@@ -1,4 +1,5 @@
-
+﻿
+import Header from '../components/Header.jsx';
 import featuredEditorial from '../assets/featured-editorial.jpg';
 import lookbook from '../assets/lookbook.jpg';
 
@@ -28,72 +29,6 @@ export default function Home() {
           color: var(--charcoal);
           overflow-x: hidden;
         }
-
-        nav {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 1000;
-          padding: 2rem 4rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: linear-gradient(180deg, var(--cream) 0%, transparent 100%);
-          animation: slideDown 0.8s ease-out;
-        }
-
-        @keyframes slideDown {
-          from {
-            transform: translateY(-100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        .logo {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 2rem;
-          font-weight: 300;
-          letter-spacing: 0.3em;
-          color: var(--charcoal);
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 3rem;
-          list-style: none;
-        }
-
-        .nav-links a {
-          text-decoration: none;
-          color: var(--charcoal);
-          font-size: 0.9rem;
-          font-weight: 300;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          position: relative;
-          transition: color 0.3s ease;
-        }
-
-        .nav-links a::after {
-          content: '';
-          position: absolute;
-          bottom: -4px;
-          left: 0;
-          width: 0;
-          height: 1px;
-          background: var(--terracotta);
-          transition: width 0.4s ease;
-        }
-
-        .nav-links a:hover::after {
-          width: 100%;
-        }
-
         .hero {
           min-height: 100vh;
           display: grid;
@@ -423,38 +358,311 @@ export default function Home() {
           color: rgba(250, 247, 242, 0.7);
         }
 
+        /* Statement section */
         .statement-section {
-          padding: 12rem 4rem;
-          text-align: center;
+          padding: 0;
+          background: var(--cream);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .statement-section::before {
+          content: '';
+          display: block;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, var(--stone) 20%, var(--stone) 80%, transparent);
+        }
+
+        .marquee-strip {
+          background: var(--terracotta);
+          padding: 1rem 0;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+
+        .marquee-inner {
+          display: inline-flex;
+          animation: marquee 22s linear infinite;
+          gap: 0;
+        }
+
+        .marquee-inner span {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 0.85rem;
+          font-weight: 300;
+          letter-spacing: 0.3em;
+          text-transform: uppercase;
+          color: var(--cream);
+          padding: 0 3rem;
+        }
+
+        .marquee-inner .dot {
+          color: rgba(250, 247, 242, 0.4);
+          padding: 0;
+          letter-spacing: 0;
+        }
+
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+
+        .pillars-section {
+          padding: 7rem 4rem;
+          background: var(--cream);
+          border-top: 1px solid var(--stone);
+        }
+
+        .pillars-header {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          margin-bottom: 5rem;
+          padding-bottom: 2rem;
+          border-bottom: 1px solid var(--stone);
+        }
+
+        .pillars-label {
+          font-size: 0.72rem;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: var(--terracotta);
+          font-weight: 600;
+        }
+
+        .pillars-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 3rem;
+          font-weight: 300;
+          color: var(--charcoal);
+          letter-spacing: -0.01em;
+        }
+
+        .pillars-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0;
+        }
+
+        .pillar-card {
+          padding: 3rem 3.5rem;
+          border-right: 1px solid var(--stone);
+          position: relative;
+          overflow: hidden;
+          transition: background 0.4s ease;
+        }
+
+        .pillar-card:last-child {
+          border-right: none;
+        }
+
+        .pillar-card::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 3px;
+          height: 0;
+          background: var(--terracotta);
+          transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .pillar-card:hover::after {
+          height: 100%;
+        }
+
+        .pillar-card:hover {
+          background: rgba(212, 205, 197, 0.14);
+        }
+
+        .pillar-index {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 0.72rem;
+          letter-spacing: 0.18em;
+          color: rgba(26, 26, 26, 0.35);
+          display: block;
+          margin-bottom: 2rem;
+        }
+
+        .pillar-icon-line {
+          width: 32px;
+          height: 1px;
+          background: var(--terracotta);
+          margin-bottom: 1.8rem;
+        }
+
+        .pillar-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.9rem;
+          font-weight: 400;
+          color: var(--charcoal);
+          line-height: 1.15;
+          margin-bottom: 1.2rem;
+          letter-spacing: -0.01em;
+        }
+
+        .pillar-body {
+          font-size: 0.88rem;
+          line-height: 1.75;
+          font-weight: 300;
+          color: rgba(26, 26, 26, 0.6);
+        }
+
+        .pillar-read-more {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 2rem;
+          font-size: 0.72rem;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
+          color: var(--terracotta);
+          text-decoration: none;
+          font-weight: 600;
+          transition: gap 0.3s ease;
+        }
+
+        .pillar-read-more:hover {
+          gap: 0.9rem;
+        }
+
+        .pillar-read-more svg {
+          width: 14px;
+          height: 14px;
+          stroke: currentColor;
+          fill: none;
+          stroke-width: 1.5;
+        }
+
+        .process-strip {
+          background: linear-gradient(120deg, #ffffff 0%, var(--stone) 100%);
+          padding: 5rem 4rem;
+          display: flex;
+          align-items: center;
+          gap: 0;
+          overflow: hidden;
           position: relative;
         }
 
-        .statement-text {
+        .process-strip::before {
+          content: 'PROCESS';
+          position: absolute;
+          top: 50%;
+          left: 4rem;
+          transform: translateY(-50%);
           font-family: 'Cormorant Garamond', serif;
-          font-size: 3.5rem;
+          font-size: 10rem;
           font-weight: 300;
-          line-height: 1.4;
-          max-width: 900px;
-          margin: 0 auto;
-          color: var(--charcoal);
-          opacity: 0;
-          animation: revealText 1.5s ease-out 0.5s forwards;
+          color: rgba(26, 26, 26, 0.05);
+          letter-spacing: 0.1em;
+          pointer-events: none;
+          white-space: nowrap;
         }
 
-        @keyframes revealText {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .process-steps {
+          display: flex;
+          align-items: center;
+          gap: 0;
+          width: 100%;
+          position: relative;
+          z-index: 1;
         }
 
-        .statement-accent {
+        .process-step {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.8rem;
+          padding: 0 2.5rem;
+          border-right: 1px solid rgba(26, 26, 26, 0.1);
+          position: relative;
+        }
+
+        .process-step:last-child {
+          border-right: none;
+        }
+
+        .process-index {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 0.75rem;
           color: var(--terracotta);
-          font-style: italic;
+          letter-spacing: 0.15em;
+        }
+
+        .process-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.55rem;
+          font-weight: 300;
+          color: var(--charcoal);
+          line-height: 1.2;
+        }
+
+        .process-note {
+          font-size: 0.78rem;
+          font-weight: 300;
+          color: rgba(26, 26, 26, 0.55);
+          line-height: 1.55;
+        }
+
+        .process-arrow {
+          width: 28px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(196, 115, 90, 0.5);
+          font-size: 1rem;
+        }
+
+        .statement-section::after {
+          content: '';
+          display: block;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, var(--stone) 20%, var(--stone) 80%, transparent);
+        }
+
+        @media (max-width: 968px) {
+          .pillars-header {
+            flex-direction: column;
+            gap: 0.8rem;
+          }
+
+          .pillars-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .pillar-card {
+            border-right: none;
+            border-bottom: 1px solid var(--stone);
+          }
+
+          .pillar-card:last-child {
+            border-bottom: none;
+          }
+
+          .process-steps {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2rem;
+          }
+
+          .process-step {
+            border-right: none;
+            border-bottom: 1px solid rgba(26, 26, 26, 0.1);
+            padding: 0 0 2rem;
+          }
+
+          .process-arrow {
+            display: none;
+          }
+
+          .process-strip::before {
+            display: none;
+          }
         }
 
         footer {
@@ -521,14 +729,6 @@ export default function Home() {
         }
 
         @media (max-width: 968px) {
-          nav {
-            padding: 1.5rem 2rem;
-          }
-
-          .nav-links {
-            gap: 1.5rem;
-          }
-
           .hero {
             grid-template-columns: 1fr;
             padding: 6rem 2rem 4rem;
@@ -547,29 +747,9 @@ export default function Home() {
             gap: 3rem;
           }
 
-          .statement-text {
-            font-size: 2.5rem;
-          }
         }
       `}</style>
-
-      <nav>
-        <div className="logo">ATELIER</div>
-        <ul className="nav-links">
-          <li>
-            <a href="#collections">Collections</a>
-          </li>
-          <li>
-            <a href="#about">About</a>
-          </li>
-          <li>
-            <a href="#journal">Journal</a>
-          </li>
-          <li>
-            <a href="#contact">Contact</a>
-          </li>
-        </ul>
-      </nav>
+      <Header />
 
       <section className="hero">
         <div className="hero-left">
@@ -634,11 +814,148 @@ export default function Home() {
       </section>
 
       <section className="statement-section" id="about">
-        <p className="statement-text">
-          Fashion is not about trends. It&apos;s about{' '}
-          <span className="statement-accent">expressing who you are</span> through pieces that resonate with your spirit
-          and stand the test of time.
-        </p>
+        <div className="marquee-strip" aria-hidden="true">
+          <div className="marquee-inner">
+            <span>Handcrafted in small batches</span><span className="dot">&middot;</span>
+            <span>Natural fibres only</span><span className="dot">&middot;</span>
+            <span>Zero-waste pattern cutting</span><span className="dot">&middot;</span>
+            <span>Made to last a lifetime</span><span className="dot">&middot;</span>
+            <span>Spring &amp; Summer 2026</span><span className="dot">&middot;</span>
+            <span>Atelier Collection</span><span className="dot">&middot;</span>
+            <span>Handcrafted in small batches</span><span className="dot">&middot;</span>
+            <span>Natural fibres only</span><span className="dot">&middot;</span>
+            <span>Zero-waste pattern cutting</span><span className="dot">&middot;</span>
+            <span>Made to last a lifetime</span><span className="dot">&middot;</span>
+            <span>Spring &amp; Summer 2026</span><span className="dot">&middot;</span>
+            <span>Atelier Collection</span><span className="dot">&middot;</span>
+          </div>
+        </div>
+
+        <div className="pillars-section">
+          <div className="pillars-header">
+            <span className="pillars-label">Our Principles</span>
+            <h2 className="pillars-title">Built on three commitments</h2>
+          </div>
+          <div className="pillars-grid">
+            <div className="pillar-card">
+              <span className="pillar-index">01 - Sustainability</span>
+              <div className="pillar-icon-line" />
+              <h3 className="pillar-name">
+                Sustainable
+                <br />
+                Fashion
+              </h3>
+              <p className="pillar-body">
+                We use eco-friendly materials and ethical production methods throughout every stage of our supply
+                chain. From certified organic cotton to post-consumer recycled fibres, every piece is designed to
+                minimise its footprint on the planet without compromising on quality.
+              </p>
+              <a href="#" className="pillar-read-more">
+                Learn more
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+            </div>
+            <div className="pillar-card">
+              <span className="pillar-index">02 - Craftsmanship</span>
+              <div className="pillar-icon-line" />
+              <h3 className="pillar-name">
+                Artisan
+                <br />
+                Craftsmanship
+              </h3>
+              <p className="pillar-body">
+                Each garment is handcrafted by skilled artisans who bring decades of experience to every stitch. We
+                celebrate slow fashion - the kind that takes time, care, and an eye for detail that no machine can
+                replicate. Quality is not a finish; it is the foundation.
+              </p>
+              <a href="#" className="pillar-read-more">
+                Meet our makers
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+            </div>
+            <div className="pillar-card">
+              <span className="pillar-index">03 - Design</span>
+              <div className="pillar-icon-line" />
+              <h3 className="pillar-name">
+                Timeless
+                <br />
+                Design
+              </h3>
+              <p className="pillar-body">
+                We create pieces that transcend seasons and resist trends. Our silhouettes are drawn to be worn, loved,
+                and cherished for years - then handed on. A wardrobe built on intention rather than impulse is the most
+                sustainable wardrobe of all.
+              </p>
+              <a href="#" className="pillar-read-more">
+                View collection
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="process-strip">
+          <div className="process-steps">
+            <div className="process-step">
+              <span className="process-index">01 - Concept</span>
+              <span className="process-name">
+                Sketch &amp;
+                <br />
+                Drape
+              </span>
+              <p className="process-note">Each silhouette begins on a live form, never a screen.</p>
+            </div>
+            <div className="process-arrow">&rarr;</div>
+            <div className="process-step">
+              <span className="process-index">02 - Source</span>
+              <span className="process-name">
+                Fabric
+                <br />
+                Selection
+              </span>
+              <p className="process-note">We visit mills in person. No catalogues. No shortcuts.</p>
+            </div>
+            <div className="process-arrow">&rarr;</div>
+            <div className="process-step">
+              <span className="process-index">03 - Cut</span>
+              <span className="process-name">
+                Hand
+                <br />
+                Tailoring
+              </span>
+              <p className="process-note">Two tailors per garment. One for the body, one for the finish.</p>
+            </div>
+            <div className="process-arrow">&rarr;</div>
+            <div className="process-step">
+              <span className="process-index">04 - Inspect</span>
+              <span className="process-name">
+                48-Hour
+                <br />
+                Quality Hold
+              </span>
+              <p className="process-note">Every piece rests before it ships. Tension reveals truth.</p>
+            </div>
+            <div className="process-arrow">&rarr;</div>
+            <div className="process-step">
+              <span className="process-index">05 - Yours</span>
+              <span className="process-name">
+                Delivered
+                <br />
+                &amp; Registered
+              </span>
+              <p className="process-note">Paired with a digital repair passport, valid for life.</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       <footer id="contact">
@@ -706,3 +1023,10 @@ export default function Home() {
     </>
   );
 }
+
+
+
+
+
+
+

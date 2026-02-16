@@ -6,6 +6,7 @@ import Men from '../pages/Men.jsx';
 import Women from '../pages/Women.jsx';
 import Accessories from '../pages/Accessories.jsx';
 import SearchResults from '../pages/SearchResults.jsx';
+import Wishlist from '../pages/Wishlist.jsx';
 
 // Centralized route configuration.
 export default function AppRoutes() {
@@ -18,6 +19,7 @@ export default function AppRoutes() {
       <Route path="/women" element={<Women />} />
       <Route path="/accessories" element={<Accessories />} />
       <Route path="/search" element={<SearchResults />} />
+      <Route path="/wishlist" element={<Wishlist />} />
     </Routes>
   );
 }
