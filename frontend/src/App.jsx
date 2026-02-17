@@ -12,6 +12,7 @@ export default function App() {
   const isSizeGuide = location.pathname === '/sizeguide';
   const isReturns = location.pathname === '/returns';
   const isAbout = location.pathname === '/about';
+  const isNewArrivals = location.pathname === '/new-arrivals';
   const hideHeader = isHome || location.pathname === '/login';
 
   return (
@@ -20,7 +21,9 @@ export default function App() {
         {!hideHeader && <Header />}
         <main
           className="main-content"
-          style={isHome || isContact || isSizeGuide || isReturns || isAbout ? { padding: 0 } : undefined}
+          style={
+            isHome || isContact || isSizeGuide || isReturns || isAbout || isNewArrivals ? { padding: 0 } : undefined
+          }
         >
           <AppRoutes />
         </main>

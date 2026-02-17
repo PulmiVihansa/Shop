@@ -13,6 +13,7 @@ import Contact from '../pages/Contact.jsx';
 import SizeGuide from '../pages/SizeGuide.jsx';
 import Returns from '../pages/Returns.jsx';
 import About from '../pages/About.jsx';
+import NewArrivals from '../pages/NewArrivals.jsx';
 
 
 // Centralized route configuration.
@@ -33,6 +34,7 @@ export default function AppRoutes() {
       <Route path="/sizeguide" element={<SizeGuide />} />
       <Route path="/returns" element={<Returns />} />
       <Route path="/about" element={<About />} />
+      <Route path="/new-arrivals" element={<NewArrivals />} />
       
     </Routes>
   );

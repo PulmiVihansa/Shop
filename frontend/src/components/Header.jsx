@@ -1,60 +1,98 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
 
 export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
   const formatCurrency = (value) => `$${value.toLocaleString()}`;
+  const location = useLocation();
+  const isNewArrivals = location.pathname === '/new-arrivals';
+  const isWomen = location.pathname.startsWith('/women') || isNewArrivals;
+  const isMen = location.pathname.startsWith('/men');
 
   return (
     <>
-      <nav className="site-nav">
-        <div className="logo">
-          <Link to="/">ATELIER</Link>
-        </div>
-
-        <ul className="nav-links">
-          <li className="nav-dropdown">
-            <button type="button" className="nav-link-button">Women</button>
-            <div className="dropdown-menu">
-              <Link to="/women/new">New Arrivals</Link>
-              <Link to="/women/dresses">Dresses</Link>
-              <Link to="/women/tops">Tops</Link>
-            </div>
-          </li>
-          <li className="nav-dropdown">
-            <button type="button" className="nav-link-button">Men</button>
-            <div className="dropdown-menu">
-              <Link to="/men/new">New Arrivals</Link>
-              <Link to="/men/shirts">Shirts</Link>
-              <Link to="/men/outerwear">Outerwear</Link>
-            </div>
-          </li>
-          <li>
-            <Link to="/giftvoucher">Gift Vouchers</Link>
-          </li>
-          <li>
-            <Link to="/sales">Sales</Link>
-          </li>
-        </ul>
-
-        <div className="nav-icons" aria-label="Utility navigation">
-          <Link to="/login" className="login-icon" aria-label="Login">
-            {'\u{1F464}\u{FE0E}'}
+      <nav className="atelier-nav">
+        <div className="nw">
+          <Link to="/" className="logo">
+            ATELIER
           </Link>
-          <Link to="/wishlist" className="nav-icon" aria-label="Wishlist">
-            {'\u2661\uFE0E'}
-          </Link>
-          <button
-            type="button"
-            className="nav-icon cart-icon"
-            aria-label={`Cart with ${summary.count} items`}
-            aria-expanded={isOpen}
-            onClick={openCart}
-          >
-            {'\u{1F6D2}\u{FE0E}'}
-            <span className="cart-count">{summary.count}</span>
-          </button>
+          <div className="nm">
+            <div className="nd">
+              <button type="button" className={`nl ${isWomen ? 'act' : ''}`}>
+                WOMEN
+                <svg viewBox="0 0 10 6" aria-hidden="true">
+                  <path d="M1 1l4 4 4-4" />
+                </svg>
+              </button>
+              <div className="drop">
+                <Link to="/new-arrivals" className={`dl ${isNewArrivals ? 'active' : ''}`}>
+                  New Arrivals
+                </Link>
+                <Link to="/women" className="dl">
+                  Dresses
+                </Link>
+                <Link to="/women" className="dl">
+                  Tops
+                </Link>
+              </div>
+            </div>
+            <div className="nd">
+              <button type="button" className={`nl ${isMen ? 'act' : ''}`}>
+                MEN
+                <svg viewBox="0 0 10 6" aria-hidden="true">
+                  <path d="M1 1l4 4 4-4" />
+                </svg>
+              </button>
+              <div className="drop">
+                <Link to="/new-arrivals" className="dl">
+                  New Arrivals
+                </Link>
+                <Link to="/men" className="dl">
+                  Shirts
+                </Link>
+                <Link to="/men" className="dl">
+                  Trousers
+                </Link>
+              </div>
+            </div>
+            <Link to="/giftvoucher" className="nl">
+              GIFT VOUCHERS
+            </Link>
+            <Link to="/sales" className="nl">
+              SALES
+            </Link>
+            <Link to="/contact" className="nl">
+              CONTACT US
+            </Link>
+          </div>
+          <div className="nr" aria-label="Utility navigation">
+            <Link to="/login" className="ib" aria-label="Account">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </Link>
+            <Link to="/wishlist" className="ib" aria-label="Wishlist">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+              </svg>
+            </Link>
+            <button
+              type="button"
+              className="ib"
+              aria-label={`Bag with ${summary.count} items`}
+              aria-expanded={isOpen}
+              onClick={openCart}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 01-8 0" />
+              </svg>
+              <span className="bag-n">{summary.count}</span>
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -70,7 +108,7 @@ export default function Header() {
             <h3>Atelier Cart</h3>
           </div>
           <button type="button" className="cart-close" onClick={closeCart} aria-label="Close cart">
-            ✕
+            {'\u00D7'}
           </button>
         </div>
 
@@ -86,7 +124,9 @@ export default function Header() {
                 <div className={`cart-item-image ${item.imageClass || ''}`} />
                 <div className="cart-item-info">
                   <p>{item.name}</p>
-                  <span>{item.size || 'One Size'} · Qty {item.quantity || 1}</span>
+                  <span>
+                    {item.size || 'One Size'} {'\u00B7'} Qty {item.quantity || 1}
+                  </span>
                 </div>
                 <strong>{formatCurrency(item.price * (item.quantity || 1))}</strong>
                 <button
