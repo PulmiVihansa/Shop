@@ -1,5 +1,6 @@
 ﻿
 import Header from '../components/Header.jsx';
+import Footer from '../components/Footer/Footer.jsx';
 import featuredEditorial from '../assets/featured-editorial.jpg';
 import lookbook from '../assets/lookbook.jpg';
 
@@ -665,68 +666,6 @@ export default function Home() {
           }
         }
 
-        footer {
-          background: var(--charcoal);
-          color: var(--cream);
-          padding: 6rem 4rem 3rem;
-        }
-
-        .footer-content {
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr;
-          gap: 4rem;
-          max-width: 1400px;
-          margin: 0 auto 4rem;
-        }
-
-        .footer-brand {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 2.5rem;
-          font-weight: 300;
-          letter-spacing: 0.2em;
-          margin-bottom: 1rem;
-        }
-
-        .footer-tagline {
-          font-size: 0.9rem;
-          line-height: 1.6;
-          color: rgba(250, 247, 242, 0.6);
-          max-width: 300px;
-        }
-
-        .footer-title {
-          font-size: 0.75rem;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          margin-bottom: 1.5rem;
-          color: var(--terracotta);
-        }
-
-        .footer-links {
-          list-style: none;
-          display: flex;
-          flex-direction: column;
-          gap: 0.8rem;
-        }
-
-        .footer-links a {
-          color: rgba(250, 247, 242, 0.7);
-          text-decoration: none;
-          font-size: 0.9rem;
-          transition: color 0.3s ease;
-        }
-
-        .footer-links a:hover {
-          color: var(--cream);
-        }
-
-        .footer-bottom {
-          text-align: center;
-          padding-top: 3rem;
-          border-top: 1px solid rgba(250, 247, 242, 0.1);
-          font-size: 0.8rem;
-          color: rgba(250, 247, 242, 0.5);
-        }
 
         @media (max-width: 968px) {
           .hero {
@@ -742,10 +681,6 @@ export default function Home() {
             grid-template-columns: 1fr;
           }
 
-          .footer-content {
-            grid-template-columns: 1fr;
-            gap: 3rem;
-          }
 
         }
       `}</style>
@@ -958,68 +893,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer id="contact">
-        <div className="footer-content">
-          <div>
-            <div className="footer-brand">ATELIER</div>
-            <p className="footer-tagline">
-              Contemporary fashion rooted in timeless design principles and sustainable practices.
-            </p>
-          </div>
-          <div>
-            <h4 className="footer-title">Shop</h4>
-            <ul className="footer-links">
-              <li>
-                <a href="#">New Arrivals</a>
-              </li>
-              <li>
-                <a href="#">Women</a>
-              </li>
-              <li>
-                <a href="#">Men</a>
-              </li>
-              <li>
-                <a href="#">Accessories</a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="footer-title">About</h4>
-            <ul className="footer-links">
-              <li>
-                <a href="#">Our Story</a>
-              </li>
-              <li>
-                <a href="#">Sustainability</a>
-              </li>
-              <li>
-                <a href="#">Craftsmanship</a>
-              </li>
-              <li>
-                <a href="#">Careers</a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="footer-title">Support</h4>
-            <ul className="footer-links">
-              <li>
-                <a href="#">Contact Us</a>
-              </li>
-              <li>
-                <a href="#">Shipping</a>
-              </li>
-              <li>
-                <a href="#">Returns</a>
-              </li>
-              <li>
-                <a href="#">Size Guide</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="footer-bottom">&copy; 2026 Atelier. All rights reserved.</div>
-      </footer>
+      <Footer />
     </>
   );
 }

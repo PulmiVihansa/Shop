@@ -1,0 +1,1118 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Archivo:wght@300;400;500;600&display=swap');
+
+.gift-page {
+  --cream: #faf7f2;
+  --charcoal: #1a1a1a;
+  --terracotta: #c4735a;
+  --sage: #a8b5a0;
+  --stone: #d4cdc5;
+  --stone-lt: #eae6e0;
+  --ink: rgba(26, 26, 26, 0.5);
+  --gold: #b8965a;
+  --gold-lt: #d4b47a;
+
+  font-family: 'Archivo', sans-serif;
+  background: var(--cream);
+  color: var(--charcoal);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+.gift-page,
+.gift-page * {
+  box-sizing: border-box;
+}
+
+.gift-page * {
+  margin: 0;
+  padding: 0;
+}
+
+.gift-page::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.022;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.gift-page > * {
+  position: relative;
+  z-index: 2;
+}
+
+.gift-page .page-hero {
+  padding: 10rem 4rem 6rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem;
+  align-items: end;
+  border-bottom: 1px solid var(--stone);
+  position: relative;
+  overflow: hidden;
+}
+
+.gift-page .page-hero::before {
+  content: 'GIFT';
+  position: absolute;
+  top: 50%;
+  right: -2rem;
+  transform: translateY(-50%);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22rem;
+  font-weight: 300;
+  color: rgba(212, 205, 197, 0.18);
+  letter-spacing: -0.05em;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.gift-page .hero-left {
+  position: relative;
+  z-index: 1;
+  animation: fadeUp 1s ease-out 0.1s both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gift-page .hero-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.gift-page .hero-eyebrow::before {
+  content: '';
+  width: 28px;
+  height: 1px;
+  background: var(--terracotta);
+  display: inline-block;
+}
+
+.gift-page .hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 6.5rem;
+  font-weight: 300;
+  line-height: 0.88;
+  letter-spacing: -0.02em;
+  margin-bottom: 2.5rem;
+}
+
+.gift-page .hero-title em {
+  font-style: italic;
+  color: var(--terracotta);
+}
+
+.gift-page .hero-desc {
+  font-size: 1rem;
+  line-height: 1.8;
+  font-weight: 300;
+  color: var(--ink);
+  max-width: 440px;
+  margin-bottom: 2.5rem;
+}
+
+.gift-page .hero-facts {
+  display: flex;
+  gap: 3rem;
+}
+
+.gift-page .hero-fact-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--charcoal);
+  display: block;
+}
+
+.gift-page .hero-fact-lbl {
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.gift-page .hero-right {
+  position: relative;
+  z-index: 1;
+  animation: fadeUp 1s ease-out 0.3s both;
+}
+
+.gift-page .voucher-preview {
+  width: 100%;
+  aspect-ratio: 16/9;
+  position: relative;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(26, 26, 26, 0.18), 0 8px 24px rgba(26, 26, 26, 0.1);
+  cursor: pointer;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.6s ease;
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+.gift-page .voucher-preview:hover {
+  box-shadow: 0 60px 100px rgba(26, 26, 26, 0.22), 0 12px 32px rgba(26, 26, 26, 0.12);
+}
+
+.gift-page .voucher-face {
+  position: absolute;
+  inset: 0;
+  padding: 2.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: background 0.8s ease;
+}
+
+.gift-page .voucher-face.theme-classic {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2a26 50%, #1a1a1a 100%);
+}
+
+.gift-page .voucher-face.theme-terracotta {
+  background: linear-gradient(135deg, #c4735a 0%, #a85840 50%, #c4735a 100%);
+}
+
+.gift-page .voucher-face.theme-sage {
+  background: linear-gradient(135deg, #6b7d65 0%, #8a9e82 60%, #6b7d65 100%);
+}
+
+.gift-page .voucher-face.theme-cream {
+  background: linear-gradient(135deg, #e8e0d5 0%, #faf7f2 50%, #e0d8cc 100%);
+}
+
+.gift-page .voucher-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image: repeating-linear-gradient(
+    45deg,
+    currentColor 0,
+    currentColor 1px,
+    transparent 0,
+    transparent 50%
+  );
+  background-size: 12px 12px;
+}
+
+.gift-page .theme-cream .voucher-pattern {
+  opacity: 0.04;
+  color: #1a1a1a;
+}
+
+.gift-page .voucher-corner {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-color: rgba(255, 255, 255, 0.25);
+  border-style: solid;
+}
+
+.gift-page .theme-cream .voucher-corner {
+  border-color: rgba(26, 26, 26, 0.18);
+}
+
+.gift-page .voucher-corner.tl {
+  top: 1rem;
+  left: 1rem;
+  border-width: 1px 0 0 1px;
+}
+
+.gift-page .voucher-corner.tr {
+  top: 1rem;
+  right: 1rem;
+  border-width: 1px 1px 0 0;
+}
+
+.gift-page .voucher-corner.bl {
+  bottom: 1rem;
+  left: 1rem;
+  border-width: 0 0 1px 1px;
+}
+
+.gift-page .voucher-corner.br {
+  bottom: 1rem;
+  right: 1rem;
+  border-width: 0 1px 1px 0;
+}
+
+.gift-page .voucher-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+}
+
+.gift-page .voucher-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.gift-page .theme-cream .voucher-brand {
+  color: rgba(26, 26, 26, 0.85);
+}
+
+.gift-page .voucher-type-tag {
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.6rem;
+}
+
+.gift-page .theme-cream .voucher-type-tag {
+  color: rgba(26, 26, 26, 0.45);
+  border-color: rgba(26, 26, 26, 0.15);
+}
+
+.gift-page .voucher-mid {
+  position: relative;
+  z-index: 1;
+}
+
+.gift-page .voucher-amount {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 4.5rem;
+  font-weight: 300;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: -0.03em;
+  transition: all 0.4s ease;
+}
+
+.gift-page .theme-cream .voucher-amount {
+  color: rgba(26, 26, 26, 0.88);
+}
+
+.gift-page .voucher-recipient {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 0.3rem;
+  font-style: italic;
+  transition: all 0.3s ease;
+}
+
+.gift-page .theme-cream .voucher-recipient {
+  color: rgba(26, 26, 26, 0.45);
+}
+
+.gift-page .voucher-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  position: relative;
+  z-index: 1;
+}
+
+.gift-page .voucher-code-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.25rem;
+}
+
+.gift-page .theme-cream .voucher-code-label {
+  color: rgba(26, 26, 26, 0.3);
+}
+
+.gift-page .voucher-code {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.gift-page .theme-cream .voucher-code {
+  color: rgba(26, 26, 26, 0.5);
+}
+
+.gift-page .voucher-valid {
+  text-align: right;
+}
+
+.gift-page .voucher-valid-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.25rem;
+}
+
+.gift-page .theme-cream .voucher-valid-label {
+  color: rgba(26, 26, 26, 0.3);
+}
+
+.gift-page .voucher-valid-date {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.1em;
+}
+
+.gift-page .theme-cream .voucher-valid-date {
+  color: rgba(26, 26, 26, 0.5);
+}
+
+.gift-page .flip-hint {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  opacity: 0.6;
+}
+
+.gift-page .gift-layout {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 0;
+  min-height: 80vh;
+}
+
+.gift-page .config-panel {
+  padding: 5rem 5rem 6rem 4rem;
+  border-right: 1px solid var(--stone);
+}
+
+.gift-page .config-section {
+  margin-bottom: 3.5rem;
+  padding-bottom: 3.5rem;
+  border-bottom: 1px solid var(--stone-lt);
+}
+
+.gift-page .config-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.gift-page .config-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.gift-page .config-label span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--terracotta);
+  color: var(--cream);
+  font-size: 0.6rem;
+  border-radius: 50%;
+}
+
+.gift-page .amount-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.gift-page .amount-btn {
+  padding: 1.1rem 0.5rem;
+  border: 1px solid var(--stone);
+  background: transparent;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--charcoal);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.gift-page .amount-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--charcoal);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gift-page .amount-btn:hover::before {
+  transform: scaleY(1);
+}
+
+.gift-page .amount-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+.gift-page .amount-btn:hover span {
+  color: var(--cream);
+}
+
+.gift-page .amount-btn.active {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+  color: var(--cream);
+}
+
+.gift-page .amount-btn.active::before {
+  display: none;
+}
+
+.gift-page .amount-sub {
+  display: block;
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-top: 0.2rem;
+}
+
+.gift-page .custom-amount-wrap {
+  position: relative;
+}
+
+.gift-page .custom-prefix {
+  position: absolute;
+  left: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.gift-page .custom-amount-input {
+  width: 100%;
+  padding: 1rem 1.2rem 1rem 2.4rem;
+  border: 1px solid var(--stone);
+  background: transparent;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.gift-page .custom-amount-input:focus {
+  border-color: var(--terracotta);
+}
+
+.gift-page .custom-amount-input::placeholder {
+  color: var(--stone);
+}
+
+.gift-page .theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.8rem;
+}
+
+.gift-page .theme-swatch {
+  aspect-ratio: 16/10;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.gift-page .theme-swatch.active {
+  border-color: var(--charcoal);
+  box-shadow: 0 0 0 1px var(--charcoal);
+}
+
+.gift-page .theme-swatch.t-classic {
+  background: linear-gradient(135deg, #1a1a1a, #2d2a26);
+}
+
+.gift-page .theme-swatch.t-terracotta {
+  background: linear-gradient(135deg, #c4735a, #a85840);
+}
+
+.gift-page .theme-swatch.t-sage {
+  background: linear-gradient(135deg, #6b7d65, #8a9e82);
+}
+
+.gift-page .theme-swatch.t-cream {
+  background: linear-gradient(135deg, #e8e0d5, #faf7f2);
+  border: 1px solid var(--stone);
+}
+
+.gift-page .theme-swatch-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.gift-page .theme-swatch:hover .theme-swatch-name {
+  opacity: 1;
+}
+
+.gift-page .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.gift-page .form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.gift-page .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gift-page .form-group label {
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.gift-page .form-group input,
+.gift-page .form-group textarea,
+.gift-page .form-group select {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--stone);
+  background: transparent;
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.88rem;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.3s;
+  font-weight: 300;
+}
+
+.gift-page .form-group input:focus,
+.gift-page .form-group textarea:focus,
+.gift-page .form-group select:focus {
+  border-color: var(--terracotta);
+}
+
+.gift-page .form-group textarea {
+  resize: none;
+  height: 90px;
+  line-height: 1.6;
+}
+
+.gift-page .form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1A1A' stroke-width='1.2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.gift-page .char-count {
+  text-align: right;
+  font-size: 0.62rem;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+
+.gift-page .delivery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.gift-page .delivery-option {
+  padding: 1.4rem;
+  border: 1px solid var(--stone);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.gift-page .delivery-option.active {
+  border-color: var(--charcoal);
+  background: rgba(26, 26, 26, 0.03);
+}
+
+.gift-page .delivery-option input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gift-page .delivery-icon {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 0.8rem;
+  stroke: var(--charcoal);
+  fill: none;
+  stroke-width: 1.4;
+}
+
+.gift-page .delivery-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 0.3rem;
+}
+
+.gift-page .delivery-desc {
+  font-size: 0.72rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.gift-page .delivery-check {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--stone);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.gift-page .delivery-option.active .delivery-check {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+}
+
+.gift-page .order-panel {
+  padding: 5rem 4rem 5rem 4rem;
+  position: sticky;
+  top: 0;
+  height: fit-content;
+  background: var(--charcoal);
+  color: var(--cream);
+}
+
+.gift-page .order-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 300;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(250, 247, 242, 0.1);
+}
+
+.gift-page .order-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(250, 247, 242, 0.06);
+}
+
+.gift-page .order-row-lbl {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: rgba(250, 247, 242, 0.5);
+}
+
+.gift-page .order-row-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  color: var(--cream);
+}
+
+.gift-page .order-total-block {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(250, 247, 242, 0.05);
+  border: 1px solid rgba(250, 247, 242, 0.08);
+}
+
+.gift-page .order-total-lbl {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(250, 247, 242, 0.4);
+  margin-bottom: 0.5rem;
+}
+
+.gift-page .order-total-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5rem;
+  font-weight: 300;
+  color: var(--cream);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.gift-page .purchase-btn {
+  width: 100%;
+  padding: 1.3rem;
+  background: var(--terracotta);
+  color: var(--cream);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 0.8rem;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+.gift-page .purchase-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.gift-page .purchase-btn:hover::before {
+  transform: translateX(0);
+}
+
+.gift-page .purchase-btn:hover {
+  background: #b06550;
+}
+
+.gift-page .purchase-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.gift-page .save-btn {
+  width: 100%;
+  padding: 1.1rem;
+  background: transparent;
+  color: var(--cream);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 400;
+  border: 1px solid rgba(250, 247, 242, 0.2);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.gift-page .save-btn:hover {
+  border-color: rgba(250, 247, 242, 0.5);
+  background: rgba(250, 247, 242, 0.05);
+}
+
+.gift-page .order-guarantee {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(250, 247, 242, 0.08);
+}
+
+.gift-page .guarantee-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.gift-page .guarantee-icon {
+  width: 16px;
+  height: 16px;
+  stroke: var(--terracotta);
+  fill: none;
+  stroke-width: 1.8;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.gift-page .guarantee-text {
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: rgba(250, 247, 242, 0.45);
+}
+
+.gift-page .guarantee-text strong {
+  color: rgba(250, 247, 242, 0.7);
+  display: block;
+  margin-bottom: 0.1rem;
+}
+
+.gift-page .how-section {
+  padding: 8rem 4rem;
+  background: var(--cream);
+  border-top: 1px solid var(--stone);
+}
+
+.gift-page .how-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--stone);
+}
+
+.gift-page .how-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  font-weight: 600;
+}
+
+.gift-page .how-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.8rem;
+  font-weight: 300;
+  color: var(--charcoal);
+}
+
+.gift-page .how-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+.gift-page .how-step {
+  padding: 0 3rem 0 0;
+  border-right: 1px solid var(--stone);
+  position: relative;
+}
+
+.gift-page .how-step:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.gift-page .how-step:not(:first-child) {
+  padding-left: 3rem;
+}
+
+.gift-page .step-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 4rem;
+  font-weight: 300;
+  color: var(--stone);
+  line-height: 1;
+  margin-bottom: 1.2rem;
+}
+
+.gift-page .step-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 0.8rem;
+}
+
+.gift-page .step-desc {
+  font-size: 0.82rem;
+  line-height: 1.7;
+  font-weight: 300;
+  color: var(--ink);
+}
+
+.gift-page .faq-section {
+  padding: 0 4rem 8rem;
+  background: var(--cream);
+}
+
+.gift-page .faq-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem;
+  font-weight: 300;
+  margin-bottom: 2.5rem;
+}
+
+.gift-page .faq-item {
+  border-bottom: 1px solid var(--stone-lt);
+}
+
+.gift-page .faq-q {
+  width: 100%;
+  padding: 1.4rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--charcoal);
+  text-align: left;
+  gap: 2rem;
+}
+
+.gift-page .faq-q svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--charcoal);
+  fill: none;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+  transition: transform 0.35s ease;
+}
+
+.gift-page .faq-item.open .faq-q svg {
+  transform: rotate(45deg);
+}
+
+.gift-page .faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gift-page .faq-a-inner {
+  padding: 0 0 1.4rem;
+  font-size: 0.88rem;
+  line-height: 1.8;
+  font-weight: 300;
+  color: var(--ink);
+  max-width: 680px;
+}
+
+.gift-page .faq-item.open .faq-a {
+  max-height: 200px;
+}
+
+.gift-page .toast {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--charcoal);
+  color: var(--cream);
+  padding: 1rem 2.2rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 500;
+  white-space: nowrap;
+}
+
+.gift-page .toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 1100px) {
+  .gift-page .page-hero {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .gift-page .gift-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gift-page .order-panel {
+    position: static;
+  }
+
+  .gift-page .how-steps {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+
+  .gift-page .how-step {
+    padding: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--stone);
+    padding-bottom: 3rem;
+  }
+
+  .gift-page .how-step:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .gift-page .page-hero {
+    padding: 8rem 1.6rem 4rem;
+  }
+
+  .gift-page .hero-title {
+    font-size: 4rem;
+  }
+
+  .gift-page .config-panel {
+    padding: 3rem 1.6rem;
+  }
+
+  .gift-page .amount-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gift-page .theme-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gift-page .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gift-page .delivery-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gift-page .order-panel {
+    padding: 3rem 1.6rem;
+  }
+
+  .gift-page .how-section {
+    padding: 5rem 1.6rem;
+  }
+
+  .gift-page .how-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .gift-page .faq-section {
+    padding: 0 1.6rem 5rem;
+  }
+}

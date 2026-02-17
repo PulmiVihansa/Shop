@@ -31,10 +31,10 @@ export default function Header() {
             </div>
           </li>
           <li>
-            <Link to="/#journal">Gift Vouchers</Link>
+            <Link to="/giftvoucher">Gift Vouchers</Link>
           </li>
           <li>
-            <Link to="/#contact">Sales</Link>
+            <Link to="/sales">Sales</Link>
           </li>
         </ul>
 

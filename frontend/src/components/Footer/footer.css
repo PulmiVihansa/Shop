@@ -1,0 +1,79 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;600&display=swap');
+
+.site-footer {
+  --cream: #faf7f2;
+  --charcoal: #1a1a1a;
+  --terracotta: #c4735a;
+
+  background: var(--charcoal);
+  color: var(--cream);
+  padding: 6rem 4rem 3rem;
+}
+
+.site-footer .footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 4rem;
+  max-width: 1400px;
+  margin: 0 auto 4rem;
+}
+
+.site-footer .footer-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.5rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  margin-bottom: 1rem;
+}
+
+.site-footer .footer-tagline {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(250, 247, 242, 0.6);
+  max-width: 300px;
+}
+
+.site-footer .footer-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  color: var(--terracotta);
+}
+
+.site-footer .footer-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.site-footer .footer-links a {
+  color: rgba(250, 247, 242, 0.7);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.site-footer .footer-links a:hover {
+  color: var(--cream);
+}
+
+.site-footer .footer-bottom {
+  text-align: center;
+  padding-top: 3rem;
+  border-top: 1px solid rgba(250, 247, 242, 0.1);
+  font-size: 0.8rem;
+  color: rgba(250, 247, 242, 0.5);
+}
+
+@media (max-width: 968px) {
+  .site-footer {
+    padding: 4rem 2rem 2.5rem;
+  }
+
+  .site-footer .footer-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+}
