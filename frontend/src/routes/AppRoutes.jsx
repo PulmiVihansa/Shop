@@ -10,6 +10,10 @@ import Wishlist from '../pages/Wishlist.jsx';
 import Sales from '../pages/Sales.jsx';
 import GiftVoucher from '../pages/GiftVoucher.jsx';
 import Contact from '../pages/Contact.jsx';
+import SizeGuide from '../pages/SizeGuide.jsx';
+import Returns from '../pages/Returns.jsx';
+import About from '../pages/About.jsx';
+
 
 // Centralized route configuration.
 export default function AppRoutes() {
@@ -26,7 +30,10 @@ export default function AppRoutes() {
       <Route path="/sales" element={<Sales />} />
       <Route path="/giftvoucher" element={<GiftVoucher />} />
       <Route path="/contact" element={<Contact />} />
-      <Route path="/contactus" element={<Contact />} />
+      <Route path="/sizeguide" element={<SizeGuide />} />
+      <Route path="/returns" element={<Returns />} />
+      <Route path="/about" element={<About />} />
+      
     </Routes>
   );
 }

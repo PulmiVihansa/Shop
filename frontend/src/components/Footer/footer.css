@@ -2,10 +2,10 @@
 
 .site-footer {
   --cream: #faf7f2;
-  --charcoal: #1a1a1a;
+  --charcoal: #000000;
   --terracotta: #c4735a;
 
-  background: var(--charcoal);
+  background: var(--charcoal) !important;
   color: var(--cream);
   padding: 6rem 4rem 3rem;
 }

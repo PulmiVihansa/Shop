@@ -48,16 +48,16 @@ export default function Footer() {
           <h4 className="footer-title">Support</h4>
           <ul className="footer-links">
             <li>
+              <a href="/about">About Us</a>
+            </li>
+            <li>
               <a href="/contact">Contact Us</a>
             </li>
             <li>
-              <a href="#">Shipping</a>
+              <a href="returns">Returns</a>
             </li>
             <li>
-              <a href="#">Returns</a>
-            </li>
-            <li>
-              <a href="#">Size Guide</a>
+              <a href="sizeguide">Size Guide</a>
             </li>
           </ul>
         </div>
