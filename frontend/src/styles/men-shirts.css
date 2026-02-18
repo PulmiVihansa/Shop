@@ -1,0 +1,772 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=Archivo:wght@300;400;500;600&display=swap');
+
+.men-shirts {
+  --cr: #faf7f2;
+  --crdk: #f0ebe3;
+  --ch: #1a1a1a;
+  --te: #c4735a;
+  --ted: #a85840;
+  --st: #d4cdc5;
+  --stl: #eae6e0;
+  --ink: rgba(26, 26, 26, 0.5);
+  --ink2: rgba(26, 26, 26, 0.3);
+  font-family: 'Archivo', sans-serif;
+  background: var(--cr);
+  color: var(--ch);
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+.men-shirts::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.men-shirts *,
+.men-shirts *::before,
+.men-shirts *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@keyframes ms-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ms-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ms-mq {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.men-shirts .hero {
+  padding-top: 72px;
+  min-height: 72vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  position: relative;
+  overflow: hidden;
+}
+
+.men-shirts .hpanel {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.men-shirts .hpanel-bg {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.men-shirts .hpanel:hover .hpanel-bg {
+  transform: scale(1.08);
+}
+
+.men-shirts .hpanel-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(26, 26, 26, 0) 30%, rgba(26, 26, 26, 0.75) 100%);
+  z-index: 1;
+}
+
+.men-shirts .hpanel-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2.5rem 2rem;
+  z-index: 2;
+}
+
+.men-shirts .hpanel-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 4rem;
+  font-weight: 300;
+  color: rgba(250, 247, 242, 0.12);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.men-shirts .hpanel-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.men-shirts .hpanel-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  color: var(--cr);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 0.3rem;
+}
+
+.men-shirts .hpanel-price {
+  font-size: 0.68rem;
+  color: rgba(250, 247, 242, 0.5);
+  letter-spacing: 0.06em;
+}
+
+.men-shirts .hero-title-bar {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+  animation: ms-fadeIn 1.1s ease-out 0.3s both;
+}
+
+.men-shirts .hero-title-bar h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(4rem, 7vw, 9rem);
+  font-weight: 300;
+  color: var(--cr);
+  letter-spacing: -0.02em;
+  line-height: 0.85;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.3);
+}
+
+.men-shirts .hero-title-bar h1 em {
+  font-style: italic;
+  color: var(--te);
+}
+
+.men-shirts .hero-eyebrow {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(250, 247, 242, 0.6);
+  margin-bottom: 0.8rem;
+}
+
+.men-shirts .mbar {
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0.72rem 0;
+  background: var(--te);
+}
+
+.men-shirts .mi {
+  display: inline-flex;
+  animation: ms-mq 26s linear infinite;
+}
+
+.men-shirts .mt {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  letter-spacing: 0.18em;
+  padding: 0 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 1.4rem;
+  font-size: 0.85rem;
+  color: rgba(250, 247, 242, 0.9);
+}
+
+.men-shirts .md {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(250, 247, 242, 0.4);
+  flex-shrink: 0;
+}
+
+.men-shirts .story {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--stl);
+}
+
+.men-shirts .story-text {
+  padding: 4rem 4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.men-shirts .story-eyebrow {
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.men-shirts .story-eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: var(--te);
+}
+
+.men-shirts .story-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.6rem;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--ch);
+  margin-bottom: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.men-shirts .story-title em {
+  font-style: italic;
+  color: var(--te);
+}
+
+.men-shirts .story-body {
+  font-size: 0.875rem;
+  line-height: 1.85;
+  color: var(--ink);
+  max-width: 420px;
+  margin-bottom: 2rem;
+}
+
+.men-shirts .story-features {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 1rem;
+}
+
+.men-shirts .sf {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.men-shirts .sf-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--ch);
+}
+
+.men-shirts .sf-lbl {
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+
+.men-shirts .story-img {
+  position: relative;
+  overflow: hidden;
+  min-height: 480px;
+}
+
+.men-shirts .story-img-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #c0b8a8, #e2d6cc);
+}
+
+.men-shirts .story-img-tag {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--cr);
+  padding: 0.75rem 1.3rem;
+}
+
+.men-shirts .story-img-tag span {
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.men-shirts .fbar {
+  padding: 1.4rem 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--stl);
+  position: sticky;
+  top: 72px;
+  background: rgba(250, 247, 242, 0.97);
+  backdrop-filter: blur(14px);
+  z-index: 300;
+}
+
+.men-shirts .ftabs {
+  display: flex;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.men-shirts .ft {
+  padding: 0.42rem 1rem;
+  border: 1px solid var(--stl);
+  background: transparent;
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.men-shirts .ft:hover {
+  border-color: var(--st);
+  color: var(--ch);
+}
+
+.men-shirts .ft.on {
+  background: var(--ch);
+  border-color: var(--ch);
+  color: var(--cr);
+}
+
+.men-shirts .fbar-r {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+}
+
+.men-shirts .fcount {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--ink2);
+}
+
+.men-shirts .fsort {
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ch);
+  background: var(--cr)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%231A1A1A' stroke-width='1.2' fill='none'/%3E%3C/svg%3E")
+    no-repeat right 0.65rem center;
+  border: 1px solid var(--stl);
+  padding: 0.42rem 2rem 0.42rem 0.7rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+}
+
+.men-shirts .grid-sec {
+  padding: 3.5rem 4rem 6rem;
+}
+
+.men-shirts .grid-hd {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.45rem;
+  font-weight: 300;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--stl);
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+
+.men-shirts .grid-hd small {
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 300;
+  color: var(--ink2);
+  letter-spacing: 0.1em;
+}
+
+.men-shirts .pgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+
+.men-shirts .pgrid .pc:nth-child(1) {
+  animation: ms-fadeUp 0.55s ease-out 0.04s both;
+}
+
+.men-shirts .pgrid .pc:nth-child(2) {
+  animation: ms-fadeUp 0.55s ease-out 0.09s both;
+}
+
+.men-shirts .pgrid .pc:nth-child(3) {
+  animation: ms-fadeUp 0.55s ease-out 0.14s both;
+}
+
+.men-shirts .pgrid .pc:nth-child(4) {
+  animation: ms-fadeUp 0.55s ease-out 0.18s both;
+}
+
+.men-shirts .pgrid .pc:nth-child(5) {
+  animation: ms-fadeUp 0.55s ease-out 0.22s both;
+}
+
+.men-shirts .pgrid .pc:nth-child(6) {
+  animation: ms-fadeUp 0.55s ease-out 0.26s both;
+}
+
+.men-shirts .pc {
+  background: var(--crdk);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.men-shirts .pci {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  position: relative;
+}
+
+.men-shirts .pcbg {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.men-shirts .pc:hover .pcbg {
+  transform: scale(1.06);
+}
+
+.men-shirts .pc-acts {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: all 0.28s;
+}
+
+.men-shirts .pc:hover .pc-acts {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.men-shirts .pa {
+  width: 31px;
+  height: 31px;
+  background: rgba(250, 247, 242, 0.93);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+}
+
+.men-shirts .pa:hover {
+  background: var(--te);
+}
+
+.men-shirts .pa:hover svg {
+  stroke: var(--cr);
+}
+
+.men-shirts .pa svg {
+  width: 13px;
+  height: 13px;
+  stroke: var(--ch);
+  fill: none;
+  stroke-width: 1.8;
+  transition: stroke 0.18s;
+}
+
+.men-shirts .pa.is-active svg {
+  stroke: var(--te);
+  fill: var(--te);
+}
+
+.men-shirts .pc-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.85rem 1rem;
+  background: rgba(250, 247, 242, 0.97);
+  backdrop-filter: blur(6px);
+  transform: translateY(100%);
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.men-shirts .pc:hover .pc-bar {
+  transform: translateY(0);
+}
+
+.men-shirts .pc-szs {
+  display: flex;
+  gap: 0.28rem;
+  margin-bottom: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.men-shirts .sz {
+  padding: 0.2rem 0.46rem;
+  border: 1px solid var(--stl);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.16s;
+  background: transparent;
+  font-family: 'Archivo', sans-serif;
+}
+
+.men-shirts .sz:hover,
+.men-shirts .sz.on {
+  border-color: var(--ch);
+  color: var(--ch);
+}
+
+.men-shirts .add-btn {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--ch);
+  color: var(--cr);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.22s;
+}
+
+.men-shirts .add-btn:hover {
+  background: var(--te);
+}
+
+.men-shirts .pinfo {
+  padding: 0.95rem 1rem 1.3rem;
+}
+
+.men-shirts .pcat {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  margin-bottom: 0.28rem;
+}
+
+.men-shirts .pname {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 0.32rem;
+  line-height: 1.2;
+}
+
+.men-shirts .pprice {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.9rem;
+}
+
+.men-shirts .pswatches {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.38rem;
+}
+
+.men-shirts .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: transform 0.16s;
+}
+
+.men-shirts .swatch:hover {
+  transform: scale(1.3);
+}
+
+.men-shirts .pbadge {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  z-index: 3;
+}
+
+.men-shirts .pnew {
+  background: var(--te);
+  color: var(--cr);
+}
+
+.men-shirts .pltd {
+  background: var(--ch);
+  color: var(--cr);
+}
+
+.men-shirts .size-cta {
+  margin: 0 4rem 2rem;
+  padding: 2.5rem 3rem;
+  background: var(--ch);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.men-shirts .size-cta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.men-shirts .size-cta-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--cr);
+}
+
+.men-shirts .size-cta-sub {
+  font-size: 0.68rem;
+  color: rgba(250, 247, 242, 0.4);
+  letter-spacing: 0.08em;
+}
+
+.men-shirts .size-cta-btn {
+  padding: 0.75rem 1.8rem;
+  border: 1px solid rgba(250, 247, 242, 0.25);
+  color: var(--cr);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.22s;
+  white-space: nowrap;
+}
+
+.men-shirts .size-cta-btn:hover {
+  background: var(--te);
+  border-color: var(--te);
+}
+
+.men-shirts .toast {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(18px);
+  background: var(--ch);
+  color: var(--cr);
+  padding: 0.75rem 1.8rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 700;
+  white-space: nowrap;
+}
+
+.men-shirts .toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.men-shirts .b1 {
+  background: linear-gradient(148deg, #c8bab0, #e2d6cc);
+}
+.men-shirts .b2 {
+  background: linear-gradient(148deg, #a8b8a0, #c6d4be);
+}
+.men-shirts .b4 {
+  background: linear-gradient(148deg, #c0b8a8, #dad2c2);
+}
+.men-shirts .b5 {
+  background: linear-gradient(148deg, #aeb8c2, #c6d0da);
+}
+.men-shirts .b7 {
+  background: linear-gradient(148deg, #a6c0b2, #bed8ca);
+}
+.men-shirts .bdark {
+  background: linear-gradient(148deg, #2e2825, #1a1a1a);
+}
+
+@media (max-width: 1100px) {
+  .men-shirts .pgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .men-shirts .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .men-shirts .hero-title-bar {
+    display: none;
+  }
+
+  .men-shirts .story {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .men-shirts .fbar {
+    padding: 1rem 1.4rem;
+    flex-direction: column;
+    gap: 0.8rem;
+    align-items: flex-start;
+  }
+
+  .men-shirts .pgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .men-shirts .story-text,
+  .men-shirts .grid-sec {
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
+  }
+
+  .men-shirts .size-cta {
+    margin: 0 1.4rem 2rem;
+  }
+}

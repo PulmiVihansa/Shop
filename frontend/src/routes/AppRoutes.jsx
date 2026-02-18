@@ -14,6 +14,10 @@ import SizeGuide from '../pages/SizeGuide.jsx';
 import Returns from '../pages/Returns.jsx';
 import About from '../pages/About.jsx';
 import NewArrivals from '../pages/NewArrivals.jsx';
+import Tops from '../pages/Tops.jsx';
+import MenNewArrivals from '../pages/MenNewArrivals.jsx';
+import MenShirts from '../pages/MenShirts.jsx';
+import MenTrousers from '../pages/MenTrousers.jsx';
 
 
 // Centralized route configuration.
@@ -35,6 +39,10 @@ export default function AppRoutes() {
       <Route path="/returns" element={<Returns />} />
       <Route path="/about" element={<About />} />
       <Route path="/new-arrivals" element={<NewArrivals />} />
+      <Route path="/men-new-arrivals" element={<MenNewArrivals />} />
+      <Route path="/men-shirts" element={<MenShirts />} />
+      <Route path="/men-trousers" element={<MenTrousers />} />
+      <Route path="/tops" element={<Tops />} />
       
     </Routes>
   );

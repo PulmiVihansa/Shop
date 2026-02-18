@@ -13,6 +13,12 @@ export default function App() {
   const isReturns = location.pathname === '/returns';
   const isAbout = location.pathname === '/about';
   const isNewArrivals = location.pathname === '/new-arrivals';
+  const isMenNewArrivals = location.pathname === '/men-new-arrivals';
+  const isMenShirts = location.pathname === '/men-shirts';
+  const isMenTrousers = location.pathname === '/men-trousers';
+  const isAccessories = location.pathname === '/accessories';
+  const isWomen = location.pathname === '/women';
+  const isTops = location.pathname === '/tops';
   const hideHeader = isHome || location.pathname === '/login';
 
   return (
@@ -22,7 +28,20 @@ export default function App() {
         <main
           className="main-content"
           style={
-            isHome || isContact || isSizeGuide || isReturns || isAbout || isNewArrivals ? { padding: 0 } : undefined
+            isHome ||
+            isContact ||
+            isSizeGuide ||
+            isReturns ||
+            isAbout ||
+            isNewArrivals ||
+            isWomen ||
+            isTops ||
+            isMenNewArrivals ||
+            isMenShirts ||
+            isMenTrousers ||
+            isAccessories
+              ? { padding: 0 }
+              : undefined
           }
         >
           <AppRoutes />

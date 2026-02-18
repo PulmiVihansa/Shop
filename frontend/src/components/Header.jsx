@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext.jsx';
 
 export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
-  const formatCurrency = (value) => `$${value.toLocaleString()}`;
+  const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
   const location = useLocation();
   const isNewArrivals = location.pathname === '/new-arrivals';
   const isWomen = location.pathname.startsWith('/women') || isNewArrivals;
@@ -32,7 +32,7 @@ export default function Header() {
                 <Link to="/women" className="dl">
                   Dresses
                 </Link>
-                <Link to="/women" className="dl">
+                <Link to="/tops" className="dl">
                   Tops
                 </Link>
               </div>
@@ -45,17 +45,20 @@ export default function Header() {
                 </svg>
               </button>
               <div className="drop">
-                <Link to="/new-arrivals" className="dl">
+                <Link to="/men-new-arrivals" className="dl">
                   New Arrivals
                 </Link>
-                <Link to="/men" className="dl">
+                <Link to="/men-shirts" className="dl">
                   Shirts
                 </Link>
-                <Link to="/men" className="dl">
+                <Link to="/men-trousers" className="dl">
                   Trousers
                 </Link>
               </div>
             </div>
+            <Link to="/accessories" className="nl">
+              Accessories
+            </Link>
             <Link to="/giftvoucher" className="nl">
               GIFT VOUCHERS
             </Link>

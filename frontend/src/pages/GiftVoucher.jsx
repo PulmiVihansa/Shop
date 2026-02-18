@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import '../styles/giftvoucher.css';
 
 const amountOptions = [
-  { value: 100, label: '$100', sub: 'Starter' },
-  { value: 250, label: '$250', sub: 'Popular' },
-  { value: 500, label: '$500', sub: 'Generous' },
-  { value: 1000, label: '$1,000', sub: 'Luxe' },
+  { value: 100, label: 'LKR100', sub: 'Starter' },
+  { value: 250, label: 'LKR250', sub: 'Popular' },
+  { value: 500, label: 'LKR500', sub: 'Generous' },
+  { value: 1000, label: 'LKR1,000', sub: 'Luxe' },
 ];
 
 const themeLabels = {
@@ -38,7 +38,7 @@ const faqItems = [
   },
 ];
 
-const formatCurrency = (value) => `$${value.toLocaleString()}`;
+const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 const formatExpiry = (dateString) => {
   if (!dateString) return '';
@@ -241,7 +241,7 @@ export default function GiftVoucher() {
               ))}
             </div>
             <div className="custom-amount-wrap">
-              <span className="custom-prefix">$</span>
+              <span className="custom-prefix">LKR</span>
               <input
                 type="number"
                 className="custom-amount-input"

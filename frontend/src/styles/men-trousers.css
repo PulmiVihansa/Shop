@@ -1,0 +1,866 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=Archivo:wght@300;400;500;600&display=swap');
+
+.men-trousers {
+  --cr: #faf7f2;
+  --crdk: #f0ebe3;
+  --ch: #1a1a1a;
+  --te: #c4735a;
+  --ted: #a85840;
+  --st: #d4cdc5;
+  --stl: #eae6e0;
+  --ink: rgba(26, 26, 26, 0.5);
+  --ink2: rgba(26, 26, 26, 0.3);
+  font-family: 'Archivo', sans-serif;
+  background: var(--cr);
+  color: var(--ch);
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+.men-trousers::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.men-trousers *,
+.men-trousers *::before,
+.men-trousers *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@keyframes mt-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mt-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mt-mq {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.men-trousers .hero {
+  padding-top: 72px;
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  min-height: 80vh;
+  position: relative;
+}
+
+.men-trousers .hl {
+  position: relative;
+  overflow: hidden;
+}
+
+.men-trousers .hl-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(148deg, #c0b8a8, #e0d8cc);
+  transition: transform 0.85s;
+}
+
+.men-trousers .hl:hover .hl-bg {
+  transform: scale(1.04);
+}
+
+.men-trousers .hl-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(26, 26, 26, 0.55) 0%, rgba(26, 26, 26, 0) 60%);
+}
+
+.men-trousers .hl-content {
+  position: absolute;
+  inset: 0;
+  padding: 5.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  z-index: 2;
+  animation: mt-fadeUp 0.9s ease-out 0.1s both;
+}
+
+.men-trousers .h-ey {
+  font-size: 0.62rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  margin-bottom: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.men-trousers .h-ey::before {
+  content: '';
+  width: 20px;
+  height: 1px;
+  background: var(--te);
+}
+
+.men-trousers h1.h-t {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(4rem, 6vw, 8.5rem);
+  font-weight: 300;
+  line-height: 0.86;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.8rem;
+  color: var(--cr);
+}
+
+.men-trousers h1.h-t em {
+  font-style: italic;
+  color: var(--te);
+}
+
+.men-trousers .h-desc {
+  font-size: 0.875rem;
+  line-height: 1.85;
+  font-weight: 300;
+  color: rgba(250, 247, 242, 0.5);
+  max-width: 380px;
+  margin-bottom: 2.5rem;
+}
+
+.men-trousers .h-btns {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.men-trousers .h-btn1 {
+  padding: 0.9rem 2.2rem;
+  background: var(--te);
+  color: var(--cr);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.28s;
+}
+
+.men-trousers .h-btn1:hover {
+  background: var(--ted);
+}
+
+.men-trousers .h-btn2 {
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: rgba(250, 247, 242, 0.4);
+  text-decoration: none;
+  padding-bottom: 0.12rem;
+  border-bottom: 1px solid rgba(250, 247, 242, 0.15);
+  transition: all 0.22s;
+}
+
+.men-trousers .h-btn2:hover {
+  color: var(--cr);
+  border-color: rgba(250, 247, 242, 0.4);
+}
+
+.men-trousers .hr {
+  display: flex;
+  flex-direction: column;
+  background: var(--crdk);
+  border-left: 1px solid var(--stl);
+}
+
+.men-trousers .hr-top {
+  flex: 1;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1px solid var(--stl);
+}
+
+.men-trousers .hr-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.men-trousers .hr-label::before {
+  content: '';
+  width: 14px;
+  height: 1px;
+  background: var(--te);
+}
+
+.men-trousers .hr-item {
+  padding: 1.2rem 0;
+  border-bottom: 1px solid var(--stl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  text-align: left;
+  font-family: inherit;
+}
+
+.men-trousers .hr-item:last-child {
+  border-bottom: none;
+}
+
+.men-trousers .hr-item:hover .hr-item-name {
+  color: var(--te);
+}
+
+.men-trousers .hr-item-name {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--ch);
+  transition: color 0.2s;
+}
+
+.men-trousers .hr-item-price {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+  margin-top: 0.2rem;
+}
+
+.men-trousers .hr-item-tag {
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  background: var(--te);
+  color: var(--cr);
+}
+
+.men-trousers .hr-item-tag.is-dark {
+  background: var(--ch);
+}
+
+.men-trousers .hr-bottom {
+  padding: 2rem 2.5rem;
+  background: var(--ch);
+}
+
+.men-trousers .hr-bottom-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  color: var(--cr);
+  font-weight: 300;
+  margin-bottom: 0.5rem;
+}
+
+.men-trousers .hr-bottom-sub {
+  font-size: 0.62rem;
+  color: rgba(250, 247, 242, 0.35);
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}
+
+.men-trousers .hr-bottom-btn {
+  width: 100%;
+  padding: 0.65rem;
+  background: transparent;
+  border: 1px solid rgba(250, 247, 242, 0.2);
+  color: var(--cr);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.22s;
+}
+
+.men-trousers .hr-bottom-btn:hover {
+  background: var(--te);
+  border-color: var(--te);
+}
+
+.men-trousers .mbar {
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0.72rem 0;
+  background: var(--crdk);
+  border-bottom: 1px solid var(--stl);
+  border-top: 1px solid var(--stl);
+}
+
+.men-trousers .mi {
+  display: inline-flex;
+  animation: mt-mq 32s linear infinite;
+}
+
+.men-trousers .mt {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  letter-spacing: 0.18em;
+  padding: 0 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 1.4rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.men-trousers .md {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--st);
+  flex-shrink: 0;
+}
+
+.men-trousers .fit-guide {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--stl);
+}
+
+.men-trousers .fg {
+  padding: 3rem 4rem;
+  border-right: 1px solid var(--stl);
+  position: relative;
+}
+
+.men-trousers .fg:last-child {
+  border-right: none;
+}
+
+.men-trousers .fg-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5rem;
+  font-weight: 300;
+  color: var(--stl);
+  line-height: 1;
+  margin-bottom: 0.8rem;
+  letter-spacing: -0.04em;
+}
+
+.men-trousers .fg-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--ch);
+  margin-bottom: 0.5rem;
+}
+
+.men-trousers .fg-desc {
+  font-size: 0.78rem;
+  line-height: 1.75;
+  color: var(--ink);
+  max-width: 280px;
+}
+
+.men-trousers .fg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: gap 0.22s;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: 'Archivo', sans-serif;
+}
+
+.men-trousers .fg-link:hover {
+  gap: 0.8rem;
+}
+
+.men-trousers .fg-link-arrow {
+  font-size: 0.8rem;
+}
+
+.men-trousers .fg.active {
+  background: var(--ch);
+}
+
+.men-trousers .fg.active .fg-num {
+  color: rgba(250, 247, 242, 0.08);
+}
+
+.men-trousers .fg.active .fg-name {
+  color: var(--cr);
+}
+
+.men-trousers .fg.active .fg-desc {
+  color: rgba(250, 247, 242, 0.45);
+}
+
+.men-trousers .fg.active .fg-link {
+  color: var(--te);
+}
+
+.men-trousers .fg-badge {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  background: var(--te);
+  color: var(--cr);
+}
+
+.men-trousers .fbar {
+  padding: 1.4rem 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--stl);
+  position: sticky;
+  top: 72px;
+  background: rgba(250, 247, 242, 0.97);
+  backdrop-filter: blur(14px);
+  z-index: 300;
+}
+
+.men-trousers .ftabs {
+  display: flex;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.men-trousers .ft {
+  padding: 0.42rem 1rem;
+  border: 1px solid var(--stl);
+  background: transparent;
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.men-trousers .ft:hover {
+  border-color: var(--st);
+  color: var(--ch);
+}
+
+.men-trousers .ft.on {
+  background: var(--ch);
+  border-color: var(--ch);
+  color: var(--cr);
+}
+
+.men-trousers .fbar-r {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+}
+
+.men-trousers .fcount {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--ink2);
+}
+
+.men-trousers .fsort {
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ch);
+  background: var(--cr)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%231A1A1A' stroke-width='1.2' fill='none'/%3E%3C/svg%3E")
+    no-repeat right 0.65rem center;
+  border: 1px solid var(--stl);
+  padding: 0.42rem 2rem 0.42rem 0.7rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+}
+
+.men-trousers .grid-sec {
+  padding: 3.5rem 4rem 6rem;
+}
+
+.men-trousers .grid-hd {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.45rem;
+  font-weight: 300;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--stl);
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+
+.men-trousers .grid-hd small {
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 300;
+  color: var(--ink2);
+  letter-spacing: 0.1em;
+}
+
+.men-trousers .pgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+
+.men-trousers .pgrid .pc:nth-child(1) {
+  animation: mt-fadeUp 0.55s ease-out 0.04s both;
+}
+
+.men-trousers .pgrid .pc:nth-child(2) {
+  animation: mt-fadeUp 0.55s ease-out 0.09s both;
+}
+
+.men-trousers .pgrid .pc:nth-child(3) {
+  animation: mt-fadeUp 0.55s ease-out 0.14s both;
+}
+
+.men-trousers .pgrid .pc:nth-child(4) {
+  animation: mt-fadeUp 0.55s ease-out 0.18s both;
+}
+
+.men-trousers .pgrid .pc:nth-child(5) {
+  animation: mt-fadeUp 0.55s ease-out 0.22s both;
+}
+
+.men-trousers .pgrid .pc:nth-child(6) {
+  animation: mt-fadeUp 0.55s ease-out 0.26s both;
+}
+
+.men-trousers .pc {
+  background: var(--crdk);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.men-trousers .pci {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  position: relative;
+}
+
+.men-trousers .pcbg {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.men-trousers .pc:hover .pcbg {
+  transform: scale(1.06);
+}
+
+.men-trousers .pc-acts {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: all 0.28s;
+}
+
+.men-trousers .pc:hover .pc-acts {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.men-trousers .pa {
+  width: 31px;
+  height: 31px;
+  background: rgba(250, 247, 242, 0.93);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+}
+
+.men-trousers .pa:hover {
+  background: var(--te);
+}
+
+.men-trousers .pa:hover svg {
+  stroke: var(--cr);
+}
+
+.men-trousers .pa svg {
+  width: 13px;
+  height: 13px;
+  stroke: var(--ch);
+  fill: none;
+  stroke-width: 1.8;
+  transition: stroke 0.18s;
+}
+
+.men-trousers .pa.is-active svg {
+  stroke: var(--te);
+  fill: var(--te);
+}
+
+.men-trousers .pc-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.85rem 1rem;
+  background: rgba(250, 247, 242, 0.97);
+  backdrop-filter: blur(6px);
+  transform: translateY(100%);
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.men-trousers .pc:hover .pc-bar {
+  transform: translateY(0);
+}
+
+.men-trousers .pc-szs {
+  display: flex;
+  gap: 0.28rem;
+  margin-bottom: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.men-trousers .sz {
+  padding: 0.2rem 0.46rem;
+  border: 1px solid var(--stl);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.16s;
+  background: transparent;
+  font-family: 'Archivo', sans-serif;
+}
+
+.men-trousers .sz:hover,
+.men-trousers .sz.on {
+  border-color: var(--ch);
+  color: var(--ch);
+}
+
+.men-trousers .add-btn {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--ch);
+  color: var(--cr);
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.22s;
+}
+
+.men-trousers .add-btn:hover {
+  background: var(--te);
+}
+
+.men-trousers .pinfo {
+  padding: 0.95rem 1rem 1.3rem;
+}
+
+.men-trousers .pcat {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--te);
+  font-weight: 600;
+  margin-bottom: 0.28rem;
+}
+
+.men-trousers .pname {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 0.32rem;
+  line-height: 1.2;
+}
+
+.men-trousers .pprice {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.9rem;
+}
+
+.men-trousers .pswatches {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.38rem;
+}
+
+.men-trousers .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: transform 0.16s;
+}
+
+.men-trousers .swatch:hover {
+  transform: scale(1.3);
+}
+
+.men-trousers .pbadge {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  z-index: 3;
+}
+
+.men-trousers .pnew {
+  background: var(--te);
+  color: var(--cr);
+}
+
+.men-trousers .pltd {
+  background: var(--ch);
+  color: var(--cr);
+}
+
+.men-trousers .toast {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(18px);
+  background: var(--ch);
+  color: var(--cr);
+  padding: 0.75rem 1.8rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 700;
+  white-space: nowrap;
+}
+
+.men-trousers .toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.men-trousers .b1 {
+  background: linear-gradient(148deg, #c8bab0, #e2d6cc);
+}
+.men-trousers .b4 {
+  background: linear-gradient(148deg, #c0b8a8, #dad2c2);
+}
+.men-trousers .b5 {
+  background: linear-gradient(148deg, #aeb8c2, #c6d0da);
+}
+.men-trousers .b6 {
+  background: linear-gradient(148deg, #c6aea0, #decabb);
+}
+.men-trousers .b9 {
+  background: linear-gradient(148deg, #b8c2aa, #d0dac2);
+}
+.men-trousers .bdark {
+  background: linear-gradient(148deg, #2e2825, #1a1a1a);
+}
+
+@media (max-width: 1100px) {
+  .men-trousers .pgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .men-trousers .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .men-trousers .hr {
+    display: none;
+  }
+
+  .men-trousers .fit-guide {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .men-trousers .fbar {
+    padding: 1rem 1.4rem;
+    flex-direction: column;
+    gap: 0.8rem;
+    align-items: flex-start;
+  }
+
+  .men-trousers .pgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .men-trousers .grid-sec,
+  .men-trousers .fg {
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
+  }
+
+  .men-trousers .hl-content {
+    padding: 3rem 1.4rem;
+  }
+}

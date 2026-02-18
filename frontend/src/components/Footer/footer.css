@@ -55,6 +55,18 @@
   transition: color 0.3s ease;
 }
 
+.site-footer .footer-links a.footer-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.site-footer .footer-links a.footer-social svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
 .site-footer .footer-links a:hover {
   color: var(--cream);
 }

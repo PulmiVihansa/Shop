@@ -1,82 +1,116 @@
 import { useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
-import '../styles/dresses.css';
+import '../styles/tops.css';
 
-const heroTiles = [
-  { id: 'hero-broderie', name: 'Broderie Anglaise Midi', bgClass: 'b6' },
-  { id: 'hero-silk-wrap', name: 'Silk Wrap Maxi', bgClass: 'b2' },
+const heroCards = [
+  { id: 'hero-silk', name: 'Silk Pliss\u00E9 Blouse', badge: 'New', bgClass: 'b3', span: 2 },
+  { id: 'hero-linen', name: 'Linen Boxy Shirt', badge: 'New', bgClass: 'b5' },
+  { id: 'hero-cashmere', name: 'Cashmere Roll-Neck', badge: 'New', bgClass: 'b9' },
 ];
 
-const lookbook = [
-  {
-    id: 'look-01',
-    name: 'Broderie Anglaise Midi',
-    category: 'Midi',
-    price: 395,
-    badge: 'lkb-new',
-    badgeText: 'New',
-    bgClass: 'b6',
-    productId: 'broderie-anglaise-midi',
-  },
-  {
-    id: 'look-02',
-    name: 'Silk Wrap Maxi',
-    category: 'Maxi',
-    price: 485,
-    badge: 'lkb-new',
-    badgeText: 'New',
-    bgClass: 'b2',
-    productId: 'silk-wrap-maxi',
-  },
-  {
-    id: 'look-03',
-    name: 'Cotton Prairie Dress',
-    category: 'Midi',
-    price: 290,
-    badge: 'lkb-ltd',
-    badgeText: 'Limited',
-    bgClass: 'b9',
-    productId: 'cotton-prairie-dress',
-  },
-  {
-    id: 'look-04',
-    name: 'Gauze Flutter Dress',
-    category: 'Mini',
-    price: 275,
-    badge: 'lkb-new',
-    badgeText: 'New',
-    bgClass: 'b7',
-    productId: 'gauze-flutter-dress',
-  },
-  {
-    id: 'look-05',
-    name: 'Velvet Column Gown',
-    category: 'Evening',
-    price: 595,
-    badge: 'lkb-new',
-    badgeText: 'New',
-    bgClass: 'b8',
-    productId: 'velvet-column-gown',
-  },
-  {
-    id: 'look-06',
-    name: 'Linen Shirt Dress',
-    category: 'Midi',
-    price: 310,
-    badge: 'lkb-new',
-    badgeText: 'New',
-    bgClass: 'b1',
-    productId: 'linen-shirt-dress',
-  },
+const marqueeItems = [
+  'Tops \u2014 SS26',
+  'Silk \u00B7 Linen \u00B7 Cotton \u00B7 Cashmere',
+  'Natural fibres only',
+  'Sourced within 200km of Paris',
+  'Lifetime repair guarantee',
+];
+
+const colorFilters = [
+  { name: 'Ivory', value: '#FAF7F2', light: true },
+  { name: 'Stone', value: '#C8BAB0' },
+  { name: 'Pebble', value: '#D4CDC5' },
+  { name: 'Sage', value: '#B8C2AA' },
+  { name: 'Forest', value: '#A8B8A0' },
+  { name: 'Lavender', value: '#B0A8B8' },
+  { name: 'Terracotta', value: '#C4735A' },
+  { name: 'Noir', value: '#1A1A1A' },
+];
+
+const materialCards = [
+  { id: 'mat-silk', title: 'Silk', content: '100% Mulberry Silk, 16mm', origin: 'Sourced from Lyon, France' },
+  { id: 'mat-linen', title: 'Linen', content: '100% Belgian Linen', origin: 'Sourced from Ghent, Belgium' },
+  { id: 'mat-cotton', title: 'Cotton', content: '100% Organic Cotton', origin: 'Sourced from Catalonia, Spain' },
+  { id: 'mat-cashmere', title: 'Cashmere', content: 'Grade A Cashmere, 2-ply', origin: 'Sourced from Piemonte, Italy' },
 ];
 
 const products = [
   {
-    id: 'broderie-anglaise-midi',
-    name: 'Broderie Anglaise Midi',
-    category: 'midi',
-    categoryLabel: 'Midi',
-    price: 395,
+    id: 'silk-plisse-blouse',
+    name: 'Silk Pliss\u00E9 Blouse',
+    category: 'blouse',
+    categoryLabel: 'Blouse',
+    price: 285,
+    badge: 'pnew',
+    badgeText: 'New',
+    bgClass: 'b3',
+    sizes: ['XS', 'S', 'M'],
+    defaultSize: 'XS',
+    swatches: ['#FAF7F2', '#C4735A'],
+    imageClass: 'silk',
+  },
+  {
+    id: 'linen-boxy-shirt',
+    name: 'Linen Boxy Shirt',
+    category: 'shirt',
+    categoryLabel: 'Shirt',
+    price: 195,
+    badge: 'pnew',
+    badgeText: 'New',
+    bgClass: 'b5',
+    sizes: ['XS', 'S', 'M', 'L'],
+    defaultSize: 'S',
+    swatches: ['#B0B8C0', '#FAF7F2', '#C8BAB0'],
+    imageClass: 'linen',
+  },
+  {
+    id: 'cashmere-roll-neck',
+    name: 'Cashmere Roll-Neck',
+    category: 'knit',
+    categoryLabel: 'Knit',
+    price: 380,
+    badge: 'pltd',
+    badgeText: 'Limited',
+    bgClass: 'b9',
+    sizes: ['XS', 'S', 'M'],
+    defaultSize: 'S',
+    swatches: ['#B8C2AA', '#C8BAB0', '#1A1A1A'],
+    imageClass: 'wool',
+  },
+  {
+    id: 'cotton-smocked-top',
+    name: 'Cotton Smocked Top',
+    category: 'blouse',
+    categoryLabel: 'Blouse',
+    price: 165,
+    badge: 'pnew',
+    badgeText: 'New',
+    bgClass: 'b7',
+    sizes: ['XS', 'S', 'M', 'L'],
+    defaultSize: 'M',
+    swatches: ['#A6C0B2', '#FAF7F2'],
+    imageClass: 'cotton',
+  },
+  {
+    id: 'silk-camisole',
+    name: 'Silk Camisole',
+    category: 'vest',
+    categoryLabel: 'Vest',
+    price: 145,
+    badge: 'pnew',
+    badgeText: 'New',
+    bgClass: 'b2',
+    sizes: ['XS', 'S', 'M'],
+    defaultSize: 'XS',
+    swatches: ['#A8B8A0', '#B0A8B8', '#1A1A1A'],
+    imageClass: 'silk',
+  },
+  {
+    id: 'broderie-peasant-top',
+    name: 'Broderie Peasant Top',
+    category: 'blouse',
+    categoryLabel: 'Blouse',
+    price: 225,
     badge: 'pnew',
     badgeText: 'New',
     bgClass: 'b6',
@@ -86,129 +120,44 @@ const products = [
     imageClass: 'cotton',
   },
   {
-    id: 'silk-wrap-maxi',
-    name: 'Silk Wrap Maxi',
-    category: 'maxi',
-    categoryLabel: 'Maxi',
-    price: 485,
+    id: 'cotton-utility-shirt',
+    name: 'Cotton Utility Shirt',
+    category: 'shirt',
+    categoryLabel: 'Shirt',
+    price: 215,
     badge: 'pnew',
     badgeText: 'New',
-    bgClass: 'b2',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#A8B8A0', '#C4735A', '#1A1A1A'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'linen-shirt-dress',
-    name: 'Linen Shirt Dress',
-    category: 'midi',
-    categoryLabel: 'Midi',
-    price: 310,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
+    bgClass: 'b4',
     sizes: ['XS', 'S', 'M', 'L'],
     defaultSize: 'M',
-    swatches: ['#C8BAB0', '#FAF7F2'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'gauze-flutter-dress',
-    name: 'Gauze Flutter Dress',
-    category: 'mini',
-    categoryLabel: 'Mini',
-    price: 275,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b7',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'S',
-    swatches: ['#A6C0B2'],
+    swatches: ['#C0B8A8', '#B0B8C0'],
     imageClass: 'cotton',
   },
   {
-    id: 'velvet-column-gown',
-    name: 'Velvet Column Gown',
-    category: 'evening',
-    categoryLabel: 'Evening',
-    price: 595,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b8',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#B6B0C2', '#1A1A1A'],
-    imageClass: 'velvet',
-  },
-  {
-    id: 'cotton-prairie-dress',
-    name: 'Cotton Prairie Dress',
-    category: 'midi',
-    categoryLabel: 'Midi',
-    price: 290,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'b9',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#B8C2AA', '#FAF7F2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'silk-slip-dress',
-    name: 'Silk Slip Dress',
-    category: 'evening',
-    categoryLabel: 'Evening',
-    price: 420,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b3',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#B0A8B8', '#C4735A'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'linen-halter-maxi',
-    name: 'Linen Halter Maxi',
-    category: 'maxi',
-    categoryLabel: 'Maxi',
-    price: 355,
+    id: 'knitted-silk-vest',
+    name: 'Knitted Silk Vest',
+    category: 'vest',
+    categoryLabel: 'Vest',
+    price: 195,
     badge: 'pnew',
     badgeText: 'New',
     bgClass: 'b12',
-    sizes: ['XS', 'S', 'M', 'L'],
+    sizes: ['XS', 'S', 'M'],
     defaultSize: 'S',
     swatches: ['#C4B6A8', '#1A1A1A'],
-    imageClass: 'linen',
+    imageClass: 'silk',
   },
 ];
 
-const marqueeItems = [
-  'The Dress Edit \u2014 SS26',
-  'Linen \u00B7 Silk \u00B7 Gauze \u00B7 Velvet',
-  'Sourced within 200km of Paris',
-  'Designed for movement',
-  'Lifetime repair guarantee',
-];
-
-const filterLabels = {
-  all: 'All Dresses',
-  midi: 'Midi Dresses',
-  maxi: 'Maxi Dresses',
-  mini: 'Mini Dresses',
-  evening: 'Evening Dresses',
-};
-
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
-export default function Women() {
+export default function Tops() {
   const { addItem } = useCart();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
+  const [activeColor, setActiveColor] = useState(null);
   const toastTimer = useRef(null);
   const [selectedSizes, setSelectedSizes] = useState(() =>
     products.reduce((acc, product) => {
@@ -264,8 +213,14 @@ export default function Women() {
     setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
   };
 
-  const handleFilterChange = (nextFilter) => {
-    setFilter(nextFilter);
+  const handleColorPick = (name) => {
+    if (activeColor === name) {
+      setActiveColor(null);
+      showToast('All colours');
+      return;
+    }
+    setActiveColor(name);
+    showToast(`Filtering by: ${name}`);
   };
 
   const visibleProducts = useMemo(() => {
@@ -284,112 +239,98 @@ export default function Women() {
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
-  const gridTitle = filterLabels[filter] || filterLabels.all;
 
   return (
-    <div className="dresses">
-      <section className="ph">
-        <div className="ph-inner">
-          <div className="ph-l">
-            <div className="ph-txt">
-              <div className="ph-ey">Women&apos;s Collection \u2014 SS26</div>
-              <h1 className="ph-h">
-                The
-                <br />
-                Dress <em>Edit</em>
-              </h1>
-              <p className="ph-desc">
-                From effortless day dresses in laundered linen to considered evening silhouettes in silk \u2014 each
-                cut to move with you, not against you.
-              </p>
-              <div className="ph-cats">
-                {[
-                  { key: 'all', label: 'All Dresses' },
-                  { key: 'midi', label: 'Midi' },
-                  { key: 'maxi', label: 'Maxi' },
-                  { key: 'mini', label: 'Mini' },
-                  { key: 'evening', label: 'Evening' },
-                ].map((cat) => (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    className={`phcat ${filter === cat.key ? 'on' : ''}`}
-                    onClick={() => handleFilterChange(cat.key)}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+    <div className="tops">
+      <section className="hero-tp">
+        <div className="ht-l">
+          <div className="ht-yr" aria-hidden="true">
+            TOPS
+          </div>
+          <div className="ht-in">
+            <div className="ht-ey">Women&apos;s Tops \u2014 SS26</div>
+            <h1 className="ht-h">
+              The
+              <br />
+              <em>Perfect</em>
+              <br />
+              Top
+            </h1>
+            <p className="ht-desc">
+              From weightless silk to structured organic cotton \u2014 tops that anchor any silhouette, in natural
+              fibres that breathe with you.
+            </p>
+            <div className="ht-stats">
+              <div>
+                <span className="hs-v">8</span>
+                <span className="hs-l">Styles</span>
+              </div>
+              <div>
+                <span className="hs-v">4</span>
+                <span className="hs-l">Fabrics</span>
+              </div>
+              <div>
+                <span className="hs-v">100%</span>
+                <span className="hs-l">Natural fibres</span>
               </div>
             </div>
           </div>
-          <div className="ph-r">
-            {heroTiles.map((tile) => (
-              <div key={tile.id} className="ph-rc">
-                <div className={`ph-rcbg ${tile.bgClass}`} />
-                <div className="ph-rc-inf">
-                  <div className="ph-rc-n">{tile.name}</div>
-                </div>
+        </div>
+        <div className="ht-r">
+          {heroCards.map((card) => (
+            <div key={card.id} className="htc" style={card.span ? { gridRow: `span ${card.span}` } : undefined}>
+              <div className={`htcbg ${card.bgClass}`} />
+              <span className="htcbadge">{card.badge}</span>
+              <div className="htc-inf">
+                <div className="htc-n">{card.name}</div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      <div className="mbar" style={{ background: 'var(--te)' }} aria-hidden="true">
+      <div className="mbar" style={{ background: 'var(--crdk)' }} aria-hidden="true">
         <div className="mi">
           {marqueeLoop.map((item, index) => (
-            <span key={`${item}-${index}`} className="mt" style={{ fontSize: '.85rem', color: 'var(--cr)' }}>
+            <span key={`${item}-${index}`} className="mt" style={{ fontSize: '.82rem', color: 'var(--ink)' }}>
               {item}
-              <span className="md" style={{ background: 'rgba(250,247,242,.4)' }} />
+              <span className="md" style={{ background: 'var(--stl)' }} />
             </span>
           ))}
         </div>
       </div>
 
-      <div className="lkb">
-        <div className="lkb-hd">
-          <div className="lkb-t">The Lookbook</div>
-          <div className="lkb-sub">Hover to shop</div>
+      <div className="colour-row">
+        <span className="cr-lbl">Shop by colour</span>
+        <div className="cr-swatches">
+          {colorFilters.map((color) => (
+            <button
+              key={color.name}
+              type="button"
+              className={`crsw ${color.light ? 'crsw-light' : ''} ${activeColor === color.name ? 'on' : ''}`}
+              style={{ background: color.value }}
+              title={color.name}
+              onClick={() => handleColorPick(color.name)}
+            />
+          ))}
         </div>
-        <div className="lkb-grid">
-          {lookbook.map((look, index) => {
-            const product = products.find((entry) => entry.id === look.productId);
-            return (
-              <div key={look.id} className="lk">
-                <div className="lk-img">
-                  <div className={`lk-ibg ${look.bgClass}`} />
-                  <div className="lk-ov" />
-                </div>
-                <span className={`lk-badge ${look.badge}`}>{look.badgeText}</span>
-                <div className="lk-num">{String(index + 1).padStart(2, '0')}</div>
-                <div className="lk-inf">
-                  <div className="lk-n">{look.name}</div>
-                  <div className="lk-n2">Women \u00B7 {look.category}</div>
-                  <div className="lk-p">{formatCurrency(look.price)}</div>
-                  <button className="lk-add" type="button" onClick={() => handleAddToBag(product)}>
-                    Quick Add
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <span className="cr-name">{activeColor || 'All colours'}</span>
       </div>
 
       <div className="fbar">
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'midi', label: 'Midi' },
-            { key: 'maxi', label: 'Maxi' },
-            { key: 'mini', label: 'Mini' },
-            { key: 'evening', label: 'Evening' },
+            { key: 'blouse', label: 'Blouses' },
+            { key: 'shirt', label: 'Shirts' },
+            { key: 'knit', label: 'Knitwear' },
+            { key: 'vest', label: 'Vests' },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
               className={`ft ${filter === tab.key ? 'on' : ''}`}
-              onClick={() => handleFilterChange(tab.key)}
+              onClick={() => setFilter(tab.key)}
             >
               {tab.label}
             </button>
@@ -407,10 +348,21 @@ export default function Women() {
         </div>
       </div>
 
-      <section className="grid-sec">
-        <div className="grid-hd">
-          {gridTitle} \u2014 {pieceCount} styles
+      <div className="mat-sec">
+        <div className="mat-hd">Every fibre, traced to source</div>
+        <div className="mat-grid">
+          {materialCards.map((card) => (
+            <div key={card.id} className="mc">
+              <div className="mc-mat">{card.title}</div>
+              <div className="mc-cnt">{card.content}</div>
+              <div className="mc-orig">{card.origin}</div>
+            </div>
+          ))}
         </div>
+      </div>
+
+      <section className="grid-sec">
+        <div className="grid-hd">All Tops \u2014 SS26</div>
         <div className="pgrid">
           {visibleProducts.map((product) => (
             <div key={product.id} className="pc">

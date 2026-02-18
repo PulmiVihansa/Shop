@@ -76,7 +76,7 @@ const initialItems = [
   },
 ];
 
-const formatCurrency = (value) => `$${value.toLocaleString()}`;
+const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Wishlist() {
   const [items, setItems] = useState(initialItems);
@@ -864,7 +864,7 @@ export default function Wishlist() {
                 <div className="summary-row">
                   <span className="summary-row-label">Sale savings</span>
                   <span className="summary-row-val" style={{ color: 'var(--terracotta)' }}>
-                    {savings > 0 ? `−${formatCurrency(savings)}` : '$0'}
+                    {savings > 0 ? `−${formatCurrency(savings)}` : 'LKR0'}
                   </span>
                 </div>
 
@@ -881,7 +881,7 @@ export default function Wishlist() {
                 </button>
 
                 <p className="summary-note">
-                  <strong>Free delivery</strong> on all orders over $250. Sizes selected above are indicative — confirm in
+                  <strong>Free delivery</strong> on all orders over LKR250. Sizes selected above are indicative — confirm in
                   bag before checkout.
                   <br />
                   <br />

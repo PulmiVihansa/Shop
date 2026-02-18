@@ -158,7 +158,7 @@ const marqueeItems = [
   'Spring / Summer 2025',
 ];
 
-const formatCurrency = (value) => `$${value.toLocaleString()}`;
+const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Sales() {
   const { addItem, openCart } = useCart();

@@ -1,4 +1,4 @@
-﻿
+
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer/Footer.jsx';
 import featuredEditorial from '../assets/featured-editorial.jpg';
@@ -728,21 +728,21 @@ export default function Home() {
             <div className="collection-image">Linen Blazer</div>
             <div className="collection-info">
               <h3 className="collection-name">Structured Linen Blazer</h3>
-              <p className="collection-price">$385</p>
+              <p className="collection-price">LKR385</p>
             </div>
           </div>
           <div className="collection-item">
             <div className="collection-image">Silk Dress</div>
             <div className="collection-info">
               <h3 className="collection-name">Flowing Silk Midi</h3>
-              <p className="collection-price">$450</p>
+              <p className="collection-price">LKR450</p>
             </div>
           </div>
           <div className="collection-item">
             <div className="collection-image">Cotton Shirt</div>
             <div className="collection-info">
               <h3 className="collection-name">Relaxed Cotton Shirt</h3>
-              <p className="collection-price">$195</p>
+              <p className="collection-price">LKR195</p>
             </div>
           </div>
         </div>
