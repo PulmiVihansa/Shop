@@ -10,7 +10,7 @@ const amountOptions = [
 
 const themeLabels = {
   classic: 'Classic',
-  terracotta: 'Terracotta',
+  Ash: 'Ash',
   sage: 'Sage',
   cream: 'Cream',
 };
@@ -259,7 +259,7 @@ export default function GiftVoucher() {
               <span>2</span> Choose a Design
             </div>
             <div className="theme-grid">
-              {['classic', 'terracotta', 'sage', 'cream'].map((variant) => (
+              {['classic', 'Ash', 'sage', 'cream'].map((variant) => (
                 <div
                   key={variant}
                   className={`theme-swatch t-${variant} ${theme === variant ? 'active' : ''}`}

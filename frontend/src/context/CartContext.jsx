@@ -1,10 +1,17 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(() => {
+    const saved = localStorage.getItem('atelier_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('atelier_cart', JSON.stringify(items));
+  }, [items]);
 
   const addItem = (item) => {
     setItems((prev) => {
@@ -28,6 +35,15 @@ export function CartProvider({ children }) {
 
   const clearCart = () => setItems([]);
 
+  const updateQuantity = (id, quantity) => {
+    const nextQuantity = Number(quantity);
+    if (nextQuantity <= 0) {
+      removeItem(id);
+      return;
+    }
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity: nextQuantity } : item)));
+  };
+
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
 
@@ -44,6 +60,7 @@ export function CartProvider({ children }) {
     addItem,
     addItems,
     removeItem,
+    updateQuantity,
     clearCart,
     openCart,
     closeCart,

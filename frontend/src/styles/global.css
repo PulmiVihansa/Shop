@@ -212,6 +212,18 @@ a {
   margin-top: 0.4rem;
 }
 
+.product-whatsapp {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.45rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid currentColor;
+  color: #1a1a1a;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .page {
   display: flex;
   flex-direction: column;

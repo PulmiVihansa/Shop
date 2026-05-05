@@ -1,9 +1,34 @@
 import { useState } from 'react';
 import Header from '../components/Header.jsx';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
+import { getErrorMessage } from '../services/api.js';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await register({
+        name: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email,
+        password: form.password,
+      });
+      navigate('/');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -15,7 +40,7 @@ export default function Signup() {
         :root {
           --cream: #faf7f2;
           --charcoal: #1a1a1a;
-          --terracotta: #c4735a;
+          --Ash: #8f9390;
           --sage: #a8b5a0;
           --stone: #d4cdc5;
         }
@@ -89,8 +114,8 @@ export default function Signup() {
 
         .auth-form input:focus {
           outline: none;
-          border-color: var(--terracotta);
-          box-shadow: 0 0 0 3px rgba(196, 115, 90, 0.2);
+          border-color: var(--Ash);
+          box-shadow: 0 0 0 3px rgba(143, 147, 144, 0.2);
         }
 
         .password-field {
@@ -179,7 +204,7 @@ export default function Signup() {
           right: 0;
           width: 4px;
           height: 120px;
-          background: var(--terracotta);
+          background: var(--Ash);
         }
 
         .brand-panel::after {
@@ -200,7 +225,7 @@ export default function Signup() {
           font-size: 0.72rem;
           letter-spacing: 0.35em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           font-weight: 600;
         }
 
@@ -264,20 +289,38 @@ export default function Signup() {
               <p className="form-subtitle">Join Atelier to unlock curated edits and private releases.</p>
             </div>
 
-            <form className="auth-form">
+            <form className="auth-form" onSubmit={handleSubmit}>
              
                 <div>
                   <label htmlFor="signup-first">First name</label>
-                  <input id="signup-first" type="text" placeholder="Enter your first name" />
+                  <input
+                    id="signup-first"
+                    type="text"
+                    placeholder="Enter your first name"
+                    value={form.firstName}
+                    onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                  />
                 </div>
                 <div>
                   <label htmlFor="signup-last">Last name</label>
-                  <input id="signup-last" type="text" placeholder="Enter your last name" />
+                  <input
+                    id="signup-last"
+                    type="text"
+                    placeholder="Enter your last name"
+                    value={form.lastName}
+                    onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                  />
                 </div>
               
 
               <label htmlFor="signup-email">Email</label>
-              <input id="signup-email" type="email" placeholder="you@atelier.com" />
+              <input
+                id="signup-email"
+                type="email"
+                placeholder="you@atelier.com"
+                value={form.email}
+                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+              />
 
               <label htmlFor="signup-password">Password</label>
               <div className="password-field">
@@ -285,6 +328,8 @@ export default function Signup() {
                   id="signup-password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Create a password"
+                  value={form.password}
+                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                 />
                 <button
                   type="button"
@@ -296,7 +341,10 @@ export default function Signup() {
                 </button>
               </div>
 
-              <button className="primary-btn" type="button">Create account</button>
+              {error && <p className="form-subtitle" style={{ color: 'var(--Ash)', marginBottom: 0 }}>{error}</p>}
+              <button className="primary-btn" type="submit" disabled={submitting}>
+                {submitting ? 'Creating...' : 'Create account'}
+              </button>
             </form>
 
             <div className="divider" />

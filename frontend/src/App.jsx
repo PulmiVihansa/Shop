@@ -19,7 +19,8 @@ export default function App() {
   const isAccessories = location.pathname === '/accessories';
   const isWomen = location.pathname === '/women';
   const isTops = location.pathname === '/tops';
-  const hideHeader = isHome || location.pathname === '/login';
+  const isAdmin = location.pathname.startsWith('/admin');
+  const hideHeader = isHome || location.pathname === '/login' || isAdmin;
 
   return (
     <CartProvider>
@@ -36,6 +37,7 @@ export default function App() {
             isNewArrivals ||
             isWomen ||
             isTops ||
+            isAdmin ||
             isMenNewArrivals ||
             isMenShirts ||
             isMenTrousers ||
@@ -46,7 +48,7 @@ export default function App() {
         >
           <AppRoutes />
         </main>
-        {!isHome && <Footer />}
+        {!isHome && !isAdmin && <Footer />}
       </div>
     </CartProvider>
   );

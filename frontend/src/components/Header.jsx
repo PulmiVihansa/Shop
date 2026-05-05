@@ -1,9 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
 
 export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
+  const navigate = useNavigate();
   const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
   const location = useLocation();
   const isNewArrivals = location.pathname === '/new-arrivals';
@@ -150,7 +151,15 @@ export default function Header() {
             <span>Subtotal</span>
             <strong>{formatCurrency(summary.subtotal)}</strong>
           </div>
-          <button type="button" className="cart-checkout" disabled={items.length === 0}>
+          <button
+            type="button"
+            className="cart-checkout"
+            disabled={items.length === 0}
+            onClick={() => {
+              closeCart();
+              navigate('/checkout');
+            }}
+          >
             Checkout
           </button>
         </div>

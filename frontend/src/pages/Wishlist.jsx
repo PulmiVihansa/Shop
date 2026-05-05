@@ -155,7 +155,7 @@ export default function Wishlist() {
         :root {
           --cream: #faf7f2;
           --charcoal: #1a1a1a;
-          --terracotta: #c4735a;
+          --Ash: #8f9390;
           --sage: #a8b5a0;
           --stone: #d4cdc5;
           --stone-lt: #eae6e0;
@@ -199,7 +199,7 @@ export default function Wishlist() {
           font-size: 0.7rem;
           letter-spacing: 0.25em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           font-weight: 600;
           margin-bottom: 0.8rem;
           display: flex;
@@ -212,7 +212,7 @@ export default function Wishlist() {
           display: inline-block;
           width: 24px;
           height: 1px;
-          background: var(--terracotta);
+          background: var(--Ash);
         }
 
         .page-title {
@@ -226,7 +226,7 @@ export default function Wishlist() {
 
         .page-title em {
           font-style: italic;
-          color: var(--terracotta);
+          color: var(--Ash);
         }
 
         .header-right {
@@ -440,7 +440,7 @@ export default function Wishlist() {
           transition-delay: 0.05s;
         }
 
-        .overlay-btn.primary:hover { background: var(--terracotta); }
+        .overlay-btn.primary:hover { background: var(--Ash); }
         .overlay-btn.secondary:hover { background: var(--stone-lt); }
 
         .card-badge {
@@ -455,7 +455,7 @@ export default function Wishlist() {
           padding: 0.3rem 0.7rem;
         }
 
-        .card-badge.new { background: var(--terracotta); color: var(--cream); }
+        .card-badge.new { background: var(--Ash); color: var(--cream); }
         .card-badge.sale { background: var(--charcoal); color: var(--cream); }
         .card-badge.low { background: var(--stone); color: var(--charcoal); }
 
@@ -497,7 +497,7 @@ export default function Wishlist() {
           font-size: 0.65rem;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           font-weight: 600;
         }
 
@@ -536,7 +536,7 @@ export default function Wishlist() {
           color: var(--charcoal);
         }
 
-        .card-price.has-sale { color: var(--terracotta); }
+        .card-price.has-sale { color: var(--Ash); }
 
         .card-price-original {
           font-size: 0.78rem;
@@ -614,7 +614,7 @@ export default function Wishlist() {
           transition: background 0.3s ease;
         }
 
-        .empty-cta:hover { background: var(--terracotta); }
+        .empty-cta:hover { background: var(--Ash); }
 
         .summary-panel {
           position: sticky;
@@ -686,7 +686,7 @@ export default function Wishlist() {
           margin-bottom: 0.8rem;
         }
 
-        .summary-cta:hover { background: var(--terracotta); }
+        .summary-cta:hover { background: var(--Ash); }
 
         .summary-cta.outline {
           background: transparent;
@@ -863,7 +863,7 @@ export default function Wishlist() {
                 </div>
                 <div className="summary-row">
                   <span className="summary-row-label">Sale savings</span>
-                  <span className="summary-row-val" style={{ color: 'var(--terracotta)' }}>
+                  <span className="summary-row-val" style={{ color: 'var(--Ash)' }}>
                     {savings > 0 ? `−${formatCurrency(savings)}` : 'LKR0'}
                   </span>
                 </div>

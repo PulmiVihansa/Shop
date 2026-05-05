@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import useProducts from '../hooks/useProducts.js';
 import '../styles/men-trousers.css';
 
 const sidebarItems = [
@@ -51,7 +52,7 @@ const marqueeItems = [
   'Cut on the bias for movement',
 ];
 
-const products = [
+const fallbackProducts = [
   {
     id: 'twill-chino-trousers',
     name: 'Twill Chino Trousers',
@@ -142,19 +143,31 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenTrousers() {
   const { addItem } = useCart();
+  const { products } = useProducts({ fallback: fallbackProducts });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
   const [selectedSizes, setSelectedSizes] = useState(() =>
-    products.reduce((acc, product) => {
+    fallbackProducts.reduce((acc, product) => {
       if (product.sizes?.length) {
         acc[product.id] = product.defaultSize || product.sizes[0];
       }
       return acc;
     }, {})
   );
+
+  useEffect(() => {
+    setSelectedSizes((prev) =>
+      products.reduce((acc, product) => {
+        if (product.sizes?.length && !acc[product.id]) {
+          acc[product.id] = product.defaultSize || product.sizes[0];
+        }
+        return acc;
+      }, { ...prev })
+    );
+  }, [products]);
 
   const showToast = (message) => {
     setToast(message);

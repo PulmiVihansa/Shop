@@ -9,10 +9,11 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(uri);
+    global.useMemoryStore = false;
     console.log('MongoDB connected');
   } catch (error) {
-    console.error('MongoDB connection error:', error.message);
-    process.exit(1);
+    global.useMemoryStore = true;
+    console.warn('MongoDB unavailable, using in-memory development store:', error.message);
   }
 };
 

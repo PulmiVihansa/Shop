@@ -4,8 +4,8 @@
   --cr: #faf7f2;
   --crdk: #f0ebe3;
   --ch: #1a1a1a;
-  --te: #c4735a;
-  --ted: #a85840;
+  --te: #8f9390;
+  --ted: #6f7471;
   --st: #d4cdc5;
   --stl: #eae6e0;
   --sg: #a8b5a0;
@@ -61,7 +61,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 70% 50%, rgba(196, 115, 90, 0.1) 0%, transparent 60%);
+  background: radial-gradient(circle at 70% 50%, rgba(143, 147, 144, 0.1) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -142,7 +142,7 @@
 .returns-page .p-icon {
   width: 36px;
   height: 36px;
-  background: rgba(196, 115, 90, 0.15);
+  background: rgba(143, 147, 144, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;

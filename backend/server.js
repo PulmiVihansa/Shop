@@ -4,6 +4,14 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const userRoutes = require('./routes/userRoutes');
+const financeRoutes = require('./routes/financeRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const bulkOrderRoutes = require('./routes/bulkOrderRoutes');
+const settingRoutes = require('./routes/settingRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const contentRoutes = require('./routes/contentRoutes');
 
 // Load environment variables.
 dotenv.config();
@@ -15,11 +23,19 @@ connectDB();
 
 // Global middleware.
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
 
 // API routes.
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/bulk-orders', bulkOrderRoutes);
+app.use('/api/settings', settingRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/content', contentRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {

@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import useProducts from '../hooks/useProducts.js';
 import '../styles/tops.css';
 
 const heroCards = [
@@ -23,7 +24,7 @@ const colorFilters = [
   { name: 'Sage', value: '#B8C2AA' },
   { name: 'Forest', value: '#A8B8A0' },
   { name: 'Lavender', value: '#B0A8B8' },
-  { name: 'Terracotta', value: '#C4735A' },
+  { name: 'Ash', value: '#8f9390' },
   { name: 'Noir', value: '#1A1A1A' },
 ];
 
@@ -34,7 +35,7 @@ const materialCards = [
   { id: 'mat-cashmere', title: 'Cashmere', content: 'Grade A Cashmere, 2-ply', origin: 'Sourced from Piemonte, Italy' },
 ];
 
-const products = [
+const fallbackProducts = [
   {
     id: 'silk-plisse-blouse',
     name: 'Silk Pliss\u00E9 Blouse',
@@ -46,7 +47,7 @@ const products = [
     bgClass: 'b3',
     sizes: ['XS', 'S', 'M'],
     defaultSize: 'XS',
-    swatches: ['#FAF7F2', '#C4735A'],
+    swatches: ['#FAF7F2', '#8f9390'],
     imageClass: 'silk',
   },
   {
@@ -153,6 +154,7 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Tops() {
   const { addItem } = useCart();
+  const { products } = useProducts({ fallback: fallbackProducts });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -160,13 +162,24 @@ export default function Tops() {
   const [activeColor, setActiveColor] = useState(null);
   const toastTimer = useRef(null);
   const [selectedSizes, setSelectedSizes] = useState(() =>
-    products.reduce((acc, product) => {
+    fallbackProducts.reduce((acc, product) => {
       if (product.sizes?.length) {
         acc[product.id] = product.defaultSize || product.sizes[0];
       }
       return acc;
     }, {})
   );
+
+  useEffect(() => {
+    setSelectedSizes((prev) =>
+      products.reduce((acc, product) => {
+        if (product.sizes?.length && !acc[product.id]) {
+          acc[product.id] = product.defaultSize || product.sizes[0];
+        }
+        return acc;
+      }, { ...prev })
+    );
+  }, [products]);
 
   const showToast = (message) => {
     setToast(message);

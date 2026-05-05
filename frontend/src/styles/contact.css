@@ -4,8 +4,8 @@
   --cream: #faf7f2;
   --cream-dk: #f2ede6;
   --charcoal: #1a1a1a;
-  --terracotta: #c4735a;
-  --terra-deep: #a85840;
+  --Ash: #8f9390;
+  --terra-deep: #6f7471;
   --stone: #d4cdc5;
   --stone-lt: #eae6e0;
   --sage: #a8b5a0;
@@ -40,7 +40,7 @@
   position: fixed;
   width: 10px;
   height: 10px;
-  background: var(--terracotta);
+  background: var(--Ash);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
@@ -53,7 +53,7 @@
   position: fixed;
   width: 36px;
   height: 36px;
-  border: 1px solid var(--terracotta);
+  border: 1px solid var(--Ash);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
@@ -137,7 +137,7 @@
   font-size: 0.7rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 600;
   margin-bottom: 1.2rem;
   display: flex;
@@ -149,7 +149,7 @@
   content: '';
   width: 28px;
   height: 1px;
-  background: var(--terracotta);
+  background: var(--Ash);
 }
 
 .contact-page .hero-title {
@@ -162,7 +162,7 @@
 
 .contact-page .hero-title em {
   font-style: italic;
-  color: var(--terracotta);
+  color: var(--Ash);
 }
 
 .contact-page .hero-desc {
@@ -181,7 +181,7 @@
   gap: 1rem;
   padding: 1.2rem 1.6rem;
   background: var(--cream-dk);
-  border-left: 3px solid var(--terracotta);
+  border-left: 3px solid var(--Ash);
   max-width: 420px;
   margin-left: auto;
 }
@@ -189,7 +189,7 @@
 .contact-page .promise-icon svg {
   width: 20px;
   height: 20px;
-  stroke: var(--terracotta);
+  stroke: var(--Ash);
   fill: none;
   stroke-width: 1.6;
 }
@@ -222,7 +222,7 @@
   font-size: 0.68rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 600;
   margin-bottom: 1.2rem;
 }
@@ -336,7 +336,7 @@
 .contact-page .float-field input:focus,
 .contact-page .float-field textarea:focus,
 .contact-page .float-field select:focus {
-  border-bottom-color: var(--terracotta);
+  border-bottom-color: var(--Ash);
 }
 
 .contact-page .float-label {
@@ -362,7 +362,7 @@
   font-size: 0.58rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
 }
 
 .contact-page .field-line {
@@ -371,7 +371,7 @@
   left: 0;
   width: 0;
   height: 1.5px;
-  background: var(--terracotta);
+  background: var(--Ash);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -388,7 +388,7 @@
 .contact-page .float-field.shake input,
 .contact-page .float-field.shake textarea,
 .contact-page .float-field.shake select {
-  border-bottom-color: var(--terracotta);
+  border-bottom-color: var(--Ash);
 }
 
 @keyframes contact-shake {
@@ -440,7 +440,7 @@
 }
 
 .contact-page .toggle-switch.on {
-  background: var(--terracotta);
+  background: var(--Ash);
 }
 
 .contact-page .toggle-switch.on::after {
@@ -464,8 +464,8 @@
 }
 
 .contact-page .attach-area:hover {
-  border-color: var(--terracotta);
-  background: rgba(196, 115, 90, 0.03);
+  border-color: var(--Ash);
+  background: rgba(143, 147, 144, 0.03);
 }
 
 .contact-page .attach-area input[type='file'] {
@@ -486,7 +486,7 @@
 }
 
 .contact-page .attach-area:hover .attach-icon svg {
-  stroke: var(--terracotta);
+  stroke: var(--Ash);
 }
 
 .contact-page .attach-text {
@@ -521,8 +521,8 @@
 }
 
 .contact-page .consent-check.checked {
-  background: var(--terracotta);
-  border-color: var(--terracotta);
+  background: var(--Ash);
+  border-color: var(--Ash);
 }
 
 .contact-page .consent-check.checked::after {
@@ -539,7 +539,7 @@
 }
 
 .contact-page .consent-check.error {
-  border-color: var(--terracotta);
+  border-color: var(--Ash);
 }
 
 .contact-page .consent-text {
@@ -550,7 +550,7 @@
 }
 
 .contact-page .consent-text a {
-  color: var(--terracotta);
+  color: var(--Ash);
   text-decoration: none;
 }
 
@@ -580,7 +580,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--terracotta);
+  background: var(--Ash);
   transform: translateX(-100%);
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -657,8 +657,8 @@
 .contact-page .map-pin svg {
   width: 36px;
   height: 36px;
-  fill: var(--terracotta);
-  filter: drop-shadow(0 4px 12px rgba(196, 115, 90, 0.4));
+  fill: var(--Ash);
+  filter: drop-shadow(0 4px 12px rgba(143, 147, 144, 0.4));
 }
 
 .contact-page .map-pin-label {
@@ -724,7 +724,7 @@
   font-size: 0.62rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 600;
   margin-bottom: 1.4rem;
 }
@@ -777,7 +777,7 @@
   top: 0;
   bottom: 0;
   width: 0;
-  background: var(--terracotta);
+  background: var(--Ash);
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -786,7 +786,7 @@
 }
 
 .contact-page .contact-method:hover {
-  background: rgba(196, 115, 90, 0.04);
+  background: rgba(143, 147, 144, 0.04);
   border-color: var(--stone);
 }
 
@@ -810,7 +810,7 @@
 .contact-page .method-icon svg {
   width: 14px;
   height: 14px;
-  stroke: var(--terracotta);
+  stroke: var(--Ash);
   fill: none;
   stroke-width: 1.8;
 }
@@ -866,7 +866,7 @@
 }
 
 .contact-page .hours-day.today {
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 500;
 }
 
@@ -886,7 +886,7 @@
   font-size: 0.55rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: var(--terracotta);
+  background: var(--Ash);
   color: var(--cream);
   padding: 0.15rem 0.45rem;
   font-weight: 600;
@@ -966,7 +966,7 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: var(--terracotta);
+  background: var(--Ash);
   flex-shrink: 0;
 }
 
@@ -1001,7 +1001,7 @@
 .contact-page .success-icon {
   width: 60px;
   height: 60px;
-  border: 1px solid var(--terracotta);
+  border: 1px solid var(--Ash);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1023,7 +1023,7 @@
 .contact-page .success-icon svg {
   width: 24px;
   height: 24px;
-  stroke: var(--terracotta);
+  stroke: var(--Ash);
   fill: none;
   stroke-width: 1.8;
 }
@@ -1046,7 +1046,7 @@
   font-family: 'Cormorant Garamond', serif;
   font-size: 0.9rem;
   letter-spacing: 0.15em;
-  color: var(--terracotta);
+  color: var(--Ash);
   border: 1px solid var(--stone);
   padding: 0.5rem 1.5rem;
 }
@@ -1067,7 +1067,7 @@
 }
 
 .contact-page .success-back:hover {
-  color: var(--terracotta);
+  color: var(--Ash);
 }
 
 @media (max-width: 1100px) {

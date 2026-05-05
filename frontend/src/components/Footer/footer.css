@@ -1,9 +1,9 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;600&display=swap');
 
 .site-footer {
   --cream: #faf7f2;
   --charcoal: #000000;
-  --terracotta: #c4735a;
+  --Ash: #8f9390;
 
   background: var(--charcoal) !important;
   color: var(--cream);
@@ -38,7 +38,7 @@
   letter-spacing: 0.15em;
   text-transform: uppercase;
   margin-bottom: 1.5rem;
-  color: var(--terracotta);
+  color: var(--Ash);
 }
 
 .site-footer .footer-links {

@@ -3,7 +3,7 @@
 .gift-page {
   --cream: #faf7f2;
   --charcoal: #1a1a1a;
-  --terracotta: #c4735a;
+  --Ash: #8f9390;
   --sage: #a8b5a0;
   --stone: #d4cdc5;
   --stone-lt: #eae6e0;
@@ -91,7 +91,7 @@
   font-size: 0.7rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 600;
   margin-bottom: 1.2rem;
   display: flex;
@@ -103,7 +103,7 @@
   content: '';
   width: 28px;
   height: 1px;
-  background: var(--terracotta);
+  background: var(--Ash);
   display: inline-block;
 }
 
@@ -118,7 +118,7 @@
 
 .gift-page .hero-title em {
   font-style: italic;
-  color: var(--terracotta);
+  color: var(--Ash);
 }
 
 .gift-page .hero-desc {
@@ -187,8 +187,8 @@
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2a26 50%, #1a1a1a 100%);
 }
 
-.gift-page .voucher-face.theme-terracotta {
-  background: linear-gradient(135deg, #c4735a 0%, #a85840 50%, #c4735a 100%);
+.gift-page .voucher-face.theme-Ash {
+  background: linear-gradient(135deg, #8f9390 0%, #6f7471 50%, #8f9390 100%);
 }
 
 .gift-page .voucher-face.theme-sage {
@@ -414,7 +414,7 @@
   font-size: 0.68rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 600;
   margin-bottom: 1.5rem;
   display: flex;
@@ -428,7 +428,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: var(--terracotta);
+  background: var(--Ash);
   color: var(--cream);
   font-size: 0.6rem;
   border-radius: 50%;
@@ -526,7 +526,7 @@
 }
 
 .gift-page .custom-amount-input:focus {
-  border-color: var(--terracotta);
+  border-color: var(--Ash);
 }
 
 .gift-page .custom-amount-input::placeholder {
@@ -557,8 +557,8 @@
   background: linear-gradient(135deg, #1a1a1a, #2d2a26);
 }
 
-.gift-page .theme-swatch.t-terracotta {
-  background: linear-gradient(135deg, #c4735a, #a85840);
+.gift-page .theme-swatch.t-Ash {
+  background: linear-gradient(135deg, #8f9390, #6f7471);
 }
 
 .gift-page .theme-swatch.t-sage {
@@ -631,7 +631,7 @@
 .gift-page .form-group input:focus,
 .gift-page .form-group textarea:focus,
 .gift-page .form-group select:focus {
-  border-color: var(--terracotta);
+  border-color: var(--Ash);
 }
 
 .gift-page .form-group textarea {
@@ -785,7 +785,7 @@
 .gift-page .purchase-btn {
   width: 100%;
   padding: 1.3rem;
-  background: var(--terracotta);
+  background: var(--Ash);
   color: var(--cream);
   font-family: 'Archivo', sans-serif;
   font-size: 0.8rem;
@@ -858,7 +858,7 @@
 .gift-page .guarantee-icon {
   width: 16px;
   height: 16px;
-  stroke: var(--terracotta);
+  stroke: var(--Ash);
   fill: none;
   stroke-width: 1.8;
   flex-shrink: 0;
@@ -896,7 +896,7 @@
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--terracotta);
+  color: var(--Ash);
   font-weight: 600;
 }
 

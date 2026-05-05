@@ -1,0 +1,78 @@
+const PaymentSettings = require('../models/PaymentSettings');
+const { store } = require('../data/memoryStore');
+
+const sanitize = (settings) => ({
+  paymentProvider: settings.paymentProvider || 'PayHere',
+  merchantId: settings.merchantId || '',
+  currency: settings.currency || 'LKR',
+  enableCOD: Boolean(settings.enableCOD),
+  enableOnlinePayment: Boolean(settings.enableOnlinePayment),
+  whatsappNumber: settings.whatsappNumber || '',
+  hasMerchantSecret: Boolean(settings.merchantSecret),
+  updatedAt: settings.updatedAt
+});
+
+const getPaymentSettingsDoc = async () => {
+  if (global.useMemoryStore) {
+    return store.paymentSettings;
+  }
+
+  const fallback = {
+    paymentProvider: process.env.PAYMENT_PROVIDER || 'PayHere',
+    merchantId: process.env.PAYHERE_MERCHANT_ID || '',
+    merchantSecret: process.env.PAYHERE_MERCHANT_SECRET || '',
+    currency: process.env.PAYMENT_CURRENCY || 'LKR',
+    enableCOD: process.env.ENABLE_COD !== 'false',
+    enableOnlinePayment: process.env.ENABLE_ONLINE_PAYMENT === 'true',
+    whatsappNumber: process.env.STORE_WHATSAPP || ''
+  };
+
+  return PaymentSettings.findOneAndUpdate(
+    {},
+    { $setOnInsert: fallback },
+    { new: true, upsert: true }
+  );
+};
+
+const getPaymentSettings = async (req, res) => {
+  try {
+    const settings = await getPaymentSettingsDoc();
+    res.json(sanitize(settings));
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch payment settings', error: error.message });
+  }
+};
+
+const updatePaymentSettings = async (req, res) => {
+  try {
+    const payload = {
+      paymentProvider: req.body.paymentProvider || 'PayHere',
+      merchantId: String(req.body.merchantId || '').trim(),
+      currency: String(req.body.currency || 'LKR').trim().toUpperCase(),
+      enableCOD: Boolean(req.body.enableCOD),
+      enableOnlinePayment: Boolean(req.body.enableOnlinePayment),
+      whatsappNumber: String(req.body.whatsappNumber || '').replace(/[^\d]/g, '')
+    };
+
+    if (req.body.merchantSecret) {
+      payload.merchantSecret = String(req.body.merchantSecret).trim();
+    }
+
+    if (!payload.enableCOD && !payload.enableOnlinePayment) {
+      return res.status(400).json({ message: 'At least one payment method must be enabled' });
+    }
+
+    if (global.useMemoryStore) {
+      store.paymentSettings = { ...store.paymentSettings, ...payload, updatedAt: new Date() };
+      store.settings.whatsappNumber = payload.whatsappNumber;
+      return res.json(sanitize(store.paymentSettings));
+    }
+
+    const settings = await PaymentSettings.findOneAndUpdate({}, payload, { new: true, upsert: true });
+    res.json(sanitize(settings));
+  } catch (error) {
+    res.status(400).json({ message: 'Failed to update payment settings', error: error.message });
+  }
+};
+
+module.exports = { getPaymentSettingsDoc, getPaymentSettings, updatePaymentSettings };

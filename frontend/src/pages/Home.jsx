@@ -1,10 +1,33 @@
-
+import { useEffect, useState } from 'react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer/Footer.jsx';
 import featuredEditorial from '../assets/featured-editorial.jpg';
 import lookbook from '../assets/lookbook.jpg';
+import api from '../services/api.js';
 
 export default function Home() {
+  const [content, setContent] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/content/homepage')
+      .then((response) => {
+        if (active) setContent(response.data);
+      })
+      .catch(() => {
+        if (active) setContent(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const heroTitle = content?.heroTitle || 'Timeless\nElegance,\nRedefined';
+  const heroLines = heroTitle.split('\n');
+  const heroPrimaryImage = content?.heroImage || featuredEditorial;
+  const heroSecondaryImage = content?.heroImageSecondary || lookbook;
+
   return (
     <>
       <style>{`
@@ -13,7 +36,7 @@ export default function Home() {
         :root {
           --cream: #faf7f2;
           --charcoal: #1a1a1a;
-          --terracotta: #c4735a;
+          --Ash: #8f9390;
           --sage: #a8b5a0;
           --stone: #d4cdc5;
         }
@@ -64,7 +87,7 @@ export default function Home() {
           font-size: 0.75rem;
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           margin-bottom: 2rem;
           font-weight: 600;
         }
@@ -110,7 +133,7 @@ export default function Home() {
           left: -100%;
           width: 100%;
           height: 100%;
-          background: var(--terracotta);
+          background: var(--Ash);
           transition: left 0.5s ease;
         }
 
@@ -234,7 +257,7 @@ export default function Home() {
           width: 100%;
           height: 100%;
           background:
-            radial-gradient(circle at 20% 50%, rgba(196, 115, 90, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 20% 50%, rgba(143, 147, 144, 0.1) 0%, transparent 50%),
             radial-gradient(circle at 80% 50%, rgba(168, 181, 160, 0.1) 0%, transparent 50%);
           pointer-events: none;
         }
@@ -260,7 +283,7 @@ export default function Home() {
           font-size: 0.75rem;
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           margin-bottom: 1rem;
         }
 
@@ -329,7 +352,7 @@ export default function Home() {
           left: 0;
           width: 100%;
           height: 100%;
-          background: var(--terracotta);
+          background: var(--Ash);
           opacity: 0;
           transition: opacity 0.4s ease;
         }
@@ -375,7 +398,7 @@ export default function Home() {
         }
 
         .marquee-strip {
-          background: var(--terracotta);
+          background: var(--Ash);
           padding: 1rem 0;
           overflow: hidden;
           white-space: nowrap;
@@ -431,7 +454,7 @@ export default function Home() {
           font-size: 0.72rem;
           letter-spacing: 0.22em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           font-weight: 600;
         }
 
@@ -468,7 +491,7 @@ export default function Home() {
           left: 0;
           width: 3px;
           height: 0;
-          background: var(--terracotta);
+          background: var(--Ash);
           transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -492,7 +515,7 @@ export default function Home() {
         .pillar-icon-line {
           width: 32px;
           height: 1px;
-          background: var(--terracotta);
+          background: var(--Ash);
           margin-bottom: 1.8rem;
         }
 
@@ -521,7 +544,7 @@ export default function Home() {
           font-size: 0.72rem;
           letter-spacing: 0.15em;
           text-transform: uppercase;
-          color: var(--terracotta);
+          color: var(--Ash);
           text-decoration: none;
           font-weight: 600;
           transition: gap 0.3s ease;
@@ -590,7 +613,7 @@ export default function Home() {
         .process-index {
           font-family: 'Cormorant Garamond', serif;
           font-size: 0.75rem;
-          color: var(--terracotta);
+          color: var(--Ash);
           letter-spacing: 0.15em;
         }
 
@@ -615,7 +638,7 @@ export default function Home() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: rgba(196, 115, 90, 0.5);
+          color: rgba(143, 147, 144, 0.5);
           font-size: 1rem;
         }
 
@@ -690,28 +713,29 @@ export default function Home() {
         <div className="hero-left">
           <div className="hero-label">Spring / Summer 2026</div>
           <h1 className="hero-title">
-            Timeless
-            <br />
-            Elegance,
-            <br />
-            Redefined
+            {heroLines.map((line, index) => (
+              <span key={`${line}-${index}`}>
+                {line}
+                {index < heroLines.length - 1 && <br />}
+              </span>
+            ))}
           </h1>
           <p className="hero-description">
-            Discover our curated collection of contemporary pieces that blend minimalist design with artisanal
-            craftsmanship. Each garment tells a story of conscious creation and enduring style.
+            {content?.heroSubtitle ||
+              'Discover our curated collection of contemporary pieces that blend minimalist design with artisanal craftsmanship. Each garment tells a story of conscious creation and enduring style.'}
           </p>
-          <a href="#" className="cta-button">
-            <span>Explore Collection</span>
+          <a href={content?.buttonLink || '#collections'} className="cta-button">
+            <span>{content?.buttonText || 'Explore Collection'}</span>
           </a>
         </div>
         <div className="hero-right">
           <div className="hero-image-stack">
             <div className="hero-image">
-              <img src={featuredEditorial} alt="Featured editorial" />
+              <img src={heroPrimaryImage} alt="Featured editorial" />
               <div className="hero-image-label">Featured Editorial</div>
             </div>
             <div className="hero-image">
-              <img src={lookbook} alt="Boo Thing lookbook" />
+              <img src={heroSecondaryImage} alt="Boo Thing lookbook" />
               <div className="hero-image-label">Boo Thing</div>
             </div>
           </div>
@@ -721,7 +745,7 @@ export default function Home() {
       <section className="featured-section" id="collections">
         <div className="section-header">
           <div className="section-subtitle">New Arrivals</div>
-          <h2 className="section-title">Essential Pieces</h2>
+          <h2 className="section-title">{content?.section2Title || 'Essential Pieces'}</h2>
         </div>
         <div className="collection-grid">
           <div className="collection-item">

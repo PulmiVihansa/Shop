@@ -397,7 +397,7 @@ export default function SizeGuide() {
               </table>
               <p className="ts-note">
                 All measurements in {unit === 'cm' ? 'centimetres' : 'inches'}. Our garments include 2-3cm ease.{' '}
-                <span className="ts-highlight">Terracotta row</span> = our most popular size.
+                <span className="ts-highlight">Ash row</span> = our most popular size.
               </p>
             </div>
           </div>
@@ -441,7 +441,7 @@ export default function SizeGuide() {
               </table>
               <p className="ts-note">
                 All measurements in {unit === 'cm' ? 'centimetres' : 'inches'}. Includes 2-3cm ease.{' '}
-                <span className="ts-highlight">Terracotta row</span> = our most popular size.
+                <span className="ts-highlight">Ash row</span> = our most popular size.
               </p>
             </div>
           </div>
@@ -480,7 +480,7 @@ export default function SizeGuide() {
                 </tbody>
               </table>
               <p className="ts-note">
-                All footwear runs true to EU size. <span className="ts-highlight">Terracotta row</span> = our most
+                All footwear runs true to EU size. <span className="ts-highlight">Ash row</span> = our most
                 popular size.
               </p>
             </div>

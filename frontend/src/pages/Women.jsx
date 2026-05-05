@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import useProducts from '../hooks/useProducts.js';
 import '../styles/dresses.css';
 
 const heroTiles = [
@@ -70,7 +71,7 @@ const lookbook = [
   },
 ];
 
-const products = [
+const fallbackProducts = [
   {
     id: 'broderie-anglaise-midi',
     name: 'Broderie Anglaise Midi',
@@ -96,7 +97,7 @@ const products = [
     bgClass: 'b2',
     sizes: ['XS', 'S', 'M'],
     defaultSize: 'XS',
-    swatches: ['#A8B8A0', '#C4735A', '#1A1A1A'],
+    swatches: ['#A8B8A0', '#8f9390', '#1A1A1A'],
     imageClass: 'silk',
   },
   {
@@ -166,7 +167,7 @@ const products = [
     bgClass: 'b3',
     sizes: ['XS', 'S', 'M'],
     defaultSize: 'XS',
-    swatches: ['#B0A8B8', '#C4735A'],
+    swatches: ['#B0A8B8', '#8f9390'],
     imageClass: 'silk',
   },
   {
@@ -205,19 +206,31 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Women() {
   const { addItem } = useCart();
+  const { products } = useProducts({ fallback: fallbackProducts });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
   const [selectedSizes, setSelectedSizes] = useState(() =>
-    products.reduce((acc, product) => {
+    fallbackProducts.reduce((acc, product) => {
       if (product.sizes?.length) {
         acc[product.id] = product.defaultSize || product.sizes[0];
       }
       return acc;
     }, {})
   );
+
+  useEffect(() => {
+    setSelectedSizes((prev) =>
+      products.reduce((acc, product) => {
+        if (product.sizes?.length && !acc[product.id]) {
+          acc[product.id] = product.defaultSize || product.sizes[0];
+        }
+        return acc;
+      }, { ...prev })
+    );
+  }, [products]);
 
   const showToast = (message) => {
     setToast(message);

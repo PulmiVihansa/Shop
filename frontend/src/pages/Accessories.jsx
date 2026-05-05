@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import useProducts from '../hooks/useProducts.js';
 import '../styles/accessories.css';
 
 const heroFeature = {
@@ -116,7 +117,7 @@ const editorialStrip = {
   ],
 };
 
-const products = [
+const fallbackProducts = [
   {
     id: 'raffia-structured-tote',
     name: 'Raffia Structured Tote',
@@ -318,6 +319,7 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Accessories() {
   const { addItem } = useCart();
+  const { products } = useProducts({ fallback: fallbackProducts });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -382,7 +384,9 @@ export default function Accessories() {
   const categoryCounts = useMemo(() => {
     const counts = products.reduce(
       (acc, product) => {
-        acc[product.category] += 1;
+        if (acc[product.category] !== undefined) {
+          acc[product.category] += 1;
+        }
         return acc;
       },
       { bags: 0, belts: 0, scarves: 0, small: 0 }

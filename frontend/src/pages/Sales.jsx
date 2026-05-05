@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import useProducts from '../hooks/useProducts.js';
 import '../styles/sales.css';
 
-const products = [
+const fallbackProducts = [
   {
     id: 1,
     name: 'Structured Linen Blazer',
@@ -162,6 +163,7 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Sales() {
   const { addItem, openCart } = useCart();
+  const { products } = useProducts({ fallback: fallbackProducts, tag: 'sale' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('disc');
   const [activePill, setActivePill] = useState('Women');
@@ -178,7 +180,7 @@ export default function Sales() {
   const toastTimer = useRef(null);
 
   const [selectedSizes, setSelectedSizes] = useState(() =>
-    products.reduce((acc, product) => {
+    fallbackProducts.reduce((acc, product) => {
       if (product.sizes?.length) {
         acc[product.id] = product.defaultSize || product.sizes[0];
       }
@@ -213,6 +215,17 @@ export default function Sales() {
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    setSelectedSizes((prev) =>
+      products.reduce((acc, product) => {
+        if (product.sizes?.length && !acc[product.id]) {
+          acc[product.id] = product.defaultSize || product.sizes[0];
+        }
+        return acc;
+      }, { ...prev })
+    );
+  }, [products]);
 
   const showToast = (message) => {
     setToast(message);

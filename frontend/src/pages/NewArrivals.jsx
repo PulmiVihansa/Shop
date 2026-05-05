@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import useProducts from '../hooks/useProducts.js';
 import '../styles/newarrivals.css';
 
-const products = [
+const fallbackProducts = [
   {
     id: 'draped-linen-coat',
     name: 'Draped Linen Coat',
@@ -28,7 +29,7 @@ const products = [
     bgClass: 'b3',
     sizes: ['XS', 'S', 'M'],
     defaultSize: 'XS',
-    swatches: ['#FAF7F2', '#C4735A'],
+    swatches: ['#FAF7F2', '#8f9390'],
     imageClass: 'silk',
   },
   {
@@ -194,19 +195,31 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function NewArrivals() {
   const { addItem } = useCart();
+  const { products } = useProducts({ fallback: fallbackProducts });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
   const [selectedSizes, setSelectedSizes] = useState(() =>
-    products.reduce((acc, product) => {
+    fallbackProducts.reduce((acc, product) => {
       if (product.sizes?.length) {
         acc[product.id] = product.defaultSize || product.sizes[0];
       }
       return acc;
     }, {})
   );
+
+  useEffect(() => {
+    setSelectedSizes((prev) =>
+      products.reduce((acc, product) => {
+        if (product.sizes?.length && !acc[product.id]) {
+          acc[product.id] = product.defaultSize || product.sizes[0];
+        }
+        return acc;
+      }, { ...prev })
+    );
+  }, [products]);
 
   const showToast = (message) => {
     setToast(message);

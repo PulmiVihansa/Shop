@@ -1,0 +1,305 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;500;600&display=swap');
+
+.tracking-page {
+  --cream: #faf7f2;
+  --charcoal: #1a1a1a;
+  --ash: #8f9390;
+  --ash-deep: #6f7471;
+  --stone: #d4cdc5;
+  --stone-light: #eae6e0;
+  --ink: rgba(26, 26, 26, 0.58);
+  min-height: 100vh;
+  padding: 8rem 4rem 5rem;
+  background: var(--cream);
+  color: var(--charcoal);
+  font-family: 'Archivo', sans-serif;
+}
+
+.tracking-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--stone);
+  margin-bottom: 2rem;
+}
+
+.tracking-eyebrow,
+.tracking-section-head span,
+.tracking-summary-line span {
+  color: var(--ash-deep);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.tracking-hero h1,
+.tracking-empty h2,
+.tracking-section-head h2,
+.tracking-cancelled h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+}
+
+.tracking-hero h1 {
+  margin: 0.8rem 0 1rem;
+  font-size: clamp(4rem, 7vw, 7rem);
+  line-height: 0.9;
+}
+
+.tracking-page p {
+  color: var(--ink);
+  line-height: 1.7;
+}
+
+.tracking-shop-link,
+.tracking-primary {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1.4rem;
+  border: 1px solid var(--charcoal);
+  background: var(--charcoal);
+  color: var(--cream);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.tracking-shop-link:hover,
+.tracking-primary:hover {
+  border-color: var(--ash-deep);
+  background: var(--ash-deep);
+}
+
+.tracking-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.tracking-orders,
+.tracking-panel,
+.tracking-card,
+.tracking-empty {
+  border: 1px solid var(--stone);
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 18px 50px rgba(26, 26, 26, 0.045);
+}
+
+.tracking-orders {
+  position: sticky;
+  top: 6rem;
+  padding: 1.2rem;
+}
+
+.tracking-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tracking-section-head h2 {
+  font-size: 2rem;
+}
+
+.tracking-orders button {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--stone-light);
+  background: transparent;
+  color: var(--charcoal);
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 0.7rem;
+}
+
+.tracking-orders button.active,
+.tracking-orders button:hover {
+  border-color: var(--charcoal);
+  background: var(--charcoal);
+  color: var(--cream);
+}
+
+.tracking-orders button strong,
+.tracking-orders button span {
+  display: block;
+}
+
+.tracking-orders button span {
+  margin-top: 0.4rem;
+  color: inherit;
+  opacity: 0.72;
+  text-transform: capitalize;
+}
+
+.tracking-panel {
+  padding: 1.5rem;
+}
+
+.tracking-summary-line {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border: 1px solid var(--stone);
+  background: var(--stone);
+  margin-bottom: 1.5rem;
+}
+
+.tracking-summary-line div {
+  padding: 1.2rem;
+  background: var(--cream);
+}
+
+.tracking-summary-line strong {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  text-transform: capitalize;
+}
+
+.tracking-timeline {
+  display: grid;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--stone);
+  background: var(--cream);
+}
+
+.tracking-step {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 1rem;
+  padding: 1.2rem;
+  border-bottom: 1px solid var(--stone-light);
+  opacity: 0.48;
+}
+
+.tracking-step:last-child {
+  border-bottom: 0;
+}
+
+.tracking-step.done {
+  opacity: 1;
+}
+
+.tracking-dot {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stone);
+  color: var(--ink);
+}
+
+.tracking-step.done .tracking-dot {
+  border-color: var(--charcoal);
+  background: var(--charcoal);
+  color: var(--cream);
+}
+
+.tracking-step h3 {
+  margin-bottom: 0.3rem;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tracking-two-col {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1.5rem;
+}
+
+.tracking-card,
+.tracking-empty {
+  padding: 1.5rem;
+}
+
+.tracking-empty {
+  max-width: 720px;
+  padding: 3rem;
+}
+
+.tracking-empty h2,
+.tracking-cancelled h2 {
+  margin: 0.8rem 0;
+  font-size: 3rem;
+}
+
+.tracking-items {
+  display: grid;
+  gap: 1rem;
+}
+
+.tracking-item {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.tracking-item-image {
+  width: 54px;
+  height: 68px;
+  background: linear-gradient(160deg, #c8b8ab, #ddd2c8);
+}
+
+.tracking-item-image.silk { background: linear-gradient(160deg, #b5c0b8, #c8d5c2); }
+.tracking-item-image.wool { background: linear-gradient(160deg, #c4a882, #dbc9ae); }
+.tracking-item-image.cotton { background: linear-gradient(160deg, #a9b8c0, #c2d0d8); }
+.tracking-item-image.denim { background: linear-gradient(160deg, #7a8fa0, #9aaabb); }
+
+.tracking-item strong,
+.tracking-item span {
+  display: block;
+}
+
+.tracking-item span {
+  margin-top: 0.3rem;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.tracking-alert,
+.tracking-cancelled {
+  padding: 1rem;
+  border: 1px solid var(--stone);
+  background: var(--cream);
+  margin-bottom: 1rem;
+  color: var(--ash-deep);
+}
+
+.tracking-address strong {
+  display: block;
+  margin-bottom: 0.7rem;
+}
+
+@media (max-width: 980px) {
+  .tracking-page {
+    padding: 6.5rem 1.4rem 4rem;
+  }
+
+  .tracking-hero {
+    display: grid;
+  }
+
+  .tracking-layout,
+  .tracking-summary-line,
+  .tracking-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-orders {
+    position: static;
+  }
+}

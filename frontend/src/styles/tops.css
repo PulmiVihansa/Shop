@@ -4,8 +4,8 @@
   --cr: #faf7f2;
   --crdk: #f0ebe3;
   --ch: #1a1a1a;
-  --te: #c4735a;
-  --ted: #a85840;
+  --te: #8f9390;
+  --ted: #6f7471;
   --st: #d4cdc5;
   --stl: #eae6e0;
   --ink: rgba(26, 26, 26, 0.5);
@@ -87,7 +87,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 25% 65%, rgba(196, 115, 90, 0.12) 0%, transparent 58%);
+  background: radial-gradient(ellipse at 25% 65%, rgba(143, 147, 144, 0.12) 0%, transparent 58%);
   pointer-events: none;
 }
 

@@ -18,6 +18,11 @@ import Tops from '../pages/Tops.jsx';
 import MenNewArrivals from '../pages/MenNewArrivals.jsx';
 import MenShirts from '../pages/MenShirts.jsx';
 import MenTrousers from '../pages/MenTrousers.jsx';
+import Checkout from '../pages/Checkout.jsx';
+import OrderSuccess from '../pages/OrderSuccess.jsx';
+import OrderTracking from '../pages/OrderTracking.jsx';
+import AdminDashboard from '../pages/AdminDashboard.jsx';
+import ProtectedRoute from '../components/ProtectedRoute.jsx';
 
 
 // Centralized route configuration.
@@ -43,6 +48,31 @@ export default function AppRoutes() {
       <Route path="/men-shirts" element={<MenShirts />} />
       <Route path="/men-trousers" element={<MenTrousers />} />
       <Route path="/tops" element={<Tops />} />
+      <Route
+        path="/checkout"
+        element={
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/order-success" element={<OrderSuccess />} />
+      <Route
+        path="/orders/track"
+        element={
+          <ProtectedRoute>
+            <OrderTracking />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute admin>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
       
     </Routes>
   );

@@ -30,7 +30,7 @@ const itemOptions = [
 ];
 
 const exchangeSizes = ['XS', 'S', 'M', 'L', 'XL'];
-const exchangeColors = ['Same colour', 'Ivory', 'Stone', 'Terracotta', 'Sage'];
+const exchangeColors = ['Same colour', 'Ivory', 'Stone', 'Ash', 'Sage'];
 
 export default function Returns() {
   const [step, setStep] = useState(1);

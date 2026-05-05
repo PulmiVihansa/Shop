@@ -4,8 +4,8 @@
   --cr: #faf7f2;
   --crdk: #f0ebe3;
   --ch: #1a1a1a;
-  --te: #c4735a;
-  --ted: #a85840;
+  --te: #8f9390;
+  --ted: #6f7471;
   --st: #d4cdc5;
   --stl: #eae6e0;
   --sg: #a8b5a0;
@@ -56,7 +56,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 30% 60%, rgba(196, 115, 90, 0.13) 0%, transparent 60%);
+  background: radial-gradient(circle at 30% 60%, rgba(143, 147, 144, 0.13) 0%, transparent 60%);
 }
 
 .about-page .yr-bg {
@@ -486,7 +486,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 20% 50%, rgba(196, 115, 90, 0.08) 0%, transparent 50%),
+  background: radial-gradient(circle at 20% 50%, rgba(143, 147, 144, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 80% 50%, rgba(168, 181, 160, 0.06) 0%, transparent 50%);
   pointer-events: none;
 }
@@ -549,7 +549,7 @@
   left: 0;
   right: 0;
   height: 0;
-  background: rgba(196, 115, 90, 0.07);
+  background: rgba(143, 147, 144, 0.07);
   transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -613,7 +613,7 @@
   transform: translate(-50%, -50%);
   width: 700px;
   height: 700px;
-  background: radial-gradient(circle, rgba(196, 115, 90, 0.05) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(143, 147, 144, 0.05) 0%, transparent 65%);
   pointer-events: none;
 }
 
