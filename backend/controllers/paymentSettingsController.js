@@ -1,5 +1,6 @@
-const PaymentSettings = require('../models/PaymentSettings');
+const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
+const { withId } = require('../utils/dbFormat');
 
 const sanitize = (settings) => ({
   paymentProvider: settings.paymentProvider || 'PayHere',
@@ -27,11 +28,8 @@ const getPaymentSettingsDoc = async () => {
     whatsappNumber: process.env.STORE_WHATSAPP || ''
   };
 
-  return PaymentSettings.findOneAndUpdate(
-    {},
-    { $setOnInsert: fallback },
-    { new: true, upsert: true }
-  );
+  const existing = await prisma.paymentSettings.findFirst();
+  return existing || prisma.paymentSettings.create({ data: fallback });
 };
 
 const getPaymentSettings = async (req, res) => {
@@ -68,8 +66,11 @@ const updatePaymentSettings = async (req, res) => {
       return res.json(sanitize(store.paymentSettings));
     }
 
-    const settings = await PaymentSettings.findOneAndUpdate({}, payload, { new: true, upsert: true });
-    res.json(sanitize(settings));
+    const existing = await prisma.paymentSettings.findFirst();
+    const settings = existing
+      ? await prisma.paymentSettings.update({ where: { id: existing.id }, data: payload })
+      : await prisma.paymentSettings.create({ data: payload });
+    res.json(sanitize(withId(settings)));
   } catch (error) {
     res.status(400).json({ message: 'Failed to update payment settings', error: error.message });
   }

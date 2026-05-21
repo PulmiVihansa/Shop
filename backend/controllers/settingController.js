@@ -1,6 +1,6 @@
-const Setting = require('../models/Setting');
-const SiteSettings = require('../models/SiteSettings');
+const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
+const { withId } = require('../utils/dbFormat');
 
 const getSettings = async (req, res) => {
   try {
@@ -8,8 +8,9 @@ const getSettings = async (req, res) => {
       return res.json(store.siteSettings);
     }
 
-    const settings = await SiteSettings.findOneAndUpdate({}, { $setOnInsert: {} }, { new: true, upsert: true });
-    res.json(settings);
+    const existing = await prisma.siteSettings.findFirst();
+    const settings = existing || await prisma.siteSettings.create({ data: {} });
+    res.json(withId(settings));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch settings', error: error.message });
   }
@@ -31,8 +32,11 @@ const updateSettings = async (req, res) => {
       return res.json(store.siteSettings);
     }
 
-    const setting = await SiteSettings.findOneAndUpdate({}, settings, { new: true, upsert: true });
-    res.json(setting);
+    const existing = await prisma.siteSettings.findFirst();
+    const setting = existing
+      ? await prisma.siteSettings.update({ where: { id: existing.id }, data: settings })
+      : await prisma.siteSettings.create({ data: settings });
+    res.json(withId(setting));
   } catch (error) {
     res.status(400).json({ message: 'Failed to update settings', error: error.message });
   }

@@ -1,7 +1,14 @@
+const prisma = require('../config/prisma');
 const { store, createId } = require('../data/memoryStore');
+const { withId } = require('../utils/dbFormat');
 
 const getBulkCustomers = async (req, res) => {
-  res.json(global.useMemoryStore ? store.bulkCustomers : []);
+  if (global.useMemoryStore) {
+    return res.json(store.bulkCustomers);
+  }
+
+  const customers = await prisma.bulkCustomer.findMany({ orderBy: { createdAt: 'desc' } });
+  res.json(customers.map(withId));
 };
 
 const createBulkCustomer = async (req, res) => {
@@ -22,9 +29,13 @@ const createBulkCustomer = async (req, res) => {
 
   if (global.useMemoryStore) {
     store.bulkCustomers.unshift(customer);
+    return res.status(201).json(customer);
   }
 
-  res.status(201).json(customer);
+  const saved = await prisma.bulkCustomer.create({
+    data: { name, email, company, discount: Number(discount || 0), notes }
+  });
+  res.status(201).json(withId(saved));
 };
 
 module.exports = { getBulkCustomers, createBulkCustomer };

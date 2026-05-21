@@ -1,19 +1,17 @@
-const mongoose = require('mongoose');
+const prisma = require('./prisma');
 
-// Connect to MongoDB using Mongoose.
 const connectDB = async () => {
   try {
-    const uri = process.env.MONGO_URI;
-    if (!uri) {
-      throw new Error('MONGO_URI is not defined in environment variables');
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is not defined in environment variables');
     }
 
-    await mongoose.connect(uri);
+    await prisma.$connect();
     global.useMemoryStore = false;
-    console.log('MongoDB connected');
+    console.log('PostgreSQL connected');
   } catch (error) {
     global.useMemoryStore = true;
-    console.warn('MongoDB unavailable, using in-memory development store:', error.message);
+    console.warn('PostgreSQL unavailable, using in-memory development store:', error.message);
   }
 };
 

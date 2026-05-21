@@ -1,13 +1,14 @@
-const User = require('../models/User');
-const Order = require('../models/Order');
+const prisma = require('../config/prisma');
 const { store, seedBusinessData } = require('../data/memoryStore');
+const { withoutPassword, normalizeOrder } = require('../utils/dbFormat');
 
 const customerSummary = (user, orders) => {
-  const userOrders = orders.filter((order) => String(order.user?._id || order.user) === String(user._id));
+  const userId = user._id || user.id;
+  const userOrders = orders.filter((order) => String(order.user?._id || order.user || order.userId) === String(userId));
   const totalSpent = userOrders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
   return {
-    id: user._id,
-    _id: user._id,
+    id: userId,
+    _id: userId,
     name: user.name,
     email: user.email,
     role: user.role,
@@ -26,10 +27,10 @@ const getUsers = async (req, res) => {
     }
 
     const [users, orders] = await Promise.all([
-      User.find().select('-password').sort({ createdAt: -1 }),
-      Order.find().sort({ createdAt: -1 })
+      prisma.user.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.order.findMany({ orderBy: { createdAt: 'desc' } })
     ]);
-    res.json(users.map((user) => customerSummary(user, orders)));
+    res.json(users.map((user) => customerSummary(withoutPassword(user), orders.map(normalizeOrder))));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch users', error: error.message });
   }
@@ -48,8 +49,9 @@ const deleteUser = async (req, res) => {
       return res.json({ message: 'User deleted' });
     }
 
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
+    await prisma.user.delete({ where: { id: req.params.id } });
     res.json({ message: 'User deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete user', error: error.message });

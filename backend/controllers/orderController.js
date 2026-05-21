@@ -1,7 +1,7 @@
-const Order = require('../models/Order');
-const Product = require('../models/Product');
+const prisma = require('../config/prisma');
 const { store, createId } = require('../data/memoryStore');
 const { getPaymentSettingsDoc } = require('./paymentSettingsController');
+const { normalizeOrder } = require('../utils/dbFormat');
 
 const reduceStock = async (items) => {
   if (global.useMemoryStore) {
@@ -20,12 +20,22 @@ const reduceStock = async (items) => {
 
   await Promise.all(items
     .filter((item) => item.product)
-    .map((item) => Product.findByIdAndUpdate(item.product, {
-      $inc: {
-        stock: -Number(item.quantity || 1),
-        ...(item.size ? { [`sizeStock.${item.size}`]: -Number(item.quantity || 1) } : {})
+    .map(async (item) => {
+      const product = await prisma.product.findUnique({ where: { id: item.product } });
+      if (!product) return;
+      const quantity = Number(item.quantity || 1);
+      const nextSizeStock = { ...(product.sizeStock || {}) };
+      if (item.size && nextSizeStock[item.size] !== undefined) {
+        nextSizeStock[item.size] = Math.max(0, Number(nextSizeStock[item.size] || 0) - quantity);
       }
-    })));
+      await prisma.product.update({
+        where: { id: item.product },
+        data: {
+          stock: Math.max(0, Number(product.stock || 0) - quantity),
+          sizeStock: nextSizeStock
+        }
+      });
+    }));
 };
 
 const createOrder = async (req, res) => {
@@ -42,7 +52,7 @@ const createOrder = async (req, res) => {
     }
 
     const normalizedItems = items.map((item) => ({
-      product: item.product || (String(item.id || '').match(/^[a-f\d]{24}$/i) ? item.id : undefined),
+      product: item.product || item.id || undefined,
       name: item.name,
       price: Number(item.price),
       quantity: Number(item.quantity || 1),
@@ -104,8 +114,9 @@ const createOrder = async (req, res) => {
       return res.status(201).json({ ...order, paymentRequest });
     }
 
-    const order = await Order.create({
-      user: req.user._id,
+    const order = await prisma.order.create({
+      data: {
+      userId: req.user._id || req.user.id,
       items: normalizedItems,
       totalPrice,
       paymentMethod,
@@ -113,10 +124,11 @@ const createOrder = async (req, res) => {
       transactionId,
       payment: paymentInfo,
       address
+      }
     });
 
-    if (paymentRequest) paymentRequest.order_id = order._id;
-    res.status(201).json({ ...order.toObject(), paymentRequest });
+    if (paymentRequest) paymentRequest.order_id = order.id;
+    res.status(201).json({ ...normalizeOrder(order), paymentRequest });
   } catch (error) {
     res.status(400).json({ message: 'Failed to create order', error: error.message });
   }
@@ -128,8 +140,11 @@ const getUserOrders = async (req, res) => {
       return res.json(store.orders.filter((order) => order.user === req.user._id));
     }
 
-    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
-    res.json(orders);
+    const orders = await prisma.order.findMany({
+      where: { userId: req.user._id || req.user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(orders.map(normalizeOrder));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch orders', error: error.message });
   }
@@ -145,10 +160,11 @@ const getAllOrders = async (req, res) => {
       return res.json(orders);
     }
 
-    const orders = await Order.find()
-      .populate('user', 'name email')
-      .sort({ createdAt: -1 });
-    res.json(orders);
+    const orders = await prisma.order.findMany({
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(orders.map(normalizeOrder));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch orders', error: error.message });
   }
@@ -170,9 +186,15 @@ const updateOrderStatus = async (req, res) => {
       return res.json(order);
     }
 
-    const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true }).populate('user', 'name email');
+    const existing = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ message: 'Order not found' });
+    const order = await prisma.order.update({
+      where: { id: req.params.id },
+      data: { status },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    });
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    res.json(order);
+    res.json(normalizeOrder(order));
   } catch (error) {
     res.status(400).json({ message: 'Failed to update order', error: error.message });
   }

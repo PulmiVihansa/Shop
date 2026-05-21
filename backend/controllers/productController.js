@@ -1,24 +1,24 @@
-const Product = require('../models/Product');
+const prisma = require('../config/prisma');
 const { store, createId, seedProducts } = require('../data/memoryStore');
 
 const normalizeProduct = (product) => ({
-  id: product._id,
-  _id: product._id,
+  id: product._id || product.id,
+  _id: product._id || product.id,
   name: product.name,
   title: product.name,
   price: product.price,
   description: product.description,
   category: product.category,
   categoryLabel: product.categoryLabel || product.category,
-  images: product.images,
-  sizes: product.sizes,
+  images: product.images || [],
+  sizes: product.sizes || [],
   stock: product.stock,
   sizeStock: product.sizeStock || {},
-  tags: product.tags,
+  tags: product.tags || [],
   badge: product.badge,
   badgeText: product.badgeText,
   bgClass: product.bgClass,
-  swatches: product.swatches,
+  swatches: product.swatches || [],
   imageClass: product.imageClass,
   createdAt: product.createdAt,
   updatedAt: product.updatedAt
@@ -41,13 +41,13 @@ const getProducts = async (req, res) => {
       return res.json(products.map(normalizeProduct));
     }
 
-    const filter = {};
+    const where = {};
 
-    if (category) filter.category = category;
-    if (tag) filter.tags = tag;
-    if (q) filter.name = { $regex: q, $options: 'i' };
+    if (category) where.category = category;
+    if (tag) where.tags = { has: tag };
+    if (q) where.name = { contains: q, mode: 'insensitive' };
 
-    const products = await Product.find(filter).sort({ createdAt: -1 });
+    const products = await prisma.product.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json(products.map(normalizeProduct));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch products', error: error.message });
@@ -65,7 +65,7 @@ const getProductById = async (req, res) => {
       return res.json(normalizeProduct(product));
     }
 
-    const product = await Product.findById(req.params.id);
+    const product = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -96,7 +96,7 @@ const createProduct = async (req, res) => {
       return res.status(201).json(normalizeProduct(product));
     }
 
-    const product = await Product.create(req.body);
+    const product = await prisma.product.create({ data: req.body });
     res.status(201).json(normalizeProduct(product));
   } catch (error) {
     res.status(400).json({ message: 'Failed to create product', error: error.message });
@@ -114,10 +114,12 @@ const updateProduct = async (req, res) => {
       return res.json(normalizeProduct(store.products[index]));
     }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
+    const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    const product = await prisma.product.update({ where: { id: req.params.id }, data: req.body });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -138,10 +140,11 @@ const deleteProduct = async (req, res) => {
       return res.json({ message: 'Product deleted' });
     }
 
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
+    await prisma.product.delete({ where: { id: req.params.id } });
     res.json({ message: 'Product deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete product', error: error.message });
@@ -170,13 +173,25 @@ const restockProduct = async (req, res) => {
       return res.json(normalizeProduct(product));
     }
 
-    const update = size
-      ? { $inc: { [`sizeStock.${size}`]: quantity, stock: quantity } }
-      : sizeStock
-        ? { $set: { sizeStock }, stock: Object.values(sizeStock).reduce((sum, value) => sum + Number(value || 0), 0) }
-        : { $inc: { stock: quantity } };
-    const product = await Product.findByIdAndUpdate(req.params.id, update, { new: true });
-    if (!product) return res.status(404).json({ message: 'Product not found' });
+    const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ message: 'Product not found' });
+
+    const nextSizeStock = { ...(existing.sizeStock || {}) };
+    let nextStock = Number(existing.stock || 0);
+    if (size && nextSizeStock[size] !== undefined) {
+      nextSizeStock[size] = Number(nextSizeStock[size] || 0) + quantity;
+      nextStock += quantity;
+    } else if (sizeStock) {
+      Object.assign(nextSizeStock, sizeStock);
+      nextStock = Object.values(nextSizeStock).reduce((sum, value) => sum + Number(value || 0), 0);
+    } else {
+      nextStock += quantity;
+    }
+
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: { sizeStock: nextSizeStock, stock: nextStock }
+    });
     res.json(normalizeProduct(product));
   } catch (error) {
     res.status(400).json({ message: 'Failed to restock product', error: error.message });

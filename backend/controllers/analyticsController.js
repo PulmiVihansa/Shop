@@ -1,8 +1,6 @@
-const Product = require('../models/Product');
-const Order = require('../models/Order');
-const User = require('../models/User');
-const Expense = require('../models/Expense');
+const prisma = require('../config/prisma');
 const { store, seedBusinessData } = require('../data/memoryStore');
+const { withId, withoutPassword, normalizeOrder } = require('../utils/dbFormat');
 
 const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
 
@@ -75,12 +73,15 @@ const getAnalytics = async (req, res) => {
     }
 
     const [products, orders, users, expenses] = await Promise.all([
-      Product.find(),
-      Order.find().populate('user', 'name email').sort({ createdAt: -1 }),
-      User.find().select('-password'),
-      Expense.find()
+      prisma.product.findMany(),
+      prisma.order.findMany({
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.user.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.expense.findMany()
     ]);
-    res.json(buildAnalytics(products, orders, users, expenses));
+    res.json(buildAnalytics(products.map(withId), orders.map(normalizeOrder), users.map(withoutPassword), expenses.map(withId)));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch analytics', error: error.message });
   }

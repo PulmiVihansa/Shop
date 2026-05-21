@@ -1,7 +1,7 @@
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const connectDB = require('../config/db');
-const User = require('../models/User');
+const prisma = require('../config/prisma');
 const { seedAdmin } = require('../data/memoryStore');
 
 dotenv.config();
@@ -20,21 +20,23 @@ async function createAdmin() {
     process.exit(0);
   }
 
-  const existing = await User.findOne({ email });
+  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   const hashedPassword = await bcrypt.hash(password, 10);
 
   if (existing) {
-    existing.name = name;
-    existing.password = hashedPassword;
-    existing.role = 'admin';
-    await existing.save();
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { name, password: hashedPassword, role: 'admin' }
+    });
     console.log(`Admin updated: ${email}`);
   } else {
-    await User.create({
+    await prisma.user.create({
+      data: {
       name,
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       role: 'admin',
+      }
     });
     console.log(`Admin created: ${email}`);
   }

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const prisma = require('../config/prisma');
 const { store, seedAdmin } = require('../data/memoryStore');
+const { withoutPassword } = require('../utils/dbFormat');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -23,13 +24,13 @@ const authMiddleware = async (req, res, next) => {
       return next();
     }
 
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
 
     if (!user) {
       return res.status(401).json({ message: 'Not authorized, user not found' });
     }
 
-    req.user = user;
+    req.user = withoutPassword(user);
     next();
   } catch (error) {
     res.status(401).json({ message: 'Not authorized, token invalid' });

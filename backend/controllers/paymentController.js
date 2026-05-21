@@ -1,4 +1,4 @@
-const Order = require('../models/Order');
+const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
 
 const notifyPayment = async (req, res) => {
@@ -22,15 +22,22 @@ const notifyPayment = async (req, res) => {
       return res.json({ message: 'Payment notification processed' });
     }
 
-    const order = await Order.findById(orderId);
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    order.paymentStatus = isPaid ? 'PAID' : 'PENDING';
-    order.transactionId = transactionId;
-    order.payment.status = isPaid ? 'paid' : 'pending';
-    order.payment.reference = transactionId;
-    order.payment.paidAt = isPaid ? new Date() : undefined;
-    await order.save();
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: isPaid ? 'PAID' : 'PENDING',
+        transactionId,
+        payment: {
+          ...(order.payment || {}),
+          status: isPaid ? 'paid' : 'pending',
+          reference: transactionId,
+          paidAt: isPaid ? new Date() : undefined
+        }
+      }
+    });
 
     res.json({ message: 'Payment notification processed' });
   } catch (error) {

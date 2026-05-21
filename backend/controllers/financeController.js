@@ -1,6 +1,6 @@
-const Expense = require('../models/Expense');
-const Order = require('../models/Order');
+const prisma = require('../config/prisma');
 const { store, createId, seedBusinessData } = require('../data/memoryStore');
+const { withId } = require('../utils/dbFormat');
 
 const summarizeFinance = (orders, expenses) => {
   const revenue = orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
@@ -19,9 +19,15 @@ const getFinanceSummary = async (req, res) => {
       return res.json({ ...summarizeFinance(store.orders, store.expenses), expenseItems: store.expenses });
     }
 
-    const filter = req.query.category ? { category: req.query.category } : {};
-    const [orders, expenses] = await Promise.all([Order.find(), Expense.find(filter).sort({ date: -1 })]);
-    res.json({ ...summarizeFinance(orders, expenses), expenseItems: expenses });
+    const where = req.query.category ? { category: req.query.category } : {};
+    const [orders, expenses] = await Promise.all([
+      prisma.order.findMany(),
+      prisma.expense.findMany({ where, orderBy: { date: 'desc' } })
+    ]);
+    res.json({
+      ...summarizeFinance(orders, expenses),
+      expenseItems: expenses.map(withId)
+    });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch finance summary', error: error.message });
   }
@@ -40,8 +46,10 @@ const createExpense = async (req, res) => {
       return res.status(201).json(expense);
     }
 
-    const expense = await Expense.create({ title, category, amount, date });
-    res.status(201).json(expense);
+    const expense = await prisma.expense.create({
+      data: { title, category, amount: Number(amount), date: date ? new Date(date) : undefined }
+    });
+    res.status(201).json(withId(expense));
   } catch (error) {
     res.status(400).json({ message: 'Failed to create expense', error: error.message });
   }
@@ -56,8 +64,9 @@ const deleteExpense = async (req, res) => {
       return res.json({ message: 'Expense deleted' });
     }
 
-    const expense = await Expense.findByIdAndDelete(req.params.id);
+    const expense = await prisma.expense.findUnique({ where: { id: req.params.id } });
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
+    await prisma.expense.delete({ where: { id: req.params.id } });
     res.json({ message: 'Expense deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete expense', error: error.message });

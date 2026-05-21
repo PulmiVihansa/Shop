@@ -1,13 +1,13 @@
-const HomepageContent = require('../models/HomepageContent');
-const Banner = require('../models/Banner');
-const PageContent = require('../models/PageContent');
+const prisma = require('../config/prisma');
 const { store, createId } = require('../data/memoryStore');
+const { withId } = require('../utils/dbFormat');
 
 const getHomepageContent = async (req, res) => {
   try {
     if (global.useMemoryStore) return res.json(store.homepageContent);
-    const content = await HomepageContent.findOneAndUpdate({}, { $setOnInsert: {} }, { new: true, upsert: true });
-    res.json(content);
+    const existing = await prisma.homepageContent.findFirst();
+    const content = existing || await prisma.homepageContent.create({ data: {} });
+    res.json(withId(content));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch homepage content', error: error.message });
   }
@@ -19,8 +19,11 @@ const updateHomepageContent = async (req, res) => {
       store.homepageContent = { ...store.homepageContent, ...req.body, updatedAt: new Date() };
       return res.json(store.homepageContent);
     }
-    const content = await HomepageContent.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(content);
+    const existing = await prisma.homepageContent.findFirst();
+    const content = existing
+      ? await prisma.homepageContent.update({ where: { id: existing.id }, data: req.body })
+      : await prisma.homepageContent.create({ data: req.body });
+    res.json(withId(content));
   } catch (error) {
     res.status(400).json({ message: 'Failed to update homepage content', error: error.message });
   }
@@ -29,8 +32,8 @@ const updateHomepageContent = async (req, res) => {
 const getBanners = async (req, res) => {
   try {
     if (global.useMemoryStore) return res.json(store.banners);
-    const banners = await Banner.find().sort({ createdAt: -1 });
-    res.json(banners);
+    const banners = await prisma.banner.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(banners.map(withId));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch banners', error: error.message });
   }
@@ -43,8 +46,8 @@ const createBanner = async (req, res) => {
       store.banners.unshift(banner);
       return res.status(201).json(banner);
     }
-    const banner = await Banner.create(req.body);
-    res.status(201).json(banner);
+    const banner = await prisma.banner.create({ data: req.body });
+    res.status(201).json(withId(banner));
   } catch (error) {
     res.status(400).json({ message: 'Failed to create banner', error: error.message });
   }
@@ -58,9 +61,11 @@ const updateBanner = async (req, res) => {
       store.banners[index] = { ...store.banners[index], ...req.body, updatedAt: new Date() };
       return res.json(store.banners[index]);
     }
-    const banner = await Banner.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const existing = await prisma.banner.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ message: 'Banner not found' });
+    const banner = await prisma.banner.update({ where: { id: req.params.id }, data: req.body });
     if (!banner) return res.status(404).json({ message: 'Banner not found' });
-    res.json(banner);
+    res.json(withId(banner));
   } catch (error) {
     res.status(400).json({ message: 'Failed to update banner', error: error.message });
   }
@@ -74,8 +79,9 @@ const deleteBanner = async (req, res) => {
       store.banners.splice(index, 1);
       return res.json({ message: 'Banner deleted' });
     }
-    const banner = await Banner.findByIdAndDelete(req.params.id);
+    const banner = await prisma.banner.findUnique({ where: { id: req.params.id } });
     if (!banner) return res.status(404).json({ message: 'Banner not found' });
+    await prisma.banner.delete({ where: { id: req.params.id } });
     res.json({ message: 'Banner deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete banner', error: error.message });
@@ -88,8 +94,12 @@ const getPageContent = async (req, res) => {
     if (global.useMemoryStore) {
       return res.json(store.pageContents.find((page) => page.pageName === pageName) || { pageName, content: '' });
     }
-    const page = await PageContent.findOneAndUpdate({ pageName }, { $setOnInsert: { pageName } }, { new: true, upsert: true });
-    res.json(page);
+    const page = await prisma.pageContent.upsert({
+      where: { pageName },
+      update: {},
+      create: { pageName }
+    });
+    res.json(withId(page));
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch page content', error: error.message });
   }
@@ -109,12 +119,12 @@ const updatePageContent = async (req, res) => {
       store.pageContents.push(page);
       return res.json(page);
     }
-    const page = await PageContent.findOneAndUpdate(
-      { pageName },
-      { pageName, content: req.body.content || '' },
-      { new: true, upsert: true }
-    );
-    res.json(page);
+    const page = await prisma.pageContent.upsert({
+      where: { pageName },
+      update: { content: req.body.content || '' },
+      create: { pageName, content: req.body.content || '' }
+    });
+    res.json(withId(page));
   } catch (error) {
     res.status(400).json({ message: 'Failed to update page content', error: error.message });
   }
