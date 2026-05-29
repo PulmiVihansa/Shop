@@ -6,7 +6,7 @@ const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'shor
 
 const buildAnalytics = (products, orders, users, expenses = []) => {
   const revenue = orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
-  const lowStock = products.filter((product) => Number(product.stock || 0) <= 5);
+  const lowStock = products.filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 15);
   const productSales = {};
 
   orders.forEach((order) => {

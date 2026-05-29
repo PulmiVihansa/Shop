@@ -5,7 +5,9 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-  restockProduct
+  restockProduct,
+  getInventoryDashboard,
+  updateProductStock
 } = require('../controllers/productController');
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
@@ -13,10 +15,12 @@ const { authMiddleware, adminMiddleware } = require('../middleware/authMiddlewar
 const router = express.Router();
 
 router.get('/', getProducts);
+router.get('/inventory/dashboard', authMiddleware, adminMiddleware, getInventoryDashboard);
 router.get('/:id', getProductById);
 router.post('/', authMiddleware, adminMiddleware, createProduct);
 router.put('/:id', authMiddleware, adminMiddleware, updateProduct);
 router.put('/:id/restock', authMiddleware, adminMiddleware, restockProduct);
+router.put('/:id/stock', authMiddleware, adminMiddleware, updateProductStock);
 router.delete('/:id', authMiddleware, adminMiddleware, deleteProduct);
 
 module.exports = router;

@@ -200,4 +200,44 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, getUserOrders, getAllOrders, updateOrderStatus };
+const updateOrderPaymentStatus = async (req, res) => {
+  try {
+    const paymentStatus = String(req.body.paymentStatus || '').toUpperCase();
+    const allowed = ['PENDING', 'PAID', 'REFUNDED'];
+    if (!allowed.includes(paymentStatus)) {
+      return res.status(400).json({ message: 'Invalid payment status' });
+    }
+
+    if (global.useMemoryStore) {
+      const order = store.orders.find((entry) => entry._id === req.params.id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+      order.paymentStatus = paymentStatus;
+      order.payment = {
+        ...(order.payment || {}),
+        status: paymentStatus.toLowerCase()
+      };
+      order.updatedAt = new Date();
+      return res.json(order);
+    }
+
+    const existing = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ message: 'Order not found' });
+    const currentPayment = existing.payment || {};
+    const order = await prisma.order.update({
+      where: { id: req.params.id },
+      data: {
+        paymentStatus,
+        payment: {
+          ...currentPayment,
+          status: paymentStatus.toLowerCase()
+        }
+      },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    });
+    return res.json(normalizeOrder(order));
+  } catch (error) {
+    return res.status(400).json({ message: 'Failed to update payment status', error: error.message });
+  }
+};
+
+module.exports = { createOrder, getUserOrders, getAllOrders, updateOrderStatus, updateOrderPaymentStatus };
