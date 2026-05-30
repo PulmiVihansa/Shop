@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client-order-v2"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  description String   @default("")
+  category    String
+  images      String[] @default([])
+  sizes       String[] @default([])
+  stock       Int      @default(0)
+  sizeStock   Json     @default("{\"S\":0,\"M\":0,\"L\":0,\"XL\":0}")
+  tags        String[] @default([])
+  badge       String   @default("")
+  badgeText   String   @default("")
+  bgClass     String   @default("b1")
+  swatches    String[] @default([])
+  imageClass  String   @default("linen")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerName  String
+  customerEmail String
+  phone         String   @default("")
+  address       Json
+  productName   String
+  size          String   @default("One Size")
+  quantity      Int      @default(1)
+  price         Float
+  shippingCost  Float    @default(0)
+  totalAmount   Float
+  paymentMethod String   @default("ONLINE")
+  paymentStatus String   @default("PENDING")
+  transactionId String   @default("")
+  orderStatus   String   @default("pending")
+  orderDate     DateTime @default(now())
+  items         Json     @default("[]")
+  payment       Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  title     String
+  category  String
+  amount    Float
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteSettings {
+  id             String   @id @default(cuid())
+  storeName      String   @default("ATELIER")
+  logoUrl        String   @default("")
+  whatsappNumber String   @default("")
+  currency       String   @default("LKR")
+  contactEmail   String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PaymentSettings {
+  id                  String   @id @default(cuid())
+  paymentProvider     String   @default("PayHere")
+  merchantId          String   @default("")
+  merchantSecret      String   @default("")
+  currency            String   @default("LKR")
+  enableCOD           Boolean  @default(true)
+  enableOnlinePayment Boolean  @default(false)
+  whatsappNumber      String   @default("")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model HomepageContent {
+  id                 String   @id @default(cuid())
+  heroTitle          String   @default("")
+  heroSubtitle       String   @default("")
+  heroImage          String   @default("")
+  heroImageSecondary String   @default("")
+  buttonText         String   @default("")
+  buttonLink         String   @default("")
+  section2Title      String   @default("")
+  section2Image      String   @default("")
+  featuredCategories String[] @default([])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  imageUrl  String   @default("")
+  link      String   @default("")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PageContent {
+  id        String   @id @default(cuid())
+  pageName  String   @unique
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BulkCustomer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  company   String?
+  discount  Float    @default(0)
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

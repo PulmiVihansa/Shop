@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "create-admin": "node scripts/createAdmin.js"
+    "create-admin": "node scripts/createAdmin.js",
+    "seed-orders": "node scripts/seedOrders.js",
+    "backfill-customer-ids": "node scripts/backfillCustomerIds.js"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
@@ -15,6 +17,8 @@
     "dotenv": "^16.6.1",
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "pg": "^8.21.0",
     "prisma": "^6.15.0"
   },

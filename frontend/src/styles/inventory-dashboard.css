@@ -173,12 +173,17 @@
 
 .inv-table th {
   text-align: left;
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #7f7462;
-  padding: 0.72rem 0.56rem;
-  border-bottom: 1px solid var(--iv-border);
+  color: #1a1a1a;
+  padding: 0.9rem 0.7rem;
+  border-bottom: 1px solid #d9d1c6;
+  font-weight: 700;
+  background: #fbf9f5;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .inv-table td {
@@ -377,6 +382,7 @@
 
 .inv-alert-list {
   margin-top: 0.55rem;
+  margin-bottom: 1.4rem;
   border: 1px solid #eee4d0;
   border-radius: 12px;
   background: #fffcf5;
@@ -398,6 +404,34 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.inv-low-list {
+  background: #f8f6f2;
+  border: 1px solid #e3ddd3;
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  box-shadow: 0 10px 22px rgba(45, 39, 25, 0.08);
+}
+
+.inv-low-list h3 {
+  color: #d51c39;
+  font-weight: 900;
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.inv-low-list h3::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #c6a27a;
+  display: inline-block;
 }
 
 .inv-bar {
@@ -446,10 +480,29 @@
 
 .inv-low-row span {
   font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.92rem;
 }
 
 .inv-low-row small {
-  color: #7a705d;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.inv-low-row .inv-low-sep {
+  color: #b7ad9f;
+}
+
+.inv-low-row .inv-low-current {
+  color: #6b7280;
+}
+
+.inv-low-row .inv-low-reorder {
+  color: #8a7f73;
+}
+
+.inv-low-row .inv-low-missing {
+  color: #b08968;
 }
 
 @keyframes invPulse {

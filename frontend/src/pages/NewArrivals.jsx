@@ -1,132 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/newarrivals.css';
 
-const fallbackProducts = [
-  {
-    id: 'draped-linen-coat',
-    name: 'Draped Linen Coat',
-    category: 'women',
-    categoryLabel: 'Women',
-    price: 490,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#C8BAB0', '#A8B8A0', '#1A1A1A'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'silk-plisse-blouse',
-    name: 'Silk Pliss\u00E9 Blouse',
-    category: 'women',
-    categoryLabel: 'Women',
-    price: 285,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b3',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#FAF7F2', '#8f9390'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'broderie-midi-dress',
-    name: 'Broderie Midi Dress',
-    category: 'women',
-    categoryLabel: 'Women',
-    price: 395,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b6',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#FAF7F2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'linen-oxford-shirt',
-    name: 'Linen Oxford Shirt',
-    category: 'men',
-    categoryLabel: 'Men',
-    price: 210,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b5',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#FAF7F2', '#B0B8C0', '#C8BAB0'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'cashmere-roll-neck',
-    name: 'Cashmere Roll-Neck',
-    category: 'women',
-    categoryLabel: 'Women',
-    price: 380,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'b9',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'S',
-    swatches: ['#B8C2AA', '#C8BAB0', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'raffia-structured-tote',
-    name: 'Raffia Structured Tote',
-    category: 'acc',
-    categoryLabel: 'Acc',
-    price: 175,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b7',
-    swatches: ['#C8BAB0', '#1A1A1A'],
-    imageClass: 'denim',
-  },
-  {
-    id: 'cotton-palazzo-trousers',
-    name: 'Cotton Palazzo Trousers',
-    category: 'women',
-    categoryLabel: 'Women',
-    price: 320,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b4',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#B0A8B8', '#C8BAB0'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'twill-chino-trousers',
-    name: 'Twill Chino Trousers',
-    category: 'men',
-    categoryLabel: 'Men',
-    price: 290,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b11',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#C8BAB0', '#1A1A1A'],
-    imageClass: 'denim',
-  },
-  {
-    id: 'woven-leather-belt',
-    name: 'Woven Leather Belt',
-    category: 'acc',
-    categoryLabel: 'Acc',
-    price: 95,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b12',
-    swatches: ['#C8BAB0', '#6B4F3A', '#1A1A1A'],
-    imageClass: 'denim',
-  },
-];
+const fallbackProducts = [];
 
 const heroCards = [
   {
@@ -201,25 +80,7 @@ export default function NewArrivals() {
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
-
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   const showToast = (message) => {
     setToast(message);
@@ -231,14 +92,13 @@ export default function NewArrivals() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    const size = selectedSizes[product.id];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
   };
 
@@ -269,7 +129,7 @@ export default function NewArrivals() {
   const visibleProducts = useMemo(() => {
     let list = [...products];
     if (filter !== 'all') {
-      list = list.filter((product) => product.category === filter);
+      list = list.filter((product) => product.collection === filter);
     }
     if (sort === 'low') {
       list.sort((a, b) => a.price - b.price);
@@ -278,7 +138,7 @@ export default function NewArrivals() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -384,9 +244,9 @@ export default function NewArrivals() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'women', label: 'Women' },
-            { key: 'men', label: 'Men' },
-            { key: 'acc', label: 'Accessories' },
+            { key: 'female', label: 'Women' },
+            { key: 'male', label: 'Men' },
+            { key: 'accessories', label: 'Accessories' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -418,10 +278,7 @@ export default function NewArrivals() {
           {visibleProducts.map((product) => (
             <div key={product.id} className="pc">
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && (
-                  <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>
-                )}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     className={`pa ${wishlist.has(product.id) ? 'is-active' : ''}`}
@@ -446,20 +303,18 @@ export default function NewArrivals() {
                   </button>
                 </div>
                 <div className="pc-bar">
-                  {product.sizes?.length ? (
-                    <div className="pc-szs">
-                      {product.sizes.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
-                          onClick={() => handleSizeSelect(product.id, size)}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div className="pc-szs">
+                    {getProductSizes(product).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
+                        onClick={() => handleSizeSelect(product.id, size)}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                   <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
                     Add to Bag
                   </button>
@@ -470,7 +325,7 @@ export default function NewArrivals() {
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -491,3 +346,4 @@ export default function NewArrivals() {
     </div>
   );
 }
+

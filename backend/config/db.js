@@ -11,7 +11,9 @@ const connectDB = async () => {
     console.log('PostgreSQL connected');
   } catch (error) {
     global.useMemoryStore = true;
-    console.warn('PostgreSQL unavailable, using in-memory development store:', error.message);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('PostgreSQL unavailable, using in-memory development store:', error.message);
+    }
   }
 };
 

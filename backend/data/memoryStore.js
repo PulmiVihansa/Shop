@@ -45,12 +45,34 @@ const store = {
 
 const createId = () => `${Date.now().toString(16)}${Math.random().toString(16).slice(2, 14)}`.padEnd(24, '0').slice(0, 24);
 
+const formatCustomerId = (prefix, index) => `${prefix}-${String(index).padStart(3, '0')}`;
+
+const getNextCustomerId = (prefix) => {
+  const existing = store.users
+    .map((user) => user.customerId)
+    .filter((value) => typeof value === 'string' && value.startsWith(`${prefix}-`));
+  const max = existing.reduce((maxValue, value) => {
+    const parsed = Number(value.slice(prefix.length + 1));
+    return Number.isFinite(parsed) && parsed > maxValue ? parsed : maxValue;
+  }, 0);
+  return formatCustomerId(prefix, max + 1);
+};
+
+const ensureCustomerId = (user) => {
+  if (user.customerId) return user;
+  const prefix = user.role === 'admin' ? 'ADMIN' : 'CUS';
+  user.customerId = getNextCustomerId(prefix);
+  return user;
+};
+
 const seedAdmin = async () => {
   const email = process.env.ADMIN_EMAIL || 'admin@atelier.com';
   const password = process.env.ADMIN_PASSWORD || 'admin12345';
   const existing = store.users.find((user) => user.email === email);
 
-  if (existing) return existing;
+  if (existing) {
+    return ensureCustomerId(existing);
+  }
 
   const admin = {
     _id: createId(),
@@ -58,11 +80,12 @@ const seedAdmin = async () => {
     email,
     password: await bcrypt.hash(password, 10),
     role: 'admin',
+    customerId: 'ADMIN-001',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
-  store.users.push(admin);
+  store.users.push(ensureCustomerId(admin));
   return admin;
 };
 
@@ -75,17 +98,14 @@ const seedProducts = () => {
       name: 'Draped Linen Coat',
       price: 490,
       description: 'A hand-cut linen coat for the SS26 edit.',
-      category: 'women',
+      collection: 'female',
+      category: 'Dresses',
+      subcategory: 'Evening',
+      colors: ['Ivory', 'Pearl', 'Noir'],
       images: [],
       sizes: ['XS', 'S', 'M', 'L'],
       stock: 12,
       sizeStock: { S: 15, M: 5, L: 0, XL: 2 },
-      tags: ['new'],
-      badge: 'pnew',
-      badgeText: 'New',
-      bgClass: 'b1',
-      swatches: ['#C8BAB0', '#A8B8A0', '#1A1A1A'],
-      imageClass: 'linen',
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -94,17 +114,14 @@ const seedProducts = () => {
       name: 'Linen Oxford Shirt',
       price: 210,
       description: 'A relaxed linen shirt with hand-finished details.',
-      category: 'men',
+      collection: 'male',
+      category: 'Shirts',
+      subcategory: 'Oxford',
+      colors: ['Ivory', 'Sand'],
       images: [],
       sizes: ['S', 'M', 'L', 'XL'],
       stock: 18,
       sizeStock: { S: 12, M: 18, L: 7, XL: 0 },
-      tags: ['new'],
-      badge: 'pnew',
-      badgeText: 'New',
-      bgClass: 'b5',
-      swatches: ['#FAF7F2', '#B0B8C0', '#C8BAB0'],
-      imageClass: 'linen',
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -113,17 +130,14 @@ const seedProducts = () => {
       name: 'Silk Plisse Blouse',
       price: 285,
       description: 'A soft silk blouse with pleated movement.',
-      category: 'women',
+      collection: 'female',
+      category: 'Tops',
+      subcategory: 'Blouses',
+      colors: ['Pearl', 'Mist'],
       images: [],
       sizes: ['S', 'M', 'L', 'XL'],
       stock: 28,
       sizeStock: { S: 14, M: 9, L: 5, XL: 0 },
-      tags: ['new', 'featured'],
-      badge: 'pnew',
-      badgeText: 'New',
-      bgClass: 'b3',
-      swatches: ['#FAF7F2', '#8f9390'],
-      imageClass: 'silk',
       createdAt: new Date(Date.now() - 86400000 * 7),
       updatedAt: new Date(Date.now() - 86400000 * 2),
     },
@@ -132,17 +146,14 @@ const seedProducts = () => {
       name: 'Twill Chino Trousers',
       price: 290,
       description: 'Structured twill trousers for the tailored menswear edit.',
-      category: 'men',
+      collection: 'male',
+      category: 'Trousers',
+      subcategory: 'Tailored',
+      colors: ['Charcoal', 'Black'],
       images: [],
       sizes: ['S', 'M', 'L', 'XL'],
       stock: 8,
       sizeStock: { S: 0, M: 3, L: 5, XL: 0 },
-      tags: ['sale'],
-      badge: 'pltd',
-      badgeText: 'Limited',
-      bgClass: 'b11',
-      swatches: ['#C8BAB0', '#1A1A1A'],
-      imageClass: 'denim',
       createdAt: new Date(Date.now() - 86400000 * 16),
       updatedAt: new Date(Date.now() - 86400000),
     },
@@ -151,17 +162,14 @@ const seedProducts = () => {
       name: 'Raffia Structured Tote',
       price: 175,
       description: 'A hand-finished raffia tote for everyday styling.',
-      category: 'accessories',
+      collection: 'accessories',
+      category: 'Bags',
+      subcategory: '',
+      colors: ['Natural', 'Black'],
       images: [],
       sizes: ['S', 'M', 'L', 'XL'],
       stock: 0,
       sizeStock: { S: 0, M: 0, L: 0, XL: 0 },
-      tags: ['new'],
-      badge: 'pnew',
-      badgeText: 'New',
-      bgClass: 'b7',
-      swatches: ['#C8BAB0', '#1A1A1A'],
-      imageClass: 'linen',
       createdAt: new Date(Date.now() - 86400000 * 5),
       updatedAt: new Date(Date.now() - 86400000 * 1),
     },
@@ -170,17 +178,14 @@ const seedProducts = () => {
       name: 'Cashmere Roll-Neck',
       price: 380,
       description: 'A limited cashmere knit with a clean seasonal silhouette.',
-      category: 'women',
+      collection: 'female',
+      category: 'Tops',
+      subcategory: 'Knitwear',
+      colors: ['Sage', 'Ivory', 'Noir'],
       images: [],
       sizes: ['S', 'M', 'L', 'XL'],
       stock: 22,
       sizeStock: { S: 12, M: 11, L: 0, XL: 0 },
-      tags: ['featured'],
-      badge: 'pltd',
-      badgeText: 'Limited',
-      bgClass: 'b9',
-      swatches: ['#B8C2AA', '#C8BAB0', '#1A1A1A'],
-      imageClass: 'wool',
       createdAt: new Date(Date.now() - 86400000 * 20),
       updatedAt: new Date(Date.now() - 86400000 * 4),
     }
@@ -224,13 +229,17 @@ const seedBusinessData = async () => {
 
   for (const sample of sampleUsers) {
     if (!store.users.some((user) => user.email === sample.email)) {
-      store.users.push({
-        ...sample,
-        password: await bcrypt.hash('customer12345', 10),
-        role: 'user',
-      });
+      store.users.push(
+        ensureCustomerId({
+          ...sample,
+          password: await bcrypt.hash('customer12345', 10),
+          role: 'user',
+        })
+      );
     }
   }
+
+  store.users.forEach(ensureCustomerId);
 
   if (!store.orders.length) {
     const users = store.users.filter((user) => user.role === 'user');
@@ -243,15 +252,31 @@ const seedBusinessData = async () => {
           price: product.price,
           quantity,
           size,
-          imageClass: product.imageClass,
         };
       });
+      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const shippingCost = subtotal > 25000 || subtotal === 0 ? 0 : 650;
+      const orderId = `ATL-${new Date(Date.now() - 86400000 * daysAgo).toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
       return {
         _id: createId(),
+        orderId,
         user: user._id,
+        customerId: user.customerId,
+        customerName: user.name,
+        customerEmail: user.email,
+        phone,
+        productName: items.length === 1 ? items[0].name : `${items[0].name} +${items.length - 1} more`,
+        size: Array.from(new Set(items.map((item) => item.size))).length === 1 ? items[0].size : 'Mixed',
+        quantity: items.reduce((sum, item) => sum + Number(item.quantity || 1), 0),
+        price: subtotal,
+        shippingCost,
+        totalAmount: subtotal + shippingCost,
+        paymentMethod: 'ONLINE',
+        paymentStatus: 'PAID',
+        transactionId: `SIM-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+        orderStatus: status,
+        orderDate: new Date(Date.now() - 86400000 * daysAgo),
         items,
-        totalPrice: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        status,
         address: {
           fullName: user.name,
           line1: `${21 + daysAgo} Atelier Lane`,
@@ -260,6 +285,11 @@ const seedBusinessData = async () => {
           postalCode: '00100',
           country: 'Sri Lanka',
           phone,
+        },
+        payment: {
+          method: 'card',
+          status: 'paid',
+          reference: `ATL-${Math.random().toString(36).slice(2, 10).toUpperCase()}`
         },
         createdAt: new Date(Date.now() - 86400000 * daysAgo),
         updatedAt: new Date(Date.now() - 86400000 * Math.max(1, daysAgo - 1)),
@@ -274,6 +304,12 @@ const seedBusinessData = async () => {
       makeOrder(users[0] || admin, [[2, 2, 'L']], 'delivered', 45, '+94 77 111 2233')
     );
   }
+
+  store.orders.forEach((order) => {
+    if (order.customerId) return;
+    const user = store.users.find((entry) => entry._id === order.user);
+    order.customerId = user?.customerId || 'CUS-000';
+  });
 
   if (!store.expenses.length) {
     store.expenses.push(
@@ -293,4 +329,4 @@ const seedBusinessData = async () => {
   }
 };
 
-module.exports = { store, createId, seedAdmin, seedProducts, seedBusinessData };
+module.exports = { store, createId, getNextCustomerId, ensureCustomerId, seedAdmin, seedProducts, seedBusinessData };

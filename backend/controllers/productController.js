@@ -1,5 +1,12 @@
 const prisma = require('../config/prisma');
 const { store, createId, seedProducts } = require('../data/memoryStore');
+const {
+  normalizeCollection,
+  normalizeCategory,
+  normalizeSubcategory,
+  getDefaultCollectionCategory,
+  getDefaultCollectionSubcategory
+} = require('../utils/productStructure');
 
 const INVENTORY_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const DEFAULT_REORDER_THRESHOLD = 15;
@@ -99,28 +106,30 @@ const applyInventoryFilters = (records, filter = {}) =>
       const skuMatch = String(product.sku || '').toLowerCase().includes(query);
       if (!idMatch && !skuMatch) return false;
     }
+    if (filter.collection && product.collection !== filter.collection) return false;
     if (filter.category && product.category !== filter.category) return false;
-    if (filter.tag && !(product.tags || []).includes(filter.tag)) return false;
-    if (filter.badge && String(product.badge || '').toLowerCase() !== String(filter.badge).toLowerCase()) return false;
+    if (filter.subcategory && product.subcategory !== filter.subcategory) return false;
     if (filter.lowStockOnly && !product.lowStock) return false;
     if (filter.outOfStockOnly && !product.outOfStock) return false;
     return true;
   });
 
 const sanitizeProductPayload = (payload = {}, existing = null) => {
+  const collection = normalizeCollection(payload.collection, existing?.collection || 'female');
+  const category = normalizeCategory(collection, payload.category, getDefaultCollectionCategory(collection));
+  const subcategory = normalizeSubcategory(collection, category, payload.subcategory, getDefaultCollectionSubcategory(collection, category));
+  const colors = sanitizeStringArray(payload.colors, existing?.colors || []);
+
   const next = {
     name: sanitizeText(payload.name, existing?.name || ''),
     price: toNumber(payload.price, toNumber(existing?.price, 0)),
     description: sanitizeText(payload.description, existing?.description || ''),
-    category: sanitizeText(payload.category, existing?.category || ''),
+    collection,
+    category,
+    subcategory,
+    colors,
     images: sanitizeStringArray(payload.images, existing?.images || []),
     sizes: sanitizeStringArray(payload.sizes, existing?.sizes || []),
-    tags: sanitizeStringArray(payload.tags, existing?.tags || []),
-    badge: sanitizeText(payload.badge, existing?.badge || ''),
-    badgeText: sanitizeText(payload.badgeText, existing?.badgeText || ''),
-    bgClass: sanitizeText(payload.bgClass, existing?.bgClass || 'b1'),
-    swatches: sanitizeStringArray(payload.swatches, existing?.swatches || []),
-    imageClass: sanitizeText(payload.imageClass, existing?.imageClass || 'linen')
   };
 
   const mergedSizeStock = normalizeSizeStock(payload.sizeStock || existing?.sizeStock || {}, next.sizes);
@@ -216,49 +225,105 @@ const normalizeProduct = (product) => ({
   title: product.name,
   price: product.price,
   description: product.description,
+  collection: normalizeCollection(product.collection, 'female'),
   category: product.category,
-  categoryLabel: product.categoryLabel || product.category,
+  categoryLabel: product.category,
+  subcategory: product.subcategory || '',
+  colors: product.colors || [],
   images: product.images || [],
   sizes: product.sizes || [],
   stock: product.stock,
   sizeStock: product.sizeStock || {},
-  tags: product.tags || [],
-  badge: product.badge,
-  badgeText: product.badgeText,
-  bgClass: product.bgClass,
-  swatches: product.swatches || [],
-  imageClass: product.imageClass,
   createdAt: product.createdAt,
   updatedAt: product.updatedAt
 });
 
+const productSearchText = (product) =>
+  [
+    product.name,
+    product.collection,
+    product.category,
+    product.subcategory,
+    product.description
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+const buildProductFilter = ({ collection, category, subcategory, q } = {}) => {
+  const normalizedCollection = collection ? normalizeCollection(collection, '') : '';
+  const normalizedCategory =
+    category && normalizedCollection ? normalizeCategory(normalizedCollection, category, '') : sanitizeText(category);
+  const normalizedSubcategory =
+    subcategory && normalizedCollection && normalizedCategory
+      ? normalizeSubcategory(normalizedCollection, normalizedCategory, subcategory, '')
+      : sanitizeText(subcategory);
+
+  return {
+    collection: normalizedCollection,
+    category: normalizedCategory,
+    subcategory: normalizedSubcategory,
+    q: sanitizeText(q)
+  };
+};
+
 const productMatches = (product, filter) => {
+  if (filter.collection && product.collection !== filter.collection) return false;
   if (filter.category && product.category !== filter.category) return false;
-  if (filter.tag && !product.tags?.includes(filter.tag)) return false;
-  if (filter.q && !product.name.toLowerCase().includes(filter.q.toLowerCase())) return false;
+  if (filter.subcategory && product.subcategory !== filter.subcategory) return false;
+  if (filter.q && !productSearchText(product).includes(filter.q.toLowerCase())) return false;
   return true;
+};
+
+const logProductQuery = (source, filter, count, sample = null) => {
+  if (process.env.NODE_ENV === 'production') return;
+  console.log('[products:get]', {
+    source,
+    filter,
+    count,
+    sample: sample
+      ? {
+          id: sample.id || sample._id,
+          collection: sample.collection,
+          category: sample.category,
+          subcategory: sample.subcategory
+        }
+      : null
+  });
 };
 
 const getProducts = async (req, res) => {
   try {
-    const { category, tag, q } = req.query;
+    const filter = buildProductFilter(req.query);
 
     if (global.useMemoryStore) {
       seedProducts();
-      const products = store.products.filter((product) => productMatches(product, { category, tag, q }));
+      const products = store.products.filter((product) => productMatches(product, filter));
+      logProductQuery('memory', filter, products.length, products[0]);
       return res.json(products.map(normalizeProduct));
     }
 
     const where = {};
 
-    if (category) where.category = category;
-    if (tag) where.tags = { has: tag };
-    if (q) where.name = { contains: q, mode: 'insensitive' };
+    if (filter.collection) where.collection = filter.collection;
+    if (filter.category) where.category = filter.category;
+    if (filter.subcategory) where.subcategory = filter.subcategory;
+    if (filter.q) {
+      where.OR = [
+        { name: { contains: filter.q, mode: 'insensitive' } },
+        { collection: { contains: filter.q, mode: 'insensitive' } },
+        { category: { contains: filter.q, mode: 'insensitive' } },
+        { subcategory: { contains: filter.q, mode: 'insensitive' } },
+        { description: { contains: filter.q, mode: 'insensitive' } }
+      ];
+    }
 
     const products = await prisma.product.findMany({ where, orderBy: { createdAt: 'desc' } });
+    logProductQuery('prisma', filter, products.length, products[0]);
     res.json(products.map(normalizeProduct));
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch products', error: error.message });
+     console.error(error);
+     res.status(500).json({ message: error.message });
   }
 };
 
@@ -279,7 +344,8 @@ const getProductById = async (req, res) => {
     }
     res.json(normalizeProduct(product));
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch product', error: error.message });
+     console.error(error);
+     res.status(500).json({ message: error.message });
   }
 };
 
@@ -300,7 +366,8 @@ const createProduct = async (req, res) => {
     const product = await prisma.product.create({ data: payload });
     res.status(201).json(normalizeProduct(product));
   } catch (error) {
-    res.status(400).json({ message: 'Failed to create product', error: error.message });
+    console.error(error);
+      res.status(500).json({ message: error.message });
   }
 };
 
@@ -328,7 +395,8 @@ const updateProduct = async (req, res) => {
     }
     res.json(normalizeProduct(product));
   } catch (error) {
-    res.status(400).json({ message: 'Failed to update product', error: error.message });
+    console.error(error);
+      res.status(500).json({ message: error.message });
   }
 };
 
@@ -350,7 +418,8 @@ const deleteProduct = async (req, res) => {
     await prisma.product.delete({ where: { id: req.params.id } });
     res.json({ message: 'Product deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete product', error: error.message });
+     console.error(error);
+     res.status(500).json({ message: error.message });
   }
 };
 
@@ -399,13 +468,14 @@ const restockProduct = async (req, res) => {
     });
     res.json(normalizeProduct(product));
   } catch (error) {
-    res.status(400).json({ message: 'Failed to restock product', error: error.message });
+      console.error(error);
+      res.status(500).json({ message: error.message });
   }
 };
 
 const getInventoryDashboard = async (req, res) => {
   try {
-    const { name, sku, category, tag, badge, lowStockOnly, outOfStockOnly, sortBy } = req.query;
+    const { name, sku, collection, category, subcategory, lowStockOnly, outOfStockOnly, sortBy } = req.query;
     let products = [];
 
     if (global.useMemoryStore) {
@@ -419,9 +489,9 @@ const getInventoryDashboard = async (req, res) => {
     const filtered = applyInventoryFilters(records, {
       name,
       sku,
+      collection,
       category,
-      tag,
-      badge,
+      subcategory,
       lowStockOnly: String(lowStockOnly) === 'true',
       outOfStockOnly: String(outOfStockOnly) === 'true'
     });
@@ -442,14 +512,15 @@ const getInventoryDashboard = async (req, res) => {
 
     res.json({
       summary,
-      filters: { name: name || '', sku: sku || '', category: category || '', tag: tag || '', badge: badge || '', lowStockOnly: String(lowStockOnly) === 'true', outOfStockOnly: String(outOfStockOnly) === 'true', sortBy: sortBy || 'recent' },
+      filters: { name: name || '', sku: sku || '', collection: collection || '', category: category || '', subcategory: subcategory || '', lowStockOnly: String(lowStockOnly) === 'true', outOfStockOnly: String(outOfStockOnly) === 'true', sortBy: sortBy || 'recent' },
       items: sorted,
       count: sorted.length,
       lowStockList,
       insights
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to load inventory dashboard', error: error.message });
+      console.error(error);
+      res.status(500).json({ message: error.message });
   }
 };
 
@@ -516,7 +587,8 @@ const updateProductStock = async (req, res) => {
       movement: { action, size, quantity, note, updatedAt: updated.updatedAt }
     });
   } catch (error) {
-    res.status(400).json({ message: 'Failed to update stock', error: error.message });
+      console.error(error);
+      res.status(500).json({ message: error.message });
   }
 };
 

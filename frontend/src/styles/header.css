@@ -295,30 +295,27 @@
   height: 72px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--st), #f1ece6);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
 }
 
-.cart-item-image.linen {
-  background: linear-gradient(160deg, #c8b8ab 0%, #ddd2c8 100%);
+.cart-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.cart-item-image.silk {
-  background: linear-gradient(160deg, #b5c0b8 0%, #c8d5c2 100%);
-}
-
-.cart-item-image.wool {
-  background: linear-gradient(160deg, #c4a882 0%, #dbc9ae 100%);
-}
-
-.cart-item-image.cotton {
-  background: linear-gradient(160deg, #a9b8c0 0%, #c2d0d8 100%);
-}
-
-.cart-item-image.velvet {
-  background: linear-gradient(160deg, #9e8fa8 0%, #b5a8c0 100%);
-}
-
-.cart-item-image.denim {
-  background: linear-gradient(160deg, #7a8fa0 0%, #9aaabb 100%);
+.cart-item-image span {
+  padding: 0.4rem;
+  color: rgba(26, 26, 26, 0.5);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .cart-item-info p {

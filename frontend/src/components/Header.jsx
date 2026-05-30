@@ -124,12 +124,14 @@ export default function Header() {
             </div>
           ) : (
             items.map((item) => (
-              <div key={item.id} className="cart-item">
-                <div className={`cart-item-image ${item.imageClass || ''}`} />
+              <div key={`${item.productId}-${item.size || 'One Size'}`} className="cart-item">
+                <div className="cart-item-image">
+                  {item.image ? <img src={item.image} alt={item.name} /> : <span>{item.name}</span>}
+                </div>
                 <div className="cart-item-info">
                   <p>{item.name}</p>
                   <span>
-                    {item.size || 'One Size'} {'\u00B7'} Qty {item.quantity || 1}
+                    Size {item.size || 'One Size'} {'\u00B7'} Qty {item.quantity || 1}
                   </span>
                 </div>
                 <strong>{formatCurrency(item.price * (item.quantity || 1))}</strong>
@@ -137,7 +139,7 @@ export default function Header() {
                   type="button"
                   className="cart-remove"
                   aria-label="Remove item"
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => removeItem(item.productId, item.size)}
                 >
                   {'\u{1F5D1}\u{FE0E}'}
                 </button>

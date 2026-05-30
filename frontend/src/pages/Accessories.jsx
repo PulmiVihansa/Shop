@@ -1,10 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/accessories.css';
 
 const heroFeature = {
-  badge: 'Just In',
+  label: 'Just In',
   category: 'Bags',
   name: 'Raffia Structured Tote',
   price: 175,
@@ -13,12 +16,12 @@ const heroFeature = {
 };
 
 const heroMini = [
-  { id: 'mini-belt', tag: 'New', tagClass: 'tag-new', name: 'Woven Leather Belt', price: 95, bgClass: 'b6' },
-  { id: 'mini-scarf', tag: 'New', tagClass: 'tag-new', name: 'Silk Scarf — Botanical', price: 145, bgClass: 'b3' },
+  { id: 'mini-belt', label: 'New', labelClass: 'tag-new', name: 'Woven Leather Belt', price: 95, bgClass: 'b6' },
+  { id: 'mini-scarf', label: 'New', labelClass: 'tag-new', name: 'Silk Scarf — Botanical', price: 145, bgClass: 'b3' },
   {
     id: 'mini-holder',
-    tag: 'Limited',
-    tagClass: 'tag-ltd',
+    label: 'Limited',
+    labelClass: 'tag-ltd',
     name: 'Leather Card Holder',
     price: 80,
     bgClass: 'bdark',
@@ -45,7 +48,7 @@ const categories = [
     ),
   },
   {
-    key: 'bags',
+    key: 'Bags',
     label: 'Bags',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -56,7 +59,7 @@ const categories = [
     ),
   },
   {
-    key: 'belts',
+    key: 'Belts',
     label: 'Belts',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -66,7 +69,7 @@ const categories = [
     ),
   },
   {
-    key: 'scarves',
+    key: 'Scarves',
     label: 'Scarves',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -76,7 +79,7 @@ const categories = [
     ),
   },
   {
-    key: 'small',
+    key: 'Small Leather',
     label: 'Small Leather',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -89,8 +92,8 @@ const categories = [
 
 const editorialStrip = {
   main: {
-    badge: "Editor's Choice",
-    badgeClass: 'es-badge-te',
+    label: "Editor's Choice",
+    labelClass: 'es-badge-te',
     name: 'Raffia Structured Tote',
     price: 175,
     category: 'Bags',
@@ -98,171 +101,24 @@ const editorialStrip = {
     productId: 'raffia-structured-tote',
   },
   side: [
-    { id: 'es-belt', tag: 'Belts — New', name: 'Woven Leather Belt', price: 95, productId: 'woven-leather-belt' },
+    { id: 'es-belt', label: 'Belts — New', name: 'Woven Leather Belt', price: 95, productId: 'woven-leather-belt' },
     {
       id: 'es-scarf',
-      tag: 'Scarves — New',
+      label: 'Scarves — New',
       name: 'Silk Scarf — Botanical',
       price: 145,
       productId: 'silk-scarf-botanical',
     },
     {
       id: 'es-holder',
-      tag: 'Small Leather — Limited',
+      label: 'Small Leather — Limited',
       name: 'Leather Card Holder',
       price: 80,
       productId: 'leather-card-holder',
     },
-    { id: 'es-tote', tag: 'Bags — New', name: 'Canvas Weekend Tote', price: 210, productId: 'canvas-weekend-tote' },
+    { id: 'es-tote', label: 'Bags — New', name: 'Canvas Weekend Tote', price: 210, productId: 'canvas-weekend-tote' },
   ],
 };
-
-const fallbackProducts = [
-  {
-    id: 'raffia-structured-tote',
-    name: 'Raffia Structured Tote',
-    category: 'bags',
-    categoryLabel: 'Bags',
-    price: 175,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
-    swatches: ['#C8BAB0', '#1A1A1A'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'canvas-weekend-tote',
-    name: 'Canvas Weekend Tote',
-    category: 'bags',
-    categoryLabel: 'Bags',
-    price: 210,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b4',
-    swatches: ['#C0B8A8', '#A8B8A0'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'leather-crossbody-bag',
-    name: 'Leather Crossbody Bag',
-    category: 'bags',
-    categoryLabel: 'Bags',
-    price: 320,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'bdark',
-    swatches: ['#1A1A1A', '#C6AEA0'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'woven-leather-belt',
-    name: 'Woven Leather Belt',
-    category: 'belts',
-    categoryLabel: 'Belts',
-    price: 95,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b6',
-    swatches: ['#C8BAB0', '#6B4F3A', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'braided-suede-belt',
-    name: 'Braided Suede Belt',
-    category: 'belts',
-    categoryLabel: 'Belts',
-    price: 110,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b10',
-    swatches: ['#BCADA0', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'canvas-web-belt',
-    name: 'Canvas Web Belt',
-    category: 'belts',
-    categoryLabel: 'Belts',
-    price: 85,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b12',
-    swatches: ['#C4B6A8', '#A6C0B2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'silk-scarf-botanical',
-    name: 'Silk Scarf — Botanical',
-    category: 'scarves',
-    categoryLabel: 'Scarves',
-    price: 145,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b3',
-    swatches: ['#B0A8B8', '#A8B8A0'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'cashmere-wrap-scarf',
-    name: 'Cashmere Wrap Scarf',
-    category: 'scarves',
-    categoryLabel: 'Scarves',
-    price: 190,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'b7',
-    swatches: ['#A6C0B2', '#C8BAB0', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'linen-neck-scarf',
-    name: 'Linen Neck Scarf',
-    category: 'scarves',
-    categoryLabel: 'Scarves',
-    price: 125,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b8',
-    swatches: ['#B6B0C2', '#FAF7F2'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'leather-card-holder',
-    name: 'Leather Card Holder',
-    category: 'small',
-    categoryLabel: 'Small Leather',
-    price: 80,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'bdark',
-    swatches: ['#1A1A1A', '#C6AEA0', '#6B4F3A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'zip-leather-wallet',
-    name: 'Zip Leather Wallet',
-    category: 'small',
-    categoryLabel: 'Small Leather',
-    price: 130,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b5',
-    swatches: ['#AEB8C2', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'leather-key-fob',
-    name: 'Leather Key Fob',
-    category: 'small',
-    categoryLabel: 'Small Leather',
-    price: 65,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b9',
-    swatches: ['#B8C2AA', '#6B4F3A', '#C8BAB0'],
-    imageClass: 'wool',
-  },
-];
 
 const craftItems = [
   {
@@ -319,11 +175,13 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Accessories() {
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products, loading, error } = useProducts({ collection: 'accessories' });
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
+  const [selectedSizes, setSelectedSizes] = useState({});
   const toastTimer = useRef(null);
 
   const showToast = (message) => {
@@ -336,13 +194,22 @@ export default function Accessories() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
+  };
+
+  const handleSizeSelect = (productId, size) => {
+    setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
+  };
+
+  const openProduct = (productId) => {
+    if (productId) navigate(`/products/${productId}`);
   };
 
   const toggleWishlist = (event, product) => {
@@ -377,22 +244,23 @@ export default function Accessories() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
   const categoryCounts = useMemo(() => {
     const counts = products.reduce(
       (acc, product) => {
-        if (acc[product.category] !== undefined) {
-          acc[product.category] += 1;
+        const key = product.category || '';
+        if (acc[key] !== undefined) {
+          acc[key] += 1;
         }
         return acc;
       },
-      { bags: 0, belts: 0, scarves: 0, small: 0 }
+      { Bags: 0, Belts: 0, Scarves: 0, 'Small Leather': 0 }
     );
     return { ...counts, all: products.length };
-  }, []);
+  }, [products]);
 
   const featureProduct = products.find((product) => product.id === heroFeature.productId);
   const editorialMain = products.find((product) => product.id === editorialStrip.main.productId);
@@ -428,7 +296,7 @@ export default function Accessories() {
         <div className="h-feat">
           <div className={`h-feat-bg ${heroFeature.bgClass}`} />
           <div className="h-feat-overlay" />
-          <span className="h-feat-badge">{heroFeature.badge}</span>
+          <span className="h-feat-badge">{heroFeature.label}</span>
           <div className="h-feat-info">
             <div className="h-feat-cat">{heroFeature.category}</div>
             <div className="h-feat-name">{heroFeature.name}</div>
@@ -447,7 +315,7 @@ export default function Accessories() {
             <div key={card.id} className="h-mini">
               <div className={`h-mini-bg ${card.bgClass}`} />
               <div className="h-mini-overlay" />
-              <span className={`h-mini-tag ${card.tagClass}`}>{card.tag}</span>
+              <span className={`h-mini-tag ${card.labelClass}`}>{card.label}</span>
               <div className="h-mini-info">
                 <div className="h-mini-name">{card.name}</div>
                 <div className="h-mini-price">{formatCurrency(card.price)}</div>
@@ -490,7 +358,7 @@ export default function Accessories() {
         <div className="es-main">
           <div className={`es-bg ${editorialStrip.main.bgClass}`} />
           <div className="es-overlay" />
-          <span className={`es-badge ${editorialStrip.main.badgeClass}`}>{editorialStrip.main.badge}</span>
+          <span className={`es-badge ${editorialStrip.main.labelClass}`}>{editorialStrip.main.label}</span>
           <div className="es-inf">
             <div className="es-n">{editorialStrip.main.name}</div>
             <div className="es-p">
@@ -513,7 +381,7 @@ export default function Accessories() {
                   onClick={() => handleAddToBag(product)}
                 >
                   <span>
-                    <span className="es-side-tag">{item.tag}</span>
+                    <span className="es-side-tag">{item.label}</span>
                     <span className="es-side-name">{item.name}</span>
                     <span className="es-side-price">{formatCurrency(item.price)}</span>
                   </span>
@@ -531,10 +399,10 @@ export default function Accessories() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'bags', label: 'Bags' },
-            { key: 'belts', label: 'Belts' },
-            { key: 'scarves', label: 'Scarves' },
-            { key: 'small', label: 'Small Leather' },
+            { key: 'Bags', label: 'Bags' },
+            { key: 'Belts', label: 'Belts' },
+            { key: 'Scarves', label: 'Scarves' },
+            { key: 'Small Leather', label: 'Small Leather' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -558,6 +426,10 @@ export default function Accessories() {
         </div>
       </div>
 
+      {loading && <div className="grid-sec" id="acc-grid"><div className="grid-hd">Loading accessories...</div></div>}
+      {!loading && error && <div className="grid-sec" id="acc-grid"><div className="grid-hd">{error}</div></div>}
+      {!loading && !error && visibleProducts.length === 0 && <div className="grid-sec" id="acc-grid"><div className="grid-hd">No accessories found.</div></div>}
+
       <section className="grid-sec" id="acc-grid">
         <div className="grid-hd">
           All Accessories <small>— Spring / Summer 2026</small>
@@ -566,10 +438,21 @@ export default function Accessories() {
           {visibleProducts.map((product, index) => {
             const shapeClass = index % 6 === 0 ? 'sq' : index % 5 === 0 ? 'tall' : '';
             return (
-              <div key={product.id} className={`pc ${shapeClass}`}>
+              <div
+                key={product.id}
+                className={`pc ${shapeClass}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => openProduct(product.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openProduct(product.id);
+                  }
+                }}
+              >
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     className={`pa ${wishlist.has(product.id) ? 'is-active' : ''}`}
@@ -594,7 +477,29 @@ export default function Accessories() {
                   </button>
                 </div>
                 <div className="pc-bar">
-                  <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
+                  <div className="pc-szs">
+                    {getProductSizes(product).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSizeSelect(product.id, size);
+                        }}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    className="add-btn"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddToBag(product);
+                    }}
+                  >
                     Add to Bag
                   </button>
                 </div>
@@ -604,7 +509,7 @@ export default function Accessories() {
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -638,3 +543,5 @@ export default function Accessories() {
     </div>
   );
 }
+
+

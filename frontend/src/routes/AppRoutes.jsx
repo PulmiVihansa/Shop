@@ -18,10 +18,12 @@ import Tops from '../pages/Tops.jsx';
 import MenNewArrivals from '../pages/MenNewArrivals.jsx';
 import MenShirts from '../pages/MenShirts.jsx';
 import MenTrousers from '../pages/MenTrousers.jsx';
+import ProductDetails from '../pages/ProductDetails.jsx';
 import Checkout from '../pages/Checkout.jsx';
 import OrderSuccess from '../pages/OrderSuccess.jsx';
 import OrderTracking from '../pages/OrderTracking.jsx';
 import AdminDashboard from '../pages/AdminDashboard.jsx';
+import AuthSuccess from '../pages/AuthSuccess.jsx';
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
 
 
@@ -32,6 +34,7 @@ export default function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/auth/success" element={<AuthSuccess />} />
       <Route path="/men" element={<Men />} />
       <Route path="/women" element={<Women />} />
       <Route path="/accessories" element={<Accessories />} />
@@ -48,6 +51,7 @@ export default function AppRoutes() {
       <Route path="/men-shirts" element={<MenShirts />} />
       <Route path="/men-trousers" element={<MenTrousers />} />
       <Route path="/tops" element={<Tops />} />
+      <Route path="/products/:id" element={<ProductDetails />} />
       <Route
         path="/checkout"
         element={

@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/tops.css';
 
 const heroCards = [
-  { id: 'hero-silk', name: 'Silk Pliss\u00E9 Blouse', badge: 'New', bgClass: 'b3', span: 2 },
-  { id: 'hero-linen', name: 'Linen Boxy Shirt', badge: 'New', bgClass: 'b5' },
-  { id: 'hero-cashmere', name: 'Cashmere Roll-Neck', badge: 'New', bgClass: 'b9' },
+  { id: 'hero-silk', name: 'Silk Pliss\u00E9 Blouse', label: 'New', bgClass: 'b3', span: 2 },
+  { id: 'hero-linen', name: 'Linen Boxy Shirt', label: 'New', bgClass: 'b5' },
+  { id: 'hero-cashmere', name: 'Cashmere Roll-Neck', label: 'New', bgClass: 'b9' },
 ];
 
 const marqueeItems = [
@@ -35,151 +38,19 @@ const materialCards = [
   { id: 'mat-cashmere', title: 'Cashmere', content: 'Grade A Cashmere, 2-ply', origin: 'Sourced from Piemonte, Italy' },
 ];
 
-const fallbackProducts = [
-  {
-    id: 'silk-plisse-blouse',
-    name: 'Silk Pliss\u00E9 Blouse',
-    category: 'blouse',
-    categoryLabel: 'Blouse',
-    price: 285,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b3',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#FAF7F2', '#8f9390'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'linen-boxy-shirt',
-    name: 'Linen Boxy Shirt',
-    category: 'shirt',
-    categoryLabel: 'Shirt',
-    price: 195,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b5',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#B0B8C0', '#FAF7F2', '#C8BAB0'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'cashmere-roll-neck',
-    name: 'Cashmere Roll-Neck',
-    category: 'knit',
-    categoryLabel: 'Knit',
-    price: 380,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'b9',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'S',
-    swatches: ['#B8C2AA', '#C8BAB0', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'cotton-smocked-top',
-    name: 'Cotton Smocked Top',
-    category: 'blouse',
-    categoryLabel: 'Blouse',
-    price: 165,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b7',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#A6C0B2', '#FAF7F2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'silk-camisole',
-    name: 'Silk Camisole',
-    category: 'vest',
-    categoryLabel: 'Vest',
-    price: 145,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b2',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#A8B8A0', '#B0A8B8', '#1A1A1A'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'broderie-peasant-top',
-    name: 'Broderie Peasant Top',
-    category: 'blouse',
-    categoryLabel: 'Blouse',
-    price: 225,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b6',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#FAF7F2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'cotton-utility-shirt',
-    name: 'Cotton Utility Shirt',
-    category: 'shirt',
-    categoryLabel: 'Shirt',
-    price: 215,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b4',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#C0B8A8', '#B0B8C0'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'knitted-silk-vest',
-    name: 'Knitted Silk Vest',
-    category: 'vest',
-    categoryLabel: 'Vest',
-    price: 195,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b12',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'S',
-    swatches: ['#C4B6A8', '#1A1A1A'],
-    imageClass: 'silk',
-  },
-];
-
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Tops() {
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products, loading, error } = useProducts({ collection: 'female', category: 'Tops' });
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const [activeColor, setActiveColor] = useState(null);
   const toastTimer = useRef(null);
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
-
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   const showToast = (message) => {
     setToast(message);
@@ -191,14 +62,13 @@ export default function Tops() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    const size = selectedSizes[product.id];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
   };
 
@@ -236,10 +106,14 @@ export default function Tops() {
     showToast(`Filtering by: ${name}`);
   };
 
+  const openProduct = (productId) => {
+    if (productId) navigate(`/products/${productId}`);
+  };
+
   const visibleProducts = useMemo(() => {
     let list = [...products];
     if (filter !== 'all') {
-      list = list.filter((product) => product.category === filter);
+      list = list.filter((product) => product.subcategory === filter);
     }
     if (sort === 'low') {
       list.sort((a, b) => a.price - b.price);
@@ -248,7 +122,7 @@ export default function Tops() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -293,7 +167,7 @@ export default function Tops() {
           {heroCards.map((card) => (
             <div key={card.id} className="htc" style={card.span ? { gridRow: `span ${card.span}` } : undefined}>
               <div className={`htcbg ${card.bgClass}`} />
-              <span className="htcbadge">{card.badge}</span>
+              <span className="htcbadge">{card.label}</span>
               <div className="htc-inf">
                 <div className="htc-n">{card.name}</div>
               </div>
@@ -334,10 +208,10 @@ export default function Tops() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'blouse', label: 'Blouses' },
-            { key: 'shirt', label: 'Shirts' },
-            { key: 'knit', label: 'Knitwear' },
-            { key: 'vest', label: 'Vests' },
+            { key: 'Blouses', label: 'Blouses' },
+            { key: 'Shirts', label: 'Shirts' },
+            { key: 'Knitwear', label: 'Knitwear' },
+            { key: 'Vests', label: 'Vests' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -374,16 +248,29 @@ export default function Tops() {
         </div>
       </div>
 
+      {loading && <div className="grid-sec"><div className="grid-hd">Loading tops...</div></div>}
+      {!loading && error && <div className="grid-sec"><div className="grid-hd">{error}</div></div>}
+      {!loading && !error && visibleProducts.length === 0 && <div className="grid-sec"><div className="grid-hd">No tops found.</div></div>}
+
       <section className="grid-sec">
         <div className="grid-hd">All Tops \u2014 SS26</div>
         <div className="pgrid">
           {visibleProducts.map((product) => (
-            <div key={product.id} className="pc">
+            <div
+              key={product.id}
+              className="pc"
+              role="button"
+              tabIndex={0}
+              onClick={() => openProduct(product.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openProduct(product.id);
+                }
+              }}
+            >
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && (
-                  <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>
-                )}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     type="button"
@@ -409,18 +296,28 @@ export default function Tops() {
                 </div>
                 <div className="pc-bar">
                   <div className="pc-szs">
-                    {product.sizes?.map((size) => (
+                    {getProductSizes(product).map((size) => (
                       <button
                         key={size}
                         type="button"
                         className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
-                        onClick={() => handleSizeSelect(product.id, size)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSizeSelect(product.id, size);
+                        }}
                       >
                         {size}
                       </button>
                     ))}
                   </div>
-                  <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
+                  <button
+                    className="add-btn"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddToBag(product);
+                    }}
+                  >
                     Add to Bag
                   </button>
                 </div>
@@ -430,7 +327,7 @@ export default function Tops() {
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -451,3 +348,4 @@ export default function Tops() {
     </div>
   );
 }
+

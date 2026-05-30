@@ -183,12 +183,15 @@
   width: 54px;
   height: 68px;
   background: linear-gradient(160deg, #c8b8ab, #ddd2c8);
+  overflow: hidden;
 }
 
-.success-item-image.silk { background: linear-gradient(160deg, #b5c0b8, #c8d5c2); }
-.success-item-image.wool { background: linear-gradient(160deg, #c4a882, #dbc9ae); }
-.success-item-image.cotton { background: linear-gradient(160deg, #a9b8c0, #c2d0d8); }
-.success-item-image.denim { background: linear-gradient(160deg, #7a8fa0, #9aaabb); }
+.success-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 .success-item strong,
 .success-item span {

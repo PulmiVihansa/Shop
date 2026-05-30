@@ -1,20 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api.js';
 
-const normalize = (product) => ({
-  ...product,
-  id: product.id || product._id,
-  name: product.name || product.title,
-  title: product.title || product.name,
-  sizes: product.sizes || [],
-  swatches: product.swatches?.length ? product.swatches : ['#C8BAB0'],
-  bgClass: product.bgClass || 'b1',
-  imageClass: product.imageClass || 'linen',
-  categoryLabel: product.categoryLabel || product.category || 'Atelier',
-});
+const EMPTY_FALLBACK = [];
 
-export default function useProducts({ fallback = [], category, tag, query } = {}) {
-  const [products, setProducts] = useState(fallback);
+const toList = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const normalize = (product) => {
+  const { tags, badge, badgeText, backgroundClass, bgClass, imageClass, ...safeProduct } = product;
+
+  return {
+    ...safeProduct,
+    id: product.id || product._id,
+    name: product.name || product.title,
+    title: product.title || product.name,
+    collection: product.collection || 'female',
+    category: product.category || '',
+    subcategory: product.subcategory || '',
+    colors: toList(product.colors || product.swatches || product.colours),
+    swatches: toList(product.colors || product.swatches || product.colours),
+    sizes: toList(product.sizes),
+    images: toList(product.images),
+    categoryLabel: product.categoryLabel || product.category || 'Atelier',
+  };
+};
+
+export default function useProducts({ fallback = EMPTY_FALLBACK, collection, category, subcategory, query } = {}) {
+  const fallbackProducts = useMemo(() => fallback.map(normalize), [fallback]);
+  const [products, setProducts] = useState(fallbackProducts);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,20 +46,37 @@ export default function useProducts({ fallback = [], category, tag, query } = {}
       setLoading(true);
       setError('');
       try {
+        const params = {
+          collection,
+          category,
+          subcategory,
+          q: query || undefined,
+        };
         const response = await api.get('/products', {
-          params: {
-            category,
-            tag,
-            q: query || undefined,
-          },
+          params,
         });
-        if (active && response.data?.length) {
-          setProducts(response.data.map(normalize));
+        if (active) {
+          const nextProducts = Array.isArray(response.data) ? response.data.map(normalize) : [];
+          if (import.meta.env.DEV) {
+            console.debug('[useProducts] response', {
+              params,
+              count: nextProducts.length,
+              sample: nextProducts[0]
+                ? {
+                    id: nextProducts[0].id,
+                    collection: nextProducts[0].collection,
+                    category: nextProducts[0].category,
+                    subcategory: nextProducts[0].subcategory,
+                  }
+                : null,
+            });
+          }
+          setProducts(nextProducts);
         }
       } catch (err) {
         if (active) {
           setError(err?.response?.data?.message || 'Unable to load products');
-          setProducts(fallback);
+          setProducts(fallbackProducts);
         }
       } finally {
         if (active) setLoading(false);
@@ -50,7 +88,7 @@ export default function useProducts({ fallback = [], category, tag, query } = {}
     return () => {
       active = false;
     };
-  }, [category, tag, query]);
+  }, [collection, category, fallbackProducts, subcategory, query]);
 
   return useMemo(() => ({ products, loading, error }), [products, loading, error]);
 }

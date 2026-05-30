@@ -57,17 +57,22 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
   const [filters, setFilters] = useState({
     name: '',
     sku: '',
+    collection: '',
     category: '',
-    tag: '',
+    subcategory: '',
     sortBy: 'recent'
   });
 
+  const collections = useMemo(
+    () => Array.from(new Set((dashboard.items || []).map((item) => item.collection).filter(Boolean))).sort(),
+    [dashboard.items]
+  );
   const categories = useMemo(
     () => Array.from(new Set((dashboard.items || []).map((item) => item.category).filter(Boolean))).sort(),
     [dashboard.items]
   );
-  const tags = useMemo(
-    () => Array.from(new Set((dashboard.items || []).flatMap((item) => item.tags || []))).sort(),
+  const subcategories = useMemo(
+    () => Array.from(new Set((dashboard.items || []).map((item) => item.subcategory).filter(Boolean))).sort(),
     [dashboard.items]
   );
 
@@ -79,8 +84,9 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
         params: {
           name: query.name || undefined,
           sku: query.sku || undefined,
+          collection: query.collection || undefined,
           category: query.category || undefined,
-          tag: query.tag || undefined,
+          subcategory: query.subcategory || undefined,
           sortBy: query.sortBy || 'recent'
         }
       });
@@ -138,8 +144,9 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
     setFilters({
       name: '',
       sku: '',
+      collection: '',
       category: '',
-      tag: '',
+      subcategory: '',
       sortBy: 'recent'
     });
   };
@@ -198,6 +205,15 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
               onChange={(event) => setFilters((prev) => ({ ...prev, sku: event.target.value }))}
             />
             <select
+              value={filters.collection}
+              onChange={(event) => setFilters((prev) => ({ ...prev, collection: event.target.value }))}
+            >
+              <option value="">All Collections</option>
+              {collections.map((collection) => (
+                <option key={collection} value={collection}>{collection}</option>
+              ))}
+            </select>
+            <select
               value={filters.category}
               onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))}
             >
@@ -207,12 +223,12 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
               ))}
             </select>
             <select
-              value={filters.tag}
-              onChange={(event) => setFilters((prev) => ({ ...prev, tag: event.target.value }))}
+              value={filters.subcategory}
+              onChange={(event) => setFilters((prev) => ({ ...prev, subcategory: event.target.value }))}
             >
-              <option value="">All Tags</option>
-              {tags.map((tag) => (
-                <option key={tag} value={tag}>{tag}</option>
+              <option value="">All Subcategories</option>
+              {subcategories.map((subcategory) => (
+                <option key={subcategory} value={subcategory}>{subcategory}</option>
               ))}
             </select>
             <select
@@ -237,7 +253,9 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                 <th />
                 <th>Product Image</th>
                 <th>Product Name</th>
+                <th>Collection</th>
                 <th>Category</th>
+                <th>Subcategory</th>
                 <th>Price</th>
                 <th>Total Stock</th>
                 <th>Inventory Value</th>
@@ -248,13 +266,13 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
             <tbody>
               {loading && Array.from({ length: 6 }).map((_, index) => (
                 <tr key={`loading-${index}`}>
-                  <td colSpan={9}><div className="inv-skeleton-row" /></td>
+                  <td colSpan={11}><div className="inv-skeleton-row" /></td>
                 </tr>
               ))}
 
               {!loading && dashboard.items.length === 0 && (
                 <tr>
-                  <td colSpan={9}><div className="inv-empty-state"><h3>No matching products</h3><p>Try a different search or clear filters.</p></div></td>
+                  <td colSpan={11}><div className="inv-empty-state"><h3>No matching products</h3><p>Try a different search or clear filters.</p></div></td>
                 </tr>
               )}
 
@@ -277,7 +295,9 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                         </div>
                       </td>
                       <td><strong>{item.name}</strong></td>
+                      <td>{item.collection || '-'}</td>
                       <td>{item.category || '-'}</td>
+                      <td>{item.subcategory || '-'}</td>
                       <td>{money(item.price, currency)}</td>
                       <td>{item.stock}</td>
                       <td>{money(item.inventoryValue, currency)}</td>
@@ -286,7 +306,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                     </tr>
                     {isOpen && (
                       <tr className="inv-expanded-row">
-                        <td colSpan={9}>
+                        <td colSpan={11}>
                           <div className="inv-expanded-content">
                             <div className="inv-size-grid">
                               <table>
@@ -381,7 +401,13 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
             dashboard.lowStockList.map((item) => (
               <div key={item.id} className="inv-low-row">
                 <span>{item.name}</span>
-                <small>Current: {item.stock} | Reorder: {item.reorderThreshold} | Missing: {item.missingQuantity}</small>
+                <small>
+                  <span className="inv-low-current">Current: {item.stock}</span>
+                  <span className="inv-low-sep"> | </span>
+                  <span className="inv-low-reorder">Reorder: {item.reorderThreshold}</span>
+                  <span className="inv-low-sep"> | </span>
+                  <span className="inv-low-missing">Missing: {item.missingQuantity}</span>
+                </small>
               </div>
             ))
           ) : (

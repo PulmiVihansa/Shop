@@ -1,44 +1,47 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/men-trousers.css';
 
 const sidebarItems = [
-  { id: 'side-chino', name: 'Twill Chino', price: 290, tag: 'Bestseller', productId: 'twill-chino-trousers' },
-  { id: 'side-linen', name: 'Linen Wide Leg', price: 260, tag: 'New', productId: 'linen-wide-trousers' },
+  { id: 'side-chino', name: 'Twill Chino', price: 290, label: 'Bestseller', productId: 'twill-chino-trousers' },
+  { id: 'side-linen', name: 'Linen Wide Leg', price: 260, label: 'New', productId: 'linen-wide-trousers' },
   {
     id: 'side-wool',
     name: 'Tailored Wool',
     price: 370,
-    tag: 'Limited',
-    tagClass: 'is-dark',
+    label: 'Limited',
+    labelClass: 'is-dark',
     productId: 'tailored-wool-trouser',
   },
   {
     id: 'side-jersey',
     name: 'Jersey Drawstring',
     price: 185,
-    tag: 'New',
+    label: 'New',
     productId: 'jersey-drawstring-trousers',
   },
 ];
 
 const fitGuides = [
   {
-    key: 'slim',
-    badge: 'Most Popular',
+    key: 'Slim',
+    label: 'Most Popular',
     number: '01',
     name: 'Slim Tapered',
     description: 'Cut close through the hip and thigh with a gradual taper to the ankle. Clean, modern and versatile.',
   },
   {
-    key: 'wide',
+    key: 'Wide Leg',
     number: '02',
     name: 'Relaxed Wide',
     description: 'A generous cut through the leg with a straight fall. Easy to wear, effortlessly elegant in motion.',
   },
   {
-    key: 'tailored',
+    key: 'Tailored',
     number: '03',
     name: 'Tailored Straight',
     description: 'The classic silhouette. A structured waistband, straight leg, and clean break above the shoe.',
@@ -52,122 +55,18 @@ const marqueeItems = [
   'Cut on the bias for movement',
 ];
 
-const fallbackProducts = [
-  {
-    id: 'twill-chino-trousers',
-    name: 'Twill Chino Trousers',
-    category: 'slim',
-    categoryLabel: 'Slim Tapered',
-    price: 290,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b4',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#C8BAB0', '#1A1A1A', '#A8B8A0'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'linen-wide-trousers',
-    name: 'Linen Wide Trousers',
-    category: 'wide',
-    categoryLabel: 'Wide Leg',
-    price: 260,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'L',
-    swatches: ['#C8BAB0', '#AEB8C2'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'tailored-wool-trouser',
-    name: 'Tailored Wool Trouser',
-    category: 'tailored',
-    categoryLabel: 'Tailored',
-    price: 370,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'bdark',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#1A1A1A', '#C8BAB0'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'jersey-drawstring-trousers',
-    name: 'Jersey Drawstring Trousers',
-    category: 'casual',
-    categoryLabel: 'Casual',
-    price: 185,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b9',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'S',
-    swatches: ['#B8C2AA', '#C8BAB0', '#1A1A1A'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'cotton-slim-chino',
-    name: 'Cotton Slim Chino',
-    category: 'slim',
-    categoryLabel: 'Slim Tapered',
-    price: 245,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b5',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#AEB8C2', '#C6AEA0'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'pleated-wide-trousers',
-    name: 'Pleated Wide Trousers',
-    category: 'wide',
-    categoryLabel: 'Wide Leg',
-    price: 310,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b6',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'L',
-    swatches: ['#C6AEA0', '#1A1A1A'],
-    imageClass: 'linen',
-  },
-];
-
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenTrousers() {
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products, loading, error } = useProducts({ collection: 'male', category: 'Trousers' });
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
-
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   const showToast = (message) => {
     setToast(message);
@@ -179,14 +78,13 @@ export default function MenTrousers() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    const size = selectedSizes[product.id];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
   };
 
@@ -214,10 +112,14 @@ export default function MenTrousers() {
     setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
   };
 
+  const openProduct = (productId) => {
+    if (productId) navigate(`/products/${productId}`);
+  };
+
   const visibleProducts = useMemo(() => {
     let list = [...products];
     if (filter !== 'all') {
-      list = list.filter((product) => product.category === filter);
+      list = list.filter((product) => product.subcategory === filter);
     }
     if (sort === 'low') {
       list.sort((a, b) => a.price - b.price);
@@ -226,7 +128,7 @@ export default function MenTrousers() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const styleCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -271,7 +173,7 @@ export default function MenTrousers() {
                     <span className="hr-item-name">{item.name}</span>
                     <span className="hr-item-price">{formatCurrency(item.price)}</span>
                   </span>
-                  <span className={`hr-item-tag ${item.tagClass || ''}`}>{item.tag}</span>
+                  <span className={`hr-item-tag ${item.labelClass || ''}`}>{item.label}</span>
                 </button>
               );
             })}
@@ -305,15 +207,15 @@ export default function MenTrousers() {
 
       <section className="fit-guide" id="trousers">
         {fitGuides.map((fit) => {
-          const isActive = filter === fit.key || (filter === 'all' && fit.key === 'slim');
+          const isActive = filter === fit.key || (filter === 'all' && fit.key === 'Slim');
           return (
             <div key={fit.key} className={`fg ${isActive ? 'active' : ''}`}>
-              {fit.badge ? <span className="fg-badge">{fit.badge}</span> : null}
+              {fit.label ? <span className="fg-badge">{fit.label}</span> : null}
               <div className="fg-num">{fit.number}</div>
               <div className="fg-name">{fit.name}</div>
               <p className="fg-desc">{fit.description}</p>
               <button type="button" className="fg-link" onClick={() => setFilter(fit.key)}>
-                Shop {fit.key === 'wide' ? 'Wide' : fit.name.split(' ')[0]} <span className="fg-link-arrow">→</span>
+                Shop {fit.key === 'Wide Leg' ? 'Wide' : fit.name.split(' ')[0]} <span className="fg-link-arrow">→</span>
               </button>
             </div>
           );
@@ -324,10 +226,10 @@ export default function MenTrousers() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'slim', label: 'Slim' },
-            { key: 'wide', label: 'Wide Leg' },
-            { key: 'tailored', label: 'Tailored' },
-            { key: 'casual', label: 'Casual' },
+            { key: 'Slim', label: 'Slim' },
+            { key: 'Wide Leg', label: 'Wide Leg' },
+            { key: 'Tailored', label: 'Tailored' },
+            { key: 'Casual', label: 'Casual' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -351,16 +253,31 @@ export default function MenTrousers() {
         </div>
       </div>
 
+      {loading && <div className="grid-sec"><div className="grid-hd">Loading trousers...</div></div>}
+      {!loading && error && <div className="grid-sec"><div className="grid-hd">{error}</div></div>}
+      {!loading && !error && visibleProducts.length === 0 && <div className="grid-sec"><div className="grid-hd">No trousers found.</div></div>}
+
       <section className="grid-sec">
         <div className="grid-hd">
           Men&apos;s Trousers <small>— Spring / Summer 2026</small>
         </div>
         <div className="pgrid">
           {visibleProducts.map((product) => (
-            <div key={product.id} className="pc">
+            <div
+              key={product.id}
+              className="pc"
+              role="button"
+              tabIndex={0}
+              onClick={() => openProduct(product.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openProduct(product.id);
+                }
+              }}
+            >
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     className={`pa ${wishlist.has(product.id) ? 'is-active' : ''}`}
@@ -386,18 +303,28 @@ export default function MenTrousers() {
                 </div>
                 <div className="pc-bar">
                   <div className="pc-szs">
-                    {product.sizes.map((size) => (
+                    {getProductSizes(product).map((size) => (
                       <button
                         key={size}
                         type="button"
                         className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
-                        onClick={() => handleSizeSelect(product.id, size)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSizeSelect(product.id, size);
+                        }}
                       >
                         {size}
                       </button>
                     ))}
                   </div>
-                  <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
+                  <button
+                    className="add-btn"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddToBag(product);
+                    }}
+                  >
                     Add to Bag
                   </button>
                 </div>
@@ -407,7 +334,7 @@ export default function MenTrousers() {
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -428,3 +355,6 @@ export default function MenTrousers() {
     </div>
   );
 }
+
+
+

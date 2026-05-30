@@ -14,14 +14,18 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("user")
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  customerId  String?  @unique
+  name        String
+  email       String   @unique
+  password    String?
+  provider    String   @default("local")
+  googleId    String?   @unique
+  avatar      String?
+  role        String   @default("user")
+  orders      Order[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Product {
@@ -29,33 +33,41 @@ model Product {
   name        String
   price       Float
   description String   @default("")
+  collection  String   @default("female")
   category    String
+  subcategory String   @default("")
+  colors      String[] @default([])
   images      String[] @default([])
   sizes       String[] @default([])
   stock       Int      @default(0)
   sizeStock   Json     @default("{\"S\":0,\"M\":0,\"L\":0,\"XL\":0}")
-  tags        String[] @default([])
-  badge       String   @default("")
-  badgeText   String   @default("")
-  bgClass     String   @default("b1")
-  swatches    String[] @default([])
-  imageClass  String   @default("linen")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model Order {
   id            String   @id @default(cuid())
+  orderId       String   @unique
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items         Json
-  totalPrice    Float
+  customerId    String
+  customerName  String
+  customerEmail String
+  phone         String   @default("")
+  address       Json
+  productName   String
+  size          String   @default("One Size")
+  quantity      Int      @default(1)
+  price         Float
+  shippingCost  Float    @default(0)
+  totalAmount   Float
   paymentMethod String   @default("ONLINE")
   paymentStatus String   @default("PENDING")
   transactionId String   @default("")
-  status        String   @default("pending")
-  payment       Json
-  address       Json
+  orderStatus   String   @default("pending")
+  orderDate     DateTime @default(now())
+  items         Json     @default("[]")
+  payment       Json     @default("{}")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

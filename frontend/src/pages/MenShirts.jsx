@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/men-shirts.css';
 
 const heroPanels = [
@@ -37,93 +40,6 @@ const marqueeItems = [
   'Hand-finished collars',
 ];
 
-const fallbackProducts = [
-  {
-    id: 'linen-oxford-shirt',
-    name: 'Linen Oxford Shirt',
-    category: 'linen',
-    categoryLabel: 'Linen',
-    price: 210,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b5',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#FAF7F2', '#AEB8C2', '#C8BAB0'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'poplin-band-collar-shirt',
-    name: 'Poplin Band Collar Shirt',
-    category: 'poplin',
-    categoryLabel: 'Poplin',
-    price: 185,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b7',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'S',
-    swatches: ['#FAF7F2', '#A6C0B2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'chambray-overshirt',
-    name: 'Chambray Overshirt',
-    category: 'chambray',
-    categoryLabel: 'Chambray',
-    price: 240,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'bdark',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#1A1A1A', '#AEB8C2'],
-    imageClass: 'denim',
-  },
-  {
-    id: 'oxford-button-down',
-    name: 'Oxford Button-Down Shirt',
-    category: 'oxford',
-    categoryLabel: 'Oxford',
-    price: 195,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#FAF7F2', '#C8BAB0', '#B0A8B8'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'linen-camp-collar',
-    name: 'Linen Camp Collar Shirt',
-    category: 'linen',
-    categoryLabel: 'Linen',
-    price: 225,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b2',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'S',
-    swatches: ['#A8B8A0', '#C8BAB0'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'poplin-relaxed-shirt',
-    name: 'Poplin Relaxed Shirt',
-    category: 'poplin',
-    categoryLabel: 'Poplin',
-    price: 175,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b4',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'L',
-    swatches: ['#FAF7F2', '#C6AEA0', '#1A1A1A'],
-    imageClass: 'cotton',
-  },
-];
-
 const storyFeatures = [
   { value: '12', label: 'Shirt Styles' },
   { value: '4', label: 'Fabrics' },
@@ -134,31 +50,14 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenShirts() {
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products, loading, error } = useProducts({ collection: 'male', category: 'Shirts' });
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
-
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   const showToast = (message) => {
     setToast(message);
@@ -170,14 +69,13 @@ export default function MenShirts() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    const size = selectedSizes[product.id];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
   };
 
@@ -205,10 +103,14 @@ export default function MenShirts() {
     setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
   };
 
+  const openProduct = (productId) => {
+    if (productId) navigate(`/products/${productId}`);
+  };
+
   const visibleProducts = useMemo(() => {
     let list = [...products];
     if (filter !== 'all') {
-      list = list.filter((product) => product.category === filter);
+      list = list.filter((product) => product.subcategory === filter);
     }
     if (sort === 'low') {
       list.sort((a, b) => a.price - b.price);
@@ -217,7 +119,7 @@ export default function MenShirts() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const shirtCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -294,10 +196,10 @@ export default function MenShirts() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All Shirts' },
-            { key: 'linen', label: 'Linen' },
-            { key: 'poplin', label: 'Poplin' },
-            { key: 'chambray', label: 'Chambray' },
-            { key: 'oxford', label: 'Oxford' },
+            { key: 'Linen', label: 'Linen' },
+            { key: 'Poplin', label: 'Poplin' },
+            { key: 'Chambray', label: 'Chambray' },
+            { key: 'Oxford', label: 'Oxford' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -333,16 +235,31 @@ export default function MenShirts() {
         </button>
       </div>
 
+      {loading && <div className="grid-sec"><div className="grid-hd">Loading shirts...</div></div>}
+      {!loading && error && <div className="grid-sec"><div className="grid-hd">{error}</div></div>}
+      {!loading && !error && visibleProducts.length === 0 && <div className="grid-sec"><div className="grid-hd">No shirts found.</div></div>}
+
       <section className="grid-sec">
         <div className="grid-hd">
           Men&apos;s Shirts <small>— Spring / Summer 2026</small>
         </div>
         <div className="pgrid">
           {visibleProducts.map((product) => (
-            <div key={product.id} className="pc">
+            <div
+              key={product.id}
+              className="pc"
+              role="button"
+              tabIndex={0}
+              onClick={() => openProduct(product.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openProduct(product.id);
+                }
+              }}
+            >
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     className={`pa ${wishlist.has(product.id) ? 'is-active' : ''}`}
@@ -368,18 +285,28 @@ export default function MenShirts() {
                 </div>
                 <div className="pc-bar">
                   <div className="pc-szs">
-                    {product.sizes.map((size) => (
+                    {getProductSizes(product).map((size) => (
                       <button
                         key={size}
                         type="button"
                         className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
-                        onClick={() => handleSizeSelect(product.id, size)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSizeSelect(product.id, size);
+                        }}
                       >
                         {size}
                       </button>
                     ))}
                   </div>
-                  <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
+                  <button
+                    className="add-btn"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddToBag(product);
+                    }}
+                  >
                     Add to Bag
                   </button>
                 </div>
@@ -389,7 +316,7 @@ export default function MenShirts() {
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -410,3 +337,4 @@ export default function MenShirts() {
     </div>
   );
 }
+

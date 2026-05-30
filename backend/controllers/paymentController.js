@@ -9,7 +9,7 @@ const notifyPayment = async (req, res) => {
     const isPaid = statusCode === '2' || req.body.status === 'PAID';
 
     if (global.useMemoryStore) {
-      const order = store.orders.find((entry) => entry._id === orderId);
+      const order = store.orders.find((entry) => entry._id === orderId || entry.orderId === orderId);
       if (!order) return res.status(404).json({ message: 'Order not found' });
       order.paymentStatus = isPaid ? 'PAID' : 'PENDING';
       order.transactionId = transactionId;
@@ -22,11 +22,15 @@ const notifyPayment = async (req, res) => {
       return res.json({ message: 'Payment notification processed' });
     }
 
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [{ id: orderId }, { orderId }]
+      }
+    });
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
     await prisma.order.update({
-      where: { id: orderId },
+      where: { id: order.id },
       data: {
         paymentStatus: isPaid ? 'PAID' : 'PENDING',
         transactionId,

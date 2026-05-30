@@ -3,7 +3,7 @@ const { store, createId, seedBusinessData } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
 
 const summarizeFinance = (orders, expenses) => {
-  const revenue = orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
+  const revenue = orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
   const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const breakdown = expenses.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + Number(expense.amount || 0);

@@ -114,6 +114,10 @@ export default function Checkout() {
       const response = await api.post('/orders', {
         items,
         address: shipping,
+        customerName: shipping.fullName,
+        phone: shipping.phone,
+        shippingCost: delivery + serviceFee,
+        totalAmount: total,
         payment: {
           method: payment.method,
           reference: `ATL-PAY-${Date.now().toString(36).toUpperCase()}`,
@@ -243,8 +247,10 @@ export default function Checkout() {
           </div>
           <div className="checkout-items">
             {items.map((item) => (
-              <div className="checkout-item" key={`${item.id}-${item.size || 'size'}`}>
-                <div className={`checkout-item-img ${item.imageClass || ''}`} />
+              <div className="checkout-item" key={`${item.productId}-${item.size || 'One Size'}`}>
+                <div className="checkout-item-img">
+                  {item.image ? <img src={item.image} alt={item.name} /> : <span>{item.name}</span>}
+                </div>
                 <div>
                   <strong>{item.name}</strong>
                   <span>{item.size || 'One Size'} · Qty {item.quantity || 1}</span>

@@ -1,26 +1,35 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import api, { getErrorMessage } from '../services/api.js';
 import InventoryManagementPanel from '../components/admin/InventoryManagementPanel.jsx';
+import { COLLECTION_OPTIONS, getCategoryOptions, getSubcategoryOptions } from '../utils/productStructure.js';
 import '../styles/admin.css';
 
 const money = (value) => `LKR${Number(value || 0).toLocaleString()}`;
+const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
 const SIZE_SET = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const newSizeStock = () => ({ XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0 });
+
+const getInitials = (name = '', email = '') => {
+  const trimmed = String(name || email || '').trim();
+  if (!trimmed) return 'CU';
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
 
 const makeEmptyProduct = () => ({
   name: '',
   price: '',
+  colors: '',
   description: '',
-  category: '',
+  collection: 'female',
+  category: getCategoryOptions('female')[0] || '',
+  subcategory: getSubcategoryOptions('female', getCategoryOptions('female')[0] || '')[0] || '',
   sizeStock: newSizeStock(),
-  tags: '',
-  swatches: '',
-  bgClass: 'b1',
-  imageClass: 'linen',
-  badge: '',
-  badgeText: '',
   images: [],
 });
+
+const getCollectionLabel = (value) => COLLECTION_OPTIONS.find((option) => option.value === value)?.label || value || '-';
 
 const emptyExpense = { title: '', category: 'Material cost', amount: '' };
 const emptyBulkCustomer = { name: '', email: '', company: '', discount: '', notes: '' };
@@ -54,14 +63,14 @@ function DataTable({ columns, rows, empty = 'No records yet.' }) {
     <div className="admin-table-wrap">
       <table className="admin-table">
         <thead>
-          <tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+          <tr>{columns.map((column) => <th key={column.key} className={column.className || ''}>{column.label}</th>)}</tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr><td colSpan={columns.length}>{empty}</td></tr>
           ) : rows.map((row) => (
             <tr key={row.id}>
-              {columns.map((column) => <td key={column.key}>{column.render ? column.render(row) : row[column.key]}</td>)}
+              {columns.map((column) => <td key={column.key} className={column.className || ''}>{column.render ? column.render(row) : row[column.key]}</td>)}
             </tr>
           ))}
         </tbody>
@@ -174,6 +183,7 @@ export default function AdminDashboard() {
   const [bulkForm, setBulkForm] = useState(emptyBulkCustomer);
   const [expenseFilter, setExpenseFilter] = useState('all');
   const [productSearch, setProductSearch] = useState('');
+  const [expandedProductId, setExpandedProductId] = useState('');
   const [productPreview, setProductPreview] = useState(null);
   const [orderFilters, setOrderFilters] = useState({
     orderId: '',
@@ -221,7 +231,7 @@ export default function AdminDashboard() {
   const totals = analytics?.totals || {
     users: customers.length,
     orders: orders.length,
-    revenue: orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0),
+    revenue: orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0),
     lowStock: products.filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 15).length,
   };
 
@@ -239,8 +249,7 @@ export default function AdminDashboard() {
       acc[size] = Math.max(0, Math.trunc(Number(productForm.sizeStock?.[size] || 0)));
       return acc;
     }, {}),
-    tags: productForm.tags.split(',').map((item) => item.trim()).filter(Boolean),
-    swatches: productForm.swatches.split(',').map((item) => item.trim()).filter(Boolean),
+    colors: (productForm.colors || '').split(',').map((item) => item.trim()).filter(Boolean),
     images: productForm.images.map((item) => item.trim()).filter(Boolean),
   };
 
@@ -303,54 +312,37 @@ export default function AdminDashboard() {
     setProductForm({
       name: product.name || '',
       price: product.price || '',
+      colors: (product.colors || []).join(', '),
       description: product.description || '',
+      collection: product.collection || 'female',
       category: product.category || '',
+      subcategory: product.subcategory || '',
       sizeStock: SIZE_SET.reduce((acc, size) => {
         acc[size] = Number(incomingSizeStock[size] || 0);
         return acc;
       }, newSizeStock()),
-      tags: product.tags?.join(', ') || '',
-      swatches: product.swatches?.join(', ') || '',
       images: product.images?.length ? product.images : [],
-      bgClass: product.bgClass || 'b1',
-      imageClass: product.imageClass || 'linen',
-      badge: product.badge || '',
-      badgeText: product.badgeText || '',
     });
-  };
-
-  const duplicateProduct = async (product) => {
-    try {
-      const payload = {
-        name: `${product.name} Copy`,
-        price: Number(product.price || 0),
-        description: product.description || '',
-        category: product.category || '',
-        sizeStock: SIZE_SET.reduce((acc, size) => {
-          acc[size] = Number(product.sizeStock?.[size] || 0);
-          return acc;
-        }, newSizeStock()),
-        stock: SIZE_SET.reduce((sum, size) => sum + Number(product.sizeStock?.[size] || 0), 0),
-        sizes: SIZE_SET,
-        tags: product.tags || [],
-        swatches: product.swatches || [],
-        images: product.images || [],
-        bgClass: product.bgClass || 'b1',
-        imageClass: product.imageClass || 'linen',
-        badge: product.badge || '',
-        badgeText: product.badgeText || '',
-      };
-      await api.post('/products', payload);
-      await loadAdminData();
-      setMessage('Product duplicated');
-      setError('');
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
   };
 
   const deleteProduct = async (id) => {
     await api.delete(`/products/${id}`);
+    await loadAdminData();
+  };
+
+  const duplicateProduct = async (product) => {
+    const duplicatePayload = {
+      name: product.name || '',
+      price: Number(product.price || 0),
+      colors: Array.isArray(product.colors) ? product.colors : [],
+      description: product.description || '',
+      collection: product.collection || 'female',
+      category: product.category || '',
+      subcategory: product.subcategory || '',
+      sizeStock: product.sizeStock || {},
+      images: Array.isArray(product.images) ? product.images : [],
+    };
+    await api.post('/products', duplicatePayload);
     await loadAdminData();
   };
 
@@ -362,6 +354,20 @@ export default function AdminDashboard() {
   const deleteCustomer = async (id) => {
     await api.delete(`/users/${id}`);
     await loadAdminData();
+  };
+
+  const viewCustomerOrders = (customer) => {
+    setActive('Orders');
+    setOrderFilters((prev) => ({
+      ...prev,
+      orderId: '',
+      customerName: '',
+      email: customer.email || '',
+      startDate: '',
+      endDate: '',
+      paymentStatus: 'all',
+      orderStatus: 'all',
+    }));
   };
 
   const submitExpense = async (event) => {
@@ -379,8 +385,11 @@ export default function AdminDashboard() {
   };
 
   const printInvoice = (order) => {
-    const lines = order.items.map((item) => `${item.name} x ${item.quantity} - ${money(item.price * item.quantity)}`).join('\n');
-    const invoice = `ATELIER INVOICE\n\nCustomer: ${order.user?.name || order.address?.fullName || 'Customer'}\nEmail: ${order.user?.email || ''}\nOrder: ${order._id}\n\n${lines}\n\nTotal: ${money(order.totalPrice)}`;
+    const orderItems = Array.isArray(order.items) && order.items.length
+      ? order.items
+      : [{ name: order.productName, quantity: order.quantity, price: order.price, size: order.size }];
+    const lines = orderItems.map((item) => `${item.name} x ${item.quantity} - ${money(Number(item.price || 0) * Number(item.quantity || 1))}`).join('\n');
+    const invoice = `ATELIER INVOICE\n\nCustomer: ${order.customerName || order.user?.name || order.address?.fullName || 'Customer'}\nEmail: ${order.customerEmail || order.user?.email || ''}\nOrder: ${order.orderId || order._id}\n\n${lines}\n\nShipping: ${money(order.shippingCost || 0)}\nTotal: ${money(order.totalAmount ?? order.totalPrice)}`;
     const popup = window.open('', '_blank', 'width=720,height=900');
     popup.document.write(`<pre style="font-family:Arial;padding:32px;line-height:1.6">${invoice}</pre>`);
     popup.document.close();
@@ -391,9 +400,10 @@ export default function AdminDashboard() {
     `https://wa.me/${String(phone || settings.whatsappNumber || '').replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`;
 
   const messageCustomer = (order) => {
-    const name = order.address?.fullName || order.user?.name || 'Customer';
-    const phone = order.address?.phone || settings.whatsappNumber;
-    const text = `Hi ${name}, your order #${String(order._id).slice(-6)} is being processed.`;
+    const name = order.customerName || order.address?.fullName || order.user?.name || 'Customer';
+    const phone = order.phone || order.address?.phone || settings.whatsappNumber;
+    const reference = order.orderId || String(order._id || order.id || '').slice(-6);
+    const text = `Hi ${name}, your order #${reference} is being processed.`;
     window.open(whatsappUrl(phone, text), '_blank', 'noopener,noreferrer');
   };
 
@@ -454,23 +464,26 @@ export default function AdminDashboard() {
     const query = productSearch.trim().toLowerCase();
     if (!query) return products;
     return products.filter((product) => {
-      const tags = (product.tags || []).join(' ').toLowerCase();
+      const category = String(product.category || '').toLowerCase();
+      const subcategory = String(product.subcategory || '').toLowerCase();
+      const collection = String(product.collection || '').toLowerCase();
       return (
         String(product.name || '').toLowerCase().includes(query) ||
-        String(product.category || '').toLowerCase().includes(query) ||
-        tags.includes(query)
+        category.includes(query) ||
+        subcategory.includes(query) ||
+        collection.includes(query)
       );
     });
   }, [products, productSearch]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      const customerName = String(order.user?.name || order.address?.fullName || '').toLowerCase();
-      const email = String(order.user?.email || '').toLowerCase();
-      const orderId = String(order._id || '').toLowerCase();
+      const customerName = String(order.customerName || order.user?.name || order.address?.fullName || '').toLowerCase();
+      const email = String(order.customerEmail || order.user?.email || '').toLowerCase();
+      const orderId = String(order.orderId || order._id || '').toLowerCase();
       const paymentStatus = String(order.paymentStatus || order.payment?.status || '').toLowerCase();
-      const status = String(order.status || '').toLowerCase();
-      const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+      const status = String(order.orderStatus || order.status || '').toLowerCase();
+      const createdAt = order.orderDate ? new Date(order.orderDate) : order.createdAt ? new Date(order.createdAt) : null;
 
       if (orderFilters.orderId && !orderId.includes(orderFilters.orderId.toLowerCase())) return false;
       if (orderFilters.customerName && !customerName.includes(orderFilters.customerName.toLowerCase())) return false;
@@ -485,7 +498,7 @@ export default function AdminDashboard() {
 
   const orderStats = useMemo(() => {
     const source = filteredOrders;
-    const countBy = (value) => source.filter((order) => String(order.status || '').toLowerCase() === value).length;
+    const countBy = (value) => source.filter((order) => String(order.orderStatus || order.status || '').toLowerCase() === value).length;
     return {
       total: source.length,
       pending: countBy('pending'),
@@ -493,9 +506,85 @@ export default function AdminDashboard() {
       shipped: countBy('shipped'),
       delivered: countBy('delivered'),
       cancelled: countBy('cancelled'),
-      revenue: source.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0),
+      revenue: source.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0),
     };
   }, [filteredOrders]);
+
+  const customerRows = useMemo(() => {
+    const now = new Date();
+    const activeCutoff = new Date(now);
+    activeCutoff.setDate(activeCutoff.getDate() - 90);
+
+    const rows = customers.map((customer) => {
+      const id = customer.id || customer._id;
+      const email = customer.email || '';
+      const role = customer.role || 'user';
+      const customerId = customer.customerId || (role === 'admin' ? 'ADMIN-001' : 'CUS-000');
+
+      const customerOrders = orders.filter((order) => {
+        const orderUserId = order.userId || order.user?.id || order.user?._id || (typeof order.user === 'string' ? order.user : null);
+        const orderEmail = order.customerEmail || order.user?.email || '';
+        if (id && orderUserId && String(orderUserId) === String(id)) return true;
+        if (email && orderEmail && String(orderEmail).toLowerCase() === String(email).toLowerCase()) return true;
+        return false;
+      });
+
+      const deliveredOrders = customerOrders.filter((order) =>
+        String(order.orderStatus || order.status || '').toLowerCase() === 'delivered'
+      );
+      const totalSpent = deliveredOrders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
+
+      const lastOrderDate = customerOrders.reduce((latest, order) => {
+        const date = order.orderDate ? new Date(order.orderDate) : order.createdAt ? new Date(order.createdAt) : null;
+        if (!date) return latest;
+        if (!latest || date > latest) return date;
+        return latest;
+      }, null);
+
+      const isActive = Boolean(lastOrderDate && lastOrderDate >= activeCutoff);
+
+      return {
+        id,
+        customerId,
+        name: customer.name || 'Customer',
+        email,
+        role,
+        isAdmin: role === 'admin',
+        initials: getInitials(customer.name, email),
+        totalOrders: customerOrders.length,
+        totalSpent,
+        deliveredOrdersCount: deliveredOrders.length,
+        createdAt: customer.createdAt,
+        isActive,
+      };
+    });
+
+    return rows.sort((a, b) => {
+      if (a.isAdmin && !b.isAdmin) return -1;
+      if (!a.isAdmin && b.isAdmin) return 1;
+      return String(a.customerId).localeCompare(String(b.customerId));
+    });
+  }, [customers, orders]);
+
+  const customerMetrics = useMemo(() => {
+    const nonAdmin = customerRows.filter((row) => !row.isAdmin);
+    const totalCustomers = nonAdmin.length;
+    const activeCustomers = nonAdmin.filter((row) => row.isActive).length;
+    const totalRevenue = nonAdmin.reduce((sum, row) => sum + row.totalSpent, 0);
+    const deliveredOrders = nonAdmin.reduce((sum, row) => sum + row.deliveredOrdersCount, 0);
+    const averageOrderValue = deliveredOrders ? totalRevenue / deliveredOrders : 0;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newCustomers = nonAdmin.filter((row) => row.createdAt && new Date(row.createdAt) >= startOfMonth).length;
+
+    return {
+      totalCustomers,
+      activeCustomers,
+      totalRevenue,
+      averageOrderValue,
+      newCustomers,
+    };
+  }, [customerRows]);
 
   const statusClass = (status) => {
     const value = String(status || '').toLowerCase();
@@ -526,14 +615,14 @@ export default function AdminDashboard() {
   };
 
   const orderTimeline = (order) => {
-    const created = order.createdAt ? new Date(order.createdAt) : new Date();
+    const created = order.orderDate ? new Date(order.orderDate) : order.createdAt ? new Date(order.createdAt) : new Date();
     const updated = order.updatedAt ? new Date(order.updatedAt) : created;
     return [
       { label: 'Order Placed', time: created },
       { label: 'Payment Confirmed', time: String(order.paymentStatus || '').toLowerCase() === 'paid' ? created : null },
-      { label: 'Processing', time: ['processing', 'shipped', 'delivered'].includes(String(order.status || '').toLowerCase()) ? updated : null },
-      { label: 'Shipped', time: ['shipped', 'delivered'].includes(String(order.status || '').toLowerCase()) ? updated : null },
-      { label: 'Delivered', time: String(order.status || '').toLowerCase() === 'delivered' ? updated : null },
+      { label: 'Processing', time: ['processing', 'shipped', 'delivered'].includes(String(order.orderStatus || order.status || '').toLowerCase()) ? updated : null },
+      { label: 'Shipped', time: ['shipped', 'delivered'].includes(String(order.orderStatus || order.status || '').toLowerCase()) ? updated : null },
+      { label: 'Delivered', time: String(order.orderStatus || order.status || '').toLowerCase() === 'delivered' ? updated : null },
     ];
   };
 
@@ -561,9 +650,9 @@ export default function AdminDashboard() {
             ]}
             rows={orders.slice(0, 6).map((order) => ({
               id: order._id,
-              customer: order.user?.name || order.address?.fullName || 'Customer',
-              total: money(order.totalPrice),
-              status: order.status,
+              customer: order.customerName || order.user?.name || order.address?.fullName || 'Customer',
+              total: money(order.totalAmount ?? order.totalPrice),
+              status: order.orderStatus || order.status,
             }))}
           />
         </section>
@@ -584,20 +673,68 @@ export default function AdminDashboard() {
       <section className="admin-panel">
         <div className="admin-section-head"><span>Catalog Studio</span><h2>{editingId ? 'Edit Product' : 'Create Product'}</h2></div>
         <form className="admin-form" onSubmit={submitProduct}>
-          {[
-            ['name', 'Name'],
-            ['price', 'Price'],
-            ['description', 'Description'],
-            ['category', 'Category'],
-            ['tags', 'Tags (new, sale, featured)'],
-            ['swatches', 'Colors / Swatches'],
-            ['badge', 'Badge'],
-            ['bgClass', 'Background class'],
-            ['imageClass', 'Image class'],
-            ['badgeText', 'Badge text'],
-          ].map(([name, label]) => (
-              <label key={name}>{label}<input name={name} value={productForm[name]} onChange={(e) => setProductForm((prev) => ({ ...prev, [name]: e.target.value }))} /></label>
-          ))}
+          <label>
+            Collection
+            <select
+              value={productForm.collection}
+              onChange={(event) => {
+                const collection = event.target.value;
+                const categories = getCategoryOptions(collection);
+                const nextCategory = categories[0] || '';
+                const subcategories = getSubcategoryOptions(collection, nextCategory);
+                setProductForm((prev) => ({
+                  ...prev,
+                  collection,
+                  category: nextCategory,
+                  subcategory: subcategories[0] || '',
+                }));
+              }}
+            >
+              {COLLECTION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
+            Category
+            <select
+              value={productForm.category}
+              onChange={(event) => {
+                const category = event.target.value;
+                const subcategories = getSubcategoryOptions(productForm.collection, category);
+                setProductForm((prev) => ({
+                  ...prev,
+                  category,
+                  subcategory: subcategories[0] || '',
+                }));
+              }}
+            >
+              {(getCategoryOptions(productForm.collection) || []).map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>
+            Subcategory
+            <select
+              value={productForm.subcategory}
+              onChange={(event) => setProductForm((prev) => ({ ...prev, subcategory: event.target.value }))}
+            >
+              <option value="">All</option>
+              {(getSubcategoryOptions(productForm.collection, productForm.category) || []).map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>Name<input name="name" value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} /></label>
+          <label>Price<input name="price" value={productForm.price} onChange={(e) => setProductForm((prev) => ({ ...prev, price: e.target.value }))} /></label>
+          <label>
+            Colours
+              <input
+                name="colors"
+                value={productForm.colors || ''}
+                onChange={(e) => setProductForm((prev) => ({ ...prev, colors: e.target.value }))}
+                placeholder="Ivory, Noir, Pearl"
+              />
+          </label>
+          <label>
+            Description
+            <textarea name="description" value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} />
+          </label>
           <div className="admin-size-stock-editor">
             <h3>Size Stock</h3>
             <div>
@@ -649,29 +786,100 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
-          <button className="admin-primary" type="submit">{editingId ? 'Update Product' : 'Create Product'}</button>
+          <button className="admin-primary admin-primary-product" type="submit">{editingId ? 'Update Product' : 'Create Product'}</button>
         </form>
       </section>
       <section className="admin-panel">
         <div className="admin-section-head"><span>Product Management</span><h2>Product List</h2></div>
         <div className="admin-inline-search">
           <input
-            placeholder="Search by product name, category, or tag"
+            placeholder="Search by product name, collection, category, or subcategory"
             value={productSearch}
             onChange={(event) => setProductSearch(event.target.value)}
           />
         </div>
-        <DataTable
-          columns={[
-            { key: 'image', label: 'Image', render: (row) => <div className="admin-mini-image">{row.image ? <img src={row.image} alt={row.name} /> : <span>No Image</span>}</div> },
-            { key: 'name', label: 'Name' },
-            { key: 'category', label: 'Category' },
-            { key: 'price', label: 'Price' },
-            { key: 'stock', label: 'Stock' },
-            { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button onClick={() => editProduct(row.raw)}>Edit</button><button onClick={() => duplicateProduct(row.raw)}>Duplicate</button><button onClick={() => setProductPreview(row.raw)}>Preview</button><button onClick={() => deleteProduct(row.id)}>Delete</button></div> },
-          ]}
-          rows={filteredProducts.map((product) => ({ id: product.id || product._id, raw: product, image: product.images?.[0] || '', name: product.name, category: product.category, price: money(product.price), stock: product.stock }))}
-        />
+        <div className="admin-table-wrap admin-products-table-wrap">
+          <table className="admin-table admin-products-table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Collection</th>
+                <th>Category</th>
+                <th>Subcategory</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Total Stock</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.length === 0 && (
+                <tr>
+                  <td colSpan={9}>No products found.</td>
+                </tr>
+              )}
+              {filteredProducts.map((product) => {
+                const id = product.id || product._id;
+                const isExpanded = expandedProductId === id;
+                return (
+                  <Fragment key={id}>
+                    <tr>
+                      <td><div className="admin-mini-image">{product.images?.[0] ? <img src={product.images[0]} alt={product.name} /> : <span>No Image</span>}</div></td>
+                      <td>{product.name || '-'}</td>
+                      <td>{getCollectionLabel(product.collection)}</td>
+                      <td>{product.category || '-'}</td>
+                      <td>{product.subcategory || '-'}</td>
+                      <td className="admin-cell-clamp">{product.description || '-'}</td>
+                      <td>{money(product.price)}</td>
+                      <td>{product.stock ?? 0}</td>
+                      <td>
+                        <div className="admin-actions">
+                          <button
+                            className="admin-action admin-action-open"
+                            type="button"
+                            onClick={() => setExpandedProductId((prev) => (prev === id ? '' : id))}
+                          >
+                            {isExpanded ? 'Hide' : 'Show'}
+                          </button>
+                          <button className="admin-action admin-action-message" type="button" onClick={() => editProduct(product)}>Edit</button>
+                          <button className="admin-action admin-action-processing" type="button" onClick={() => duplicateProduct(product)}>Duplicate</button>
+                          <button className="admin-action admin-action-cancelled" type="button" onClick={() => deleteProduct(id)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${id}-details`} className="admin-product-expanded-row">
+                        <td colSpan={9}>
+                          <div className="admin-product-expanded-grid">
+                            <div>
+                              <h4>Full Description</h4>
+                              <p>{product.description || 'No description provided.'}</p>
+                            </div>
+                            <div>
+                              <h4>Metadata</h4>
+                              <p><strong>Collection:</strong> {getCollectionLabel(product.collection)}</p>
+                              <p><strong>Category:</strong> {product.category || '-'}</p>
+                              <p><strong>Subcategory:</strong> {product.subcategory || '-'}</p>
+                            </div>
+                            <div>
+                              <h4>Size Stock</h4>
+                              <div className="admin-size-stock-readonly">
+                                {SIZE_SET.map((size) => (
+                                  <span key={`${id}-${size}`}><strong>{size}:</strong> {Number(product.sizeStock?.[size] || 0)}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
       {productPreview && (
         <section className="admin-panel">
@@ -682,10 +890,11 @@ export default function AdminDashboard() {
             </div>
             <div>
               <p>{productPreview.description || 'No description provided.'}</p>
+              <p>Collection: {getCollectionLabel(productPreview.collection)}</p>
               <p>Category: {productPreview.category || '-'}</p>
+              <p>Subcategory: {productPreview.subcategory || '-'}</p>
               <p>Price: {money(productPreview.price)}</p>
               <p>Total Stock: {productPreview.stock}</p>
-              <p>Tags: {(productPreview.tags || []).join(', ') || '-'}</p>
               <button onClick={() => setProductPreview(null)}>Close Preview</button>
             </div>
           </div>
@@ -732,37 +941,55 @@ export default function AdminDashboard() {
         <DataTable
           columns={[
             { key: 'orderId', label: 'Order ID' },
-            { key: 'customer', label: 'Customer' },
-            { key: 'date', label: 'Date' },
-            { key: 'items', label: 'Items Count' },
-            { key: 'total', label: 'Total' },
+            { key: 'customerName', label: 'Customer Name' },
+            { key: 'customerEmail', label: 'Customer Email' },
+            { key: 'customerId', label: 'Customer ID', render: (row) => <span className="customer-id">{row.customerId}</span> },
+            { key: 'phone', label: 'Phone', className: 'admin-order-phone-column' },
+            { key: 'productName', label: 'Product' },
+            { key: 'size', label: 'Size' },
+            { key: 'quantity', label: 'Qty' },
+            { key: 'price', label: 'Price' },
+            { key: 'shippingCost', label: 'Shipping' },
+            { key: 'totalAmount', label: 'Total Amount' },
+            { key: 'paymentMethod', label: 'Payment Method' },
             { key: 'paymentStatus', label: 'Payment Status', render: (row) => <span className={`admin-pill ${paymentClass(row.paymentStatus)}`}>{row.paymentStatus.toUpperCase()}</span> },
             { key: 'status', label: 'Order Status', render: (row) => <span className={`admin-pill ${statusClass(row.status)}`}>{row.status.toUpperCase()}</span> },
-            { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button onClick={() => setSelectedOrder(row.raw)}>Open</button><button onClick={() => messageCustomer(row.raw)}>Message</button></div> },
+            { key: 'transactionId', label: 'Transaction ID' },
+            { key: 'orderDate', label: 'Order Date' },
+            { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button className="admin-action admin-action-open" onClick={() => setSelectedOrder(row.raw)}>Open</button><button className="admin-action admin-action-message" onClick={() => messageCustomer(row.raw)}>Message</button></div> },
           ]}
           rows={filteredOrders.map((order) => ({
-            id: order._id,
+            id: order._id || order.id,
             raw: order,
-            orderId: String(order._id).slice(-8).toUpperCase(),
-            customer: order.user?.name || order.address?.fullName || 'Customer',
-            date: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-',
-            items: order.items.length,
-            total: money(order.totalPrice),
+            orderId: order.orderId || String(order._id || order.id).slice(-8).toUpperCase(),
+            customerName: order.customerName || order.user?.name || order.address?.fullName || 'Customer',
+            customerEmail: order.customerEmail || order.user?.email || '-',
+            customerId: order.customerId || order.user?.customerId || '-',
+            phone: <span className="order-phone-cell">{order.phone || order.address?.phone || '-'}</span>,
+            productName: order.productName || (order.items?.[0]?.name ?? '-'),
+            size: order.size || (order.items?.[0]?.size ?? 'One Size'),
+            quantity: order.quantity ?? order.items?.reduce((sum, item) => sum + Number(item.quantity || 1), 0) ?? 0,
+            price: money(order.price ?? order.items?.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0) ?? 0),
+            shippingCost: money(order.shippingCost || 0),
+            totalAmount: money(order.totalAmount ?? order.totalPrice),
+            paymentMethod: order.paymentMethod || '-',
             paymentStatus: String(order.paymentStatus || order.payment?.status || 'pending').toLowerCase(),
-            status: String(order.status || 'pending').toLowerCase()
+            status: String(order.orderStatus || order.status || 'pending').toLowerCase(),
+            transactionId: order.transactionId || '-',
+            orderDate: order.orderDate ? new Date(order.orderDate).toLocaleDateString() : order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'
           }))}
         />
       </section>
       {selectedOrder && (
         <aside className="admin-order-drawer">
           <button className="admin-close" onClick={() => setSelectedOrder(null)}>Close</button>
-          <h3>Order #{String(selectedOrder._id).slice(-8).toUpperCase()}</h3>
+          <h3>Order #{selectedOrder.orderId || String(selectedOrder._id || selectedOrder.id).slice(-8).toUpperCase()}</h3>
           <div className="admin-order-detail-grid">
             <section>
               <h4>Customer Information</h4>
-              <p>Name: {selectedOrder.user?.name || selectedOrder.address?.fullName || 'Customer'}</p>
-              <p>Email: {selectedOrder.user?.email || '-'}</p>
-              <p>Phone: {selectedOrder.address?.phone || '-'}</p>
+              <p>Name: {selectedOrder.customerName || selectedOrder.user?.name || selectedOrder.address?.fullName || 'Customer'}</p>
+              <p>Email: {selectedOrder.customerEmail || selectedOrder.user?.email || '-'}</p>
+              <p>Phone: {selectedOrder.phone || selectedOrder.address?.phone || '-'}</p>
             </section>
             <section>
               <h4>Shipping Address</h4>
@@ -775,7 +1002,7 @@ export default function AdminDashboard() {
           <section>
             <h4>Ordered Products</h4>
             <div className="admin-order-item-list">
-              {selectedOrder.items.map((item) => (
+              {(selectedOrder.items?.length ? selectedOrder.items : [{ name: selectedOrder.productName, size: selectedOrder.size, quantity: selectedOrder.quantity, price: selectedOrder.price }]).map((item) => (
                 <article key={`${item.name}-${item.size}-${item.quantity}`}>
                   <div className="admin-mini-image">
                     {getProductImage(item) ? <img src={getProductImage(item)} alt={item.name} /> : <span>No Image</span>}
@@ -790,25 +1017,25 @@ export default function AdminDashboard() {
           </section>
           <section className="admin-order-summary">
             <h4>Order Summary</h4>
-            <p>Subtotal: <strong>{money(selectedOrder.totalPrice)}</strong></p>
-            <p>Shipping: <strong>{money(0)}</strong></p>
-            <p>Discount: <strong>{money(0)}</strong></p>
-            <p>Total: <strong>{money(selectedOrder.totalPrice)}</strong></p>
+            <p>Item Price: <strong>{money(selectedOrder.price ?? selectedOrder.totalAmount ?? selectedOrder.totalPrice)}</strong></p>
+            <p>Shipping: <strong>{money(selectedOrder.shippingCost || 0)}</strong></p>
+            <p>Total: <strong>{money(selectedOrder.totalAmount ?? selectedOrder.totalPrice)}</strong></p>
           </section>
           <section className="admin-order-summary">
             <h4>Payment Details</h4>
             <p>Payment Method: <strong>{selectedOrder.paymentMethod || selectedOrder.payment?.method || '-'}</strong></p>
             <p>Transaction ID: <strong>{selectedOrder.transactionId || selectedOrder.payment?.reference || '-'}</strong></p>
             <p>Payment Status: <strong>{String(selectedOrder.paymentStatus || selectedOrder.payment?.status || '-').toUpperCase()}</strong></p>
+            <p>Order Date: <strong>{selectedOrder.orderDate ? new Date(selectedOrder.orderDate).toLocaleString() : selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString() : '-'}</strong></p>
           </section>
           <section className="admin-order-actions">
             <h4>Admin Actions</h4>
             <div className="admin-actions">
-              <button onClick={() => updateStatus(selectedOrder._id, 'processing')}>Mark Processing</button>
-              <button onClick={() => updateStatus(selectedOrder._id, 'shipped')}>Mark Shipped</button>
-              <button onClick={() => updateStatus(selectedOrder._id, 'delivered')}>Mark Delivered</button>
-              <button onClick={() => updateStatus(selectedOrder._id, 'cancelled')}>Cancel Order</button>
-              <button onClick={() => updatePaymentStatus(selectedOrder._id, 'REFUNDED')}>Refund</button>
+              <button className="admin-action admin-action-processing" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'processing')}>Mark Processing</button>
+              <button className="admin-action admin-action-shipped" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'shipped')}>Mark Shipped</button>
+              <button className="admin-action admin-action-delivered" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'delivered')}>Mark Delivered</button>
+              <button className="admin-action admin-action-cancelled" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'cancelled')}>Cancel Order</button>
+              <button className="admin-action admin-action-refund" onClick={() => updatePaymentStatus(selectedOrder._id || selectedOrder.id, 'REFUNDED')}>Refund</button>
             </div>
           </section>
           <section className="admin-order-timeline">
@@ -826,20 +1053,77 @@ export default function AdminDashboard() {
   );
 
   const renderCustomers = () => (
-    <section className="admin-panel">
-      <div className="admin-section-head"><span>Customers</span><h2>Customer Management</h2></div>
-      <DataTable
-        columns={[
-          { key: 'name', label: 'Name' },
-          { key: 'email', label: 'Email' },
-          { key: 'orders', label: 'Orders' },
-          { key: 'spent', label: 'Total Spent' },
-          { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button onClick={() => setSelectedCustomer(row.raw)}>View</button><button onClick={() => deleteCustomer(row.id)}>Delete</button></div> },
-        ]}
-        rows={customers.map((customer) => ({ id: customer.id || customer._id, raw: customer, name: customer.name, email: customer.email, orders: customer.totalOrders, spent: money(customer.totalSpent) }))}
-      />
-      {selectedCustomer && <div className="admin-detail"><button className="admin-close" onClick={() => setSelectedCustomer(null)}>Close</button><h3>{selectedCustomer.name}</h3><p>{selectedCustomer.email}</p><p>{selectedCustomer.totalOrders} orders - {money(selectedCustomer.totalSpent)}</p></div>}
-    </section>
+    <>
+      <div className="customer-metrics">
+        <MetricCard label="Total Customers" value={customerMetrics.totalCustomers} />
+        <MetricCard label="Active Customers" value={customerMetrics.activeCustomers} />
+        <MetricCard label="Customer Revenue" value={formatLkr(customerMetrics.totalRevenue)} />
+        <MetricCard label="Avg Order Value" value={formatLkr(customerMetrics.averageOrderValue)} />
+        <MetricCard label="New This Month" value={customerMetrics.newCustomers} />
+      </div>
+      <section className="admin-panel">
+        <div className="admin-section-head"><span>Customers</span><h2>Customer Management</h2></div>
+        <div className="admin-table-wrap customer-table-wrap">
+          <table className="admin-table customer-table">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Password</th>
+                <th>Orders</th>
+                <th>Total Spent</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customerRows.length === 0 ? (
+                <tr><td colSpan={7}>No customers found.</td></tr>
+              ) : customerRows.map((row) => (
+                <tr key={row.id} className="customer-row">
+                  <td><span className={`customer-id${row.isAdmin ? ' admin' : ''}`}>{row.customerId}</span></td>
+                  <td>
+                    <div className="customer-name-cell">
+                      <div className="customer-avatar">{row.initials}</div>
+                      <div>
+                        <div className="customer-name">{row.name}</div>
+                        <div className="customer-badges">
+                          <span className={`customer-badge ${row.isAdmin ? 'protected' : row.isActive ? 'active' : 'inactive'}`}>
+                            {row.isAdmin ? 'Protected' : row.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{row.email || '-'}</td>
+                  <td><span className="customer-password" aria-label="Masked password" /></td>
+                  <td>{row.totalOrders}</td>
+                  <td>{formatLkr(row.totalSpent)}</td>
+                  <td>
+                    {row.isAdmin ? (
+                      <span className="customer-badge protected">Protected</span>
+                    ) : (
+                      <div className="admin-actions">
+                        <button className="admin-action admin-action-view" onClick={() => setSelectedCustomer(row)}>View Profile</button>
+                        <button className="admin-action admin-action-orders" onClick={() => viewCustomerOrders(row)}>View Orders</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {selectedCustomer && (
+          <div className="admin-detail">
+            <button className="admin-close" onClick={() => setSelectedCustomer(null)}>Close</button>
+            <h3>{selectedCustomer.name}</h3>
+            <p>{selectedCustomer.email}</p>
+            <p>{selectedCustomer.totalOrders} orders - {formatLkr(selectedCustomer.totalSpent)}</p>
+          </div>
+        )}
+      </section>
+    </>
   );
 
   const renderInventory = () => (
@@ -920,7 +1204,16 @@ export default function AdminDashboard() {
           { key: 'total', label: 'Total' },
           { key: 'actions', label: 'Invoice', render: (row) => <button onClick={() => printInvoice(row.raw)}>Print / PDF</button> },
         ]}
-        rows={orders.map((order) => ({ id: order._id, raw: order, order: order._id.slice(-6), customer: order.user?.name || order.address?.fullName || 'Customer', total: money(order.totalPrice) }))}
+        rows={orders.map((order) => {
+          const id = order._id || order.id;
+          return {
+            id,
+            raw: order,
+            order: order.orderId || String(id || '').slice(-6).toUpperCase(),
+            customer: order.customerName || order.user?.name || order.address?.fullName || 'Customer',
+            total: money(order.totalAmount ?? order.totalPrice)
+          };
+        })}
       />
     </section>
   );
@@ -936,7 +1229,7 @@ export default function AdminDashboard() {
             <label>Button Text<input value={homepageContent.buttonText || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, buttonText: e.target.value }))} /></label>
             <label>Button Link<input value={homepageContent.buttonLink || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, buttonLink: e.target.value }))} /></label>
             <label>Section Title<input value={homepageContent.section2Title || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, section2Title: e.target.value }))} /></label>
-            <label>Featured Categories<input value={(homepageContent.featuredCategories || []).join(', ')} onChange={(e) => setHomepageContent((prev) => ({ ...prev, featuredCategories: e.target.value.split(',').map((item) => item.trim()).filter(Boolean) }))} /></label>
+            <label>Featured Categories<input value={(homepageContent.featuredCategories || []).join(', ')} onChange={(e) => setHomepageContent((prev) => ({ ...prev, featuredCategories: (e.target.value || '').split(',').map((item) => item.trim()).filter(Boolean) }))} /></label>
             <div className="admin-image-manager">
               <div className="admin-image-head"><span>Hero Images</span></div>
               <div className="admin-image-list">

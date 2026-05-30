@@ -26,7 +26,12 @@ async function createAdmin() {
   if (existing) {
     await prisma.user.update({
       where: { id: existing.id },
-      data: { name, password: hashedPassword, role: 'admin' }
+      data: {
+        name,
+        password: hashedPassword,
+        role: 'admin',
+        customerId: existing.customerId || 'ADMIN-001'
+      }
     });
     console.log(`Admin updated: ${email}`);
   } else {
@@ -36,6 +41,7 @@ async function createAdmin() {
       email: email.toLowerCase(),
       password: hashedPassword,
       role: 'admin',
+      customerId: 'ADMIN-001'
       }
     });
     console.log(`Admin created: ${email}`);

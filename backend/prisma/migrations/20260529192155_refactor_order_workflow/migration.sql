@@ -1,0 +1,21 @@
+-- AlterTable
+ALTER TABLE "public"."Order" DROP COLUMN "status",
+DROP COLUMN "totalPrice",
+ADD COLUMN     "customerEmail" TEXT NOT NULL,
+ADD COLUMN     "customerName" TEXT NOT NULL,
+ADD COLUMN     "orderDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "orderId" TEXT NOT NULL,
+ADD COLUMN     "orderStatus" TEXT NOT NULL DEFAULT 'pending',
+ADD COLUMN     "phone" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "price" DOUBLE PRECISION NOT NULL,
+ADD COLUMN     "productName" TEXT NOT NULL,
+ADD COLUMN     "quantity" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN     "shippingCost" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "size" TEXT NOT NULL DEFAULT 'One Size',
+ADD COLUMN     "totalAmount" DOUBLE PRECISION NOT NULL,
+ALTER COLUMN "items" SET DEFAULT '[]',
+ALTER COLUMN "payment" SET DEFAULT '{}';
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Order_orderId_key" ON "public"."Order"("orderId");
+

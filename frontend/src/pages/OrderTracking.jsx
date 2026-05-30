@@ -36,7 +36,7 @@ export default function OrderTracking() {
         const response = await api.get('/orders/user');
         if (active) {
           setOrders(response.data);
-          setSelectedId(response.data[0]?._id || '');
+          setSelectedId(response.data[0]?._id || response.data[0]?.id || '');
         }
       } catch (err) {
         if (active) setError(getErrorMessage(err));
@@ -53,11 +53,12 @@ export default function OrderTracking() {
   }, []);
 
   const selectedOrder = useMemo(
-    () => orders.find((order) => order._id === selectedId) || orders[0],
+    () => orders.find((order) => (order._id || order.id) === selectedId) || orders[0],
     [orders, selectedId]
   );
 
-  const currentStep = statusIndex[selectedOrder?.status] ?? 0;
+  const currentStatus = selectedOrder?.orderStatus || selectedOrder?.status;
+  const currentStep = statusIndex[currentStatus] ?? 0;
 
   return (
     <section className="tracking-page">
@@ -87,37 +88,40 @@ export default function OrderTracking() {
               <span>History</span>
               <h2>Your Orders</h2>
             </div>
-            {orders.map((order) => (
-              <button
-                key={order._id}
-                type="button"
-                className={selectedOrder._id === order._id ? 'active' : ''}
-                onClick={() => setSelectedId(order._id)}
-              >
-                <strong>#{String(order._id).slice(-8).toUpperCase()}</strong>
-                <span>{formatCurrency(order.totalPrice)} · {order.status}</span>
-              </button>
-            ))}
+            {orders.map((order) => {
+              const rowId = order._id || order.id;
+              return (
+                <button
+                  key={rowId}
+                  type="button"
+                  className={(selectedOrder._id || selectedOrder.id) === rowId ? 'active' : ''}
+                  onClick={() => setSelectedId(rowId)}
+                >
+                  <strong>#{order.orderId || String(rowId).slice(-8).toUpperCase()}</strong>
+                  <span>{formatCurrency(order.totalAmount ?? order.totalPrice)} - {order.orderStatus || order.status}</span>
+                </button>
+              );
+            })}
           </aside>
 
           <main className="tracking-panel">
             <div className="tracking-summary-line">
               <div>
                 <span>Order ID</span>
-                <strong>#{String(selectedOrder._id).slice(-8).toUpperCase()}</strong>
+                <strong>#{selectedOrder.orderId || String(selectedOrder._id || selectedOrder.id).slice(-8).toUpperCase()}</strong>
               </div>
               <div>
                 <span>Payment</span>
-                <strong>{selectedOrder.payment?.status || 'pending'}</strong>
+                <strong>{selectedOrder.payment?.status || selectedOrder.paymentStatus?.toLowerCase() || 'pending'}</strong>
               </div>
               <div>
                 <span>Total</span>
-                <strong>{formatCurrency(selectedOrder.totalPrice)}</strong>
+                <strong>{formatCurrency(selectedOrder.totalAmount ?? selectedOrder.totalPrice)}</strong>
               </div>
             </div>
 
-            <div className={`tracking-timeline ${selectedOrder.status === 'cancelled' ? 'cancelled' : ''}`}>
-              {selectedOrder.status === 'cancelled' ? (
+            <div className={`tracking-timeline ${currentStatus === 'cancelled' ? 'cancelled' : ''}`}>
+              {currentStatus === 'cancelled' ? (
                 <div className="tracking-cancelled">
                   <h2>Order Cancelled</h2>
                   <p>This order has been cancelled. Contact support if this was unexpected.</p>
@@ -142,14 +146,19 @@ export default function OrderTracking() {
                   <h2>Order Pieces</h2>
                 </div>
                 <div className="tracking-items">
-                  {selectedOrder.items.map((item) => (
-                    <div className="tracking-item" key={`${item.name}-${item.size}`}>
-                      <div className={`tracking-item-image ${item.imageClass || ''}`} />
+                  {(selectedOrder.items?.length
+                    ? selectedOrder.items
+                    : [{ name: selectedOrder.productName, size: selectedOrder.size, quantity: selectedOrder.quantity, price: selectedOrder.price }]
+                  ).map((item) => (
+                    <div className="tracking-item" key={`${item.product || item.productId || item.name}-${item.size}`}>
+                      <div className="tracking-item-image">
+                        {item.image ? <img src={item.image} alt={item.name} /> : null}
+                      </div>
                       <div>
                         <strong>{item.name}</strong>
-                        <span>{item.size || 'One Size'} · Qty {item.quantity || 1}</span>
+                        <span>{item.size || 'One Size'} - Qty {item.quantity || 1}</span>
                       </div>
-                      <p>{formatCurrency(item.price * (item.quantity || 1))}</p>
+                      <p>{formatCurrency(Number(item.price || 0) * Number(item.quantity || 1))}</p>
                     </div>
                   ))}
                 </div>
@@ -161,12 +170,12 @@ export default function OrderTracking() {
                   <h2>Shipping Details</h2>
                 </div>
                 <div className="tracking-address">
-                  <strong>{selectedOrder.address?.fullName}</strong>
+                  <strong>{selectedOrder.customerName || selectedOrder.address?.fullName}</strong>
                   <p>{selectedOrder.address?.line1}</p>
                   {selectedOrder.address?.line2 && <p>{selectedOrder.address.line2}</p>}
                   <p>{selectedOrder.address?.city}, {selectedOrder.address?.postalCode}</p>
                   <p>{selectedOrder.address?.country}</p>
-                  <p>{selectedOrder.address?.phone}</p>
+                  <p>{selectedOrder.phone || selectedOrder.address?.phone}</p>
                 </div>
               </section>
             </div>
@@ -176,3 +185,4 @@ export default function OrderTracking() {
     </section>
   );
 }
+

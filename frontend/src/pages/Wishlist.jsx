@@ -114,11 +114,12 @@ export default function Wishlist() {
 
   const handleMoveToBag = (item) => {
     addItem({
-      id: item.id,
+      productId: item.id,
       name: item.name,
+      image: item.image || '',
       price: item.price,
       size: item.selectedSize,
-      imageClass: item.imageClass,
+      quantity: 1,
     });
     setItems((prev) => prev.filter((entry) => entry.id !== item.id));
     showToast(`${item.name} added to bag — ${formatCurrency(item.price)}`);
@@ -129,11 +130,12 @@ export default function Wishlist() {
     if (!visibleItems.length) return;
     addItems(
       visibleItems.map((item) => ({
-        id: item.id,
+        productId: item.id,
         name: item.name,
+        image: item.image || '',
         price: item.price,
         size: item.selectedSize,
-        imageClass: item.imageClass,
+        quantity: 1,
       }))
     );
     setItems((prev) => prev.filter((item) => !visibleItems.some((entry) => entry.id === item.id)));

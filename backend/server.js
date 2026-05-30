@@ -1,7 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const passport = require('passport');
+const path = require('path');
 const connectDB = require('./config/db');
+const { configurePassport } = require('./config/passport');
+const devLog = require('./utils/devLog');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -14,16 +18,28 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const contentRoutes = require('./routes/contentRoutes');
 
 // Load environment variables.
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
+
+devLog('[server] environment bootstrap', {
+  cwd: process.cwd(),
+  backendDir: __dirname,
+  hasGoogleClientId: Boolean(process.env.GOOGLE_CLIENT_ID),
+  hasGoogleClientSecret: Boolean(process.env.GOOGLE_CLIENT_SECRET),
+  hasJwtSecret: Boolean(process.env.JWT_SECRET),
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173'
+});
 
 const app = express();
 
 // Connect to PostgreSQL.
 connectDB();
+configurePassport();
 
 // Global middleware.
 app.use(cors());
 app.use(express.json({ limit: '12mb' }));
+app.use(passport.initialize());
 
 // API routes.
 app.use('/api/auth', authRoutes);

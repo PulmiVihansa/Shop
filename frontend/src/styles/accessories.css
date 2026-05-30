@@ -868,6 +868,32 @@
   transform: translateY(0);
 }
 
+.accessories .pc-szs {
+  display: flex;
+  gap: 0.28rem;
+  margin-bottom: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.accessories .sz {
+  padding: 0.2rem 0.46rem;
+  border: 1px solid var(--stl);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.16s;
+  background: transparent;
+  font-family: 'Archivo', sans-serif;
+}
+
+.accessories .sz:hover,
+.accessories .sz.on {
+  border-color: var(--ch);
+  color: var(--ch);
+  background: rgba(26, 26, 26, 0.04);
+}
+
 .accessories .add-btn {
   width: 100%;
   padding: 0.6rem;

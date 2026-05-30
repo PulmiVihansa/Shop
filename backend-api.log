@@ -1,0 +1,5 @@
+
+> shop-backend@0.1.0 start
+> node server.js
+
+Server running on port 5001

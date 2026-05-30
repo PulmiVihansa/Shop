@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/dresses.css';
 
 const heroTiles = [
@@ -14,8 +17,8 @@ const lookbook = [
     name: 'Broderie Anglaise Midi',
     category: 'Midi',
     price: 395,
-    badge: 'lkb-new',
-    badgeText: 'New',
+    labelClass: 'lkb-new',
+    label: 'New',
     bgClass: 'b6',
     productId: 'broderie-anglaise-midi',
   },
@@ -24,8 +27,8 @@ const lookbook = [
     name: 'Silk Wrap Maxi',
     category: 'Maxi',
     price: 485,
-    badge: 'lkb-new',
-    badgeText: 'New',
+    labelClass: 'lkb-new',
+    label: 'New',
     bgClass: 'b2',
     productId: 'silk-wrap-maxi',
   },
@@ -34,8 +37,8 @@ const lookbook = [
     name: 'Cotton Prairie Dress',
     category: 'Midi',
     price: 290,
-    badge: 'lkb-ltd',
-    badgeText: 'Limited',
+    labelClass: 'lkb-ltd',
+    label: 'Limited',
     bgClass: 'b9',
     productId: 'cotton-prairie-dress',
   },
@@ -44,8 +47,8 @@ const lookbook = [
     name: 'Gauze Flutter Dress',
     category: 'Mini',
     price: 275,
-    badge: 'lkb-new',
-    badgeText: 'New',
+    labelClass: 'lkb-new',
+    label: 'New',
     bgClass: 'b7',
     productId: 'gauze-flutter-dress',
   },
@@ -54,8 +57,8 @@ const lookbook = [
     name: 'Velvet Column Gown',
     category: 'Evening',
     price: 595,
-    badge: 'lkb-new',
-    badgeText: 'New',
+    labelClass: 'lkb-new',
+    label: 'New',
     bgClass: 'b8',
     productId: 'velvet-column-gown',
   },
@@ -64,125 +67,10 @@ const lookbook = [
     name: 'Linen Shirt Dress',
     category: 'Midi',
     price: 310,
-    badge: 'lkb-new',
-    badgeText: 'New',
+    labelClass: 'lkb-new',
+    label: 'New',
     bgClass: 'b1',
     productId: 'linen-shirt-dress',
-  },
-];
-
-const fallbackProducts = [
-  {
-    id: 'broderie-anglaise-midi',
-    name: 'Broderie Anglaise Midi',
-    category: 'midi',
-    categoryLabel: 'Midi',
-    price: 395,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b6',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#FAF7F2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'silk-wrap-maxi',
-    name: 'Silk Wrap Maxi',
-    category: 'maxi',
-    categoryLabel: 'Maxi',
-    price: 485,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b2',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#A8B8A0', '#8f9390', '#1A1A1A'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'linen-shirt-dress',
-    name: 'Linen Shirt Dress',
-    category: 'midi',
-    categoryLabel: 'Midi',
-    price: 310,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#C8BAB0', '#FAF7F2'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'gauze-flutter-dress',
-    name: 'Gauze Flutter Dress',
-    category: 'mini',
-    categoryLabel: 'Mini',
-    price: 275,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b7',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'S',
-    swatches: ['#A6C0B2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'velvet-column-gown',
-    name: 'Velvet Column Gown',
-    category: 'evening',
-    categoryLabel: 'Evening',
-    price: 595,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b8',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#B6B0C2', '#1A1A1A'],
-    imageClass: 'velvet',
-  },
-  {
-    id: 'cotton-prairie-dress',
-    name: 'Cotton Prairie Dress',
-    category: 'midi',
-    categoryLabel: 'Midi',
-    price: 290,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'b9',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#B8C2AA', '#FAF7F2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'silk-slip-dress',
-    name: 'Silk Slip Dress',
-    category: 'evening',
-    categoryLabel: 'Evening',
-    price: 420,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b3',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    swatches: ['#B0A8B8', '#8f9390'],
-    imageClass: 'silk',
-  },
-  {
-    id: 'linen-halter-maxi',
-    name: 'Linen Halter Maxi',
-    category: 'maxi',
-    categoryLabel: 'Maxi',
-    price: 355,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b12',
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#C4B6A8', '#1A1A1A'],
-    imageClass: 'linen',
   },
 ];
 
@@ -196,41 +84,24 @@ const marqueeItems = [
 
 const filterLabels = {
   all: 'All Dresses',
-  midi: 'Midi Dresses',
-  maxi: 'Maxi Dresses',
-  mini: 'Mini Dresses',
-  evening: 'Evening Dresses',
+  Midi: 'Midi Dresses',
+  Maxi: 'Maxi Dresses',
+  Mini: 'Mini Dresses',
+  Evening: 'Evening Dresses',
 };
 
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Women() {
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products, loading, error } = useProducts({ collection: 'female', category: 'Dresses' });
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
-
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   const showToast = (message) => {
     setToast(message);
@@ -242,14 +113,13 @@ export default function Women() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    const size = selectedSizes[product.id];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
   };
 
@@ -281,10 +151,14 @@ export default function Women() {
     setFilter(nextFilter);
   };
 
+  const openProduct = (productId) => {
+    if (productId) navigate(`/products/${productId}`);
+  };
+
   const visibleProducts = useMemo(() => {
     let list = [...products];
     if (filter !== 'all') {
-      list = list.filter((product) => product.category === filter);
+      list = list.filter((product) => product.subcategory === filter);
     }
     if (sort === 'low') {
       list.sort((a, b) => a.price - b.price);
@@ -293,7 +167,7 @@ export default function Women() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -318,10 +192,10 @@ export default function Women() {
               <div className="ph-cats">
                 {[
                   { key: 'all', label: 'All Dresses' },
-                  { key: 'midi', label: 'Midi' },
-                  { key: 'maxi', label: 'Maxi' },
-                  { key: 'mini', label: 'Mini' },
-                  { key: 'evening', label: 'Evening' },
+                  { key: 'Midi', label: 'Midi' },
+                  { key: 'Maxi', label: 'Maxi' },
+                  { key: 'Mini', label: 'Mini' },
+                  { key: 'Evening', label: 'Evening' },
                 ].map((cat) => (
                   <button
                     key={cat.key}
@@ -373,7 +247,7 @@ export default function Women() {
                   <div className={`lk-ibg ${look.bgClass}`} />
                   <div className="lk-ov" />
                 </div>
-                <span className={`lk-badge ${look.badge}`}>{look.badgeText}</span>
+                <span className={`lk-badge ${look.labelClass}`}>{look.label}</span>
                 <div className="lk-num">{String(index + 1).padStart(2, '0')}</div>
                 <div className="lk-inf">
                   <div className="lk-n">{look.name}</div>
@@ -393,10 +267,10 @@ export default function Women() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'midi', label: 'Midi' },
-            { key: 'maxi', label: 'Maxi' },
-            { key: 'mini', label: 'Mini' },
-            { key: 'evening', label: 'Evening' },
+            { key: 'Midi', label: 'Midi' },
+            { key: 'Maxi', label: 'Maxi' },
+            { key: 'Mini', label: 'Mini' },
+            { key: 'Evening', label: 'Evening' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -420,18 +294,31 @@ export default function Women() {
         </div>
       </div>
 
+      {loading && <div className="grid-sec"><div className="grid-hd">Loading dresses...</div></div>}
+      {!loading && error && <div className="grid-sec"><div className="grid-hd">{error}</div></div>}
+      {!loading && !error && visibleProducts.length === 0 && <div className="grid-sec"><div className="grid-hd">No dresses found.</div></div>}
+
       <section className="grid-sec">
         <div className="grid-hd">
           {gridTitle} \u2014 {pieceCount} styles
         </div>
         <div className="pgrid">
           {visibleProducts.map((product) => (
-            <div key={product.id} className="pc">
+            <div
+              key={product.id}
+              className="pc"
+              role="button"
+              tabIndex={0}
+              onClick={() => openProduct(product.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openProduct(product.id);
+                }
+              }}
+            >
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && (
-                  <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>
-                )}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     type="button"
@@ -457,28 +344,38 @@ export default function Women() {
                 </div>
                 <div className="pc-bar">
                   <div className="pc-szs">
-                    {product.sizes?.map((size) => (
+                    {getProductSizes(product).map((size) => (
                       <button
                         key={size}
                         type="button"
                         className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
-                        onClick={() => handleSizeSelect(product.id, size)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSizeSelect(product.id, size);
+                        }}
                       >
                         {size}
                       </button>
                     ))}
                   </div>
-                  <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
+                  <button
+                    className="add-btn"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddToBag(product);
+                    }}
+                  >
                     Add to Bag
                   </button>
                 </div>
               </div>
               <div className="pinfo">
-                <div className="pcat">{product.categoryLabel}</div>
+                <div className="pcat">{product.subcategory || product.categoryLabel}</div>
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -499,3 +396,4 @@ export default function Women() {
     </div>
   );
 }
+

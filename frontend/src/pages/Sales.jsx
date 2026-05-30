@@ -1,153 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/sales.css';
 
-const fallbackProducts = [
-  {
-    id: 1,
-    name: 'Structured Linen Blazer',
-    label: 'Linen Blazer',
-    category: 'women',
-    cardCategory: 'Women / Blazers',
-    price: 231,
-    originalPrice: 385,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    featured: true,
-    sizes: ['XS', 'S', 'M', 'L'],
-    defaultSize: 'S',
-    bgClass: 'bg-linen',
-    imageClass: 'linen',
-    isNew: true,
-  },
-  {
-    id: 2,
-    name: 'Flowing Silk Midi',
-    label: 'Silk Midi',
-    category: 'women',
-    cardCategory: 'Women / Dresses',
-    price: 270,
-    originalPrice: 450,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'XS',
-    bgClass: 'bg-silk',
-    imageClass: 'silk',
-    isNew: true,
-  },
-  {
-    id: 3,
-    name: 'Relaxed Cotton Shirt',
-    label: 'Cotton Shirt',
-    category: 'men',
-    cardCategory: 'Men / Shirts',
-    price: 117,
-    originalPrice: 195,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    bgClass: 'bg-cotton',
-    imageClass: 'cotton',
-  },
-  {
-    id: 4,
-    name: 'Merino Wool Overcoat',
-    label: 'Wool Coat',
-    category: 'final',
-    cardCategory: 'Men / Outerwear',
-    price: 248,
-    originalPrice: 620,
-    discount: 60,
-    badgeStyle: 'final',
-    badgeText: 'Final - 60%',
-    bgClass: 'bg-wool',
-    imageClass: 'wool',
-    soldOut: true,
-  },
-  {
-    id: 5,
-    name: 'Velvet Wide Trousers',
-    label: 'Velvet Trouser',
-    category: 'women',
-    cardCategory: 'Women / Trousers',
-    price: 177,
-    originalPrice: 295,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'S',
-    bgClass: 'bg-velvet',
-    imageClass: 'velvet',
-  },
-  {
-    id: 6,
-    name: 'Washed Canvas Tote',
-    label: 'Canvas Tote',
-    category: 'accessories',
-    cardCategory: 'Accessories / Bags',
-    price: 87,
-    originalPrice: 145,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    sizes: ['One Size'],
-    defaultSize: 'One Size',
-    bgClass: 'bg-denim',
-    imageClass: 'denim',
-  },
-  {
-    id: 7,
-    name: 'Suede Chelsea Boot',
-    label: 'Suede Boot',
-    category: 'men',
-    cardCategory: 'Men / Footwear',
-    price: 216,
-    originalPrice: 360,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    sizes: ['41', '42', '43', '44'],
-    defaultSize: '42',
-    bgClass: 'bg-suede',
-  },
-  {
-    id: 8,
-    name: 'Cashmere Roll-Neck',
-    label: 'Cashmere Knit',
-    category: 'final',
-    cardCategory: 'Women / Knitwear / Final',
-    price: 192,
-    originalPrice: 480,
-    discount: 60,
-    badgeStyle: 'final',
-    badgeText: 'Final - 60%',
-    sizes: ['XS', 'S', 'M'],
-    defaultSize: 'M',
-    bgClass: 'bg-cashmere',
-  },
-  {
-    id: 9,
-    name: 'Tweed Sport Jacket',
-    label: 'Tweed Jacket',
-    category: 'men',
-    cardCategory: 'Men / Jackets',
-    price: 174,
-    originalPrice: 290,
-    discount: 40,
-    badgeStyle: 'pct',
-    badgeText: '-40%',
-    sizes: ['S', 'M', 'L'],
-    defaultSize: 'M',
-    bgClass: 'bg-tweed',
-  },
-];
+const fallbackProducts = [];
 
 const marqueeItems = [
   'Up to 60% off',
@@ -179,14 +37,7 @@ export default function Sales() {
   });
   const toastTimer = useRef(null);
 
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   useEffect(() => {
     const endDate = new Date();
@@ -195,8 +46,7 @@ export default function Sales() {
     endDate.setMinutes(endDate.getMinutes() + 28);
 
     const tick = () => {
-      const now = new Date();
-      const diff = Math.max(0, endDate - now);
+                const diff = Math.max(0, endDate - now);
       const days = Math.floor(diff / 86400000);
       const hours = Math.floor((diff % 86400000) / 3600000);
       const mins = Math.floor((diff % 3600000) / 60000);
@@ -216,17 +66,6 @@ export default function Sales() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
-
   const showToast = (message) => {
     setToast(message);
     if (toastTimer.current) {
@@ -237,14 +76,13 @@ export default function Sales() {
 
   const handleAddToBag = (product) => {
     if (!product || product.soldOut) return;
-    const size = selectedSizes[product.id] || product.sizes?.[0];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     openCart();
     showToast(`${product.name} added to bag - ${formatCurrency(product.price)}`);
   };
@@ -282,7 +120,7 @@ export default function Sales() {
   const visibleProducts = useMemo(() => {
     let list = [...products];
     if (filter !== 'all') {
-      list = list.filter((product) => product.category === filter);
+      list = list.filter((product) => product.collection === filter);
     }
 
     if (sort === 'disc') {
@@ -299,16 +137,16 @@ export default function Sales() {
         const aNew = a.isNew ? 1 : 0;
         const bNew = b.isNew ? 1 : 0;
         if (aNew !== bNew) return bNew - aNew;
-        return a.id - b.id;
+        return String(a.id).localeCompare(String(b.id));
       });
     }
 
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const resultCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
-  const stickySizes = stickyItem?.sizes || [];
+  const stickySizes = stickyItem ? getProductSizes(stickyItem) : [];
   const stickySize = stickyItem ? selectedSizes[stickyItem.id] : null;
 
   return (
@@ -415,8 +253,8 @@ export default function Sales() {
         <div className="filter-left">
           {[
             { key: 'all', label: 'All' },
-            { key: 'women', label: 'Women' },
-            { key: 'men', label: 'Men' },
+            { key: 'female', label: 'Women' },
+            { key: 'male', label: 'Men' },
             { key: 'accessories', label: 'Accessories' },
             { key: 'final', label: 'Final Reductions' },
           ].map((btn) => (
@@ -478,10 +316,6 @@ export default function Sales() {
               style={{ animationDelay: `${index * 0.05}s` }}
               onMouseEnter={() => handleCardHover(product)}
             >
-              {product.badgeText && (
-                <span className={`disc-badge ${product.badgeStyle}`}>{product.badgeText}</span>
-              )}
-
               {!product.soldOut && (
                 <div className="card-actions">
                   <button
@@ -509,8 +343,8 @@ export default function Sales() {
               )}
 
               <div className="card-image">
-                <div className={`card-img-bg ${product.bgClass}`} />
-                <span className="card-img-label">{product.label}</span>
+                <ProductVisual product={product} className="card-img-bg" />
+                <span className="card-img-label">{product.label || product.name}</span>
 
                 {product.soldOut && (
                   <div className="sold-overlay">
@@ -520,20 +354,21 @@ export default function Sales() {
 
                 {!product.soldOut && (
                   <div className="card-hover-bar">
-                    {product.sizes && (
-                      <div className="hover-bar-sizes">
-                        {product.sizes.map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            className={`hover-size ${selectedSizes[product.id] === size ? 'sel' : ''}`}
-                            onClick={() => handleSizeSelect(product.id, size)}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <div className="hover-bar-sizes">
+                      {getProductSizes(product).map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          className={`hover-size ${selectedSizes[product.id] === size ? 'sel' : ''}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleSizeSelect(product.id, size);
+                          }}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       className="hover-add-btn"
                       type="button"
@@ -549,17 +384,17 @@ export default function Sales() {
               </div>
 
               <div className="card-info">
-                <div className="card-cat">{product.cardCategory}</div>
+                <div className="card-cat">{product.cardCategory || `${product.collection} / ${product.category}`}</div>
                 <div className="card-name">{product.name}</div>
                 <div className="card-pricing">
                   <span className={`price-sale ${product.soldOut ? 'is-muted' : ''}`}>
                     {formatCurrency(product.price)}
                   </span>
-                  <span className="price-orig">{formatCurrency(product.originalPrice)}</span>
+                  <span className="price-orig">{formatCurrency(product.originalPrice || product.price)}</span>
                   <span className="price-saving">
                     {product.soldOut
                       ? 'Sold out'
-                      : `You save ${formatCurrency(product.originalPrice - product.price)}`}
+                      : `You save ${formatCurrency((product.originalPrice || product.price) - product.price)}`}
                   </span>
                 </div>
               </div>
@@ -626,3 +461,4 @@ export default function Sales() {
     </div>
   );
 }
+

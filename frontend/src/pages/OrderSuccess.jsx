@@ -6,7 +6,7 @@ const formatCurrency = (value) => `LKR${Number(value || 0).toLocaleString()}`;
 export default function OrderSuccess() {
   const { state } = useLocation();
   const order = state?.order;
-  const shortId = order?._id ? String(order._id).slice(-8).toUpperCase() : 'PENDING';
+  const shortId = order?.orderId || (order?._id ? String(order._id).slice(-8).toUpperCase() : 'PENDING');
 
   return (
     <section className="order-success-page">
@@ -35,7 +35,7 @@ export default function OrderSuccess() {
             </div>
             <div>
               <span>Status</span>
-              <strong>{order?.status || 'Pending'}</strong>
+              <strong>{order?.orderStatus || order?.status || 'Pending'}</strong>
             </div>
           </div>
 
@@ -55,8 +55,10 @@ export default function OrderSuccess() {
           {order?.items?.length ? (
             <div className="success-items">
               {order.items.map((item) => (
-                <div className="success-item" key={`${item.name}-${item.size}`}>
-                  <div className={`success-item-image ${item.imageClass || ''}`} />
+                <div className="success-item" key={`${item.product || item.productId || item.name}-${item.size}`}>
+                  <div className="success-item-image">
+                    {item.image ? <img src={item.image} alt={item.name} /> : null}
+                  </div>
                   <div>
                     <strong>{item.name}</strong>
                     <span>{item.size || 'One Size'} · Qty {item.quantity || 1}</span>
@@ -71,7 +73,7 @@ export default function OrderSuccess() {
 
           <div className="success-total">
             <span>Total Paid</span>
-            <strong>{formatCurrency(order?.totalPrice)}</strong>
+            <strong>{formatCurrency(order?.totalAmount ?? order?.totalPrice)}</strong>
           </div>
 
           <div className="success-next">

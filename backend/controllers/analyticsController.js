@@ -3,14 +3,26 @@ const { store, seedBusinessData } = require('../data/memoryStore');
 const { withId, withoutPassword, normalizeOrder } = require('../utils/dbFormat');
 
 const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
+const getOrderTotal = (order) => Number(order.totalAmount ?? order.totalPrice ?? 0);
+const getOrderDate = (order) => order.orderDate || order.createdAt || new Date();
+const getOrderItems = (order) => {
+  if (Array.isArray(order.items) && order.items.length) return order.items;
+  return [{
+    product: order.productId || order.product || order.id,
+    name: order.productName || 'Product',
+    price: Number(order.price || 0),
+    quantity: Number(order.quantity || 1),
+    size: order.size || 'One Size'
+  }];
+};
 
 const buildAnalytics = (products, orders, users, expenses = []) => {
-  const revenue = orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
+  const revenue = orders.reduce((sum, order) => sum + getOrderTotal(order), 0);
   const lowStock = products.filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 15);
   const productSales = {};
 
   orders.forEach((order) => {
-    order.items?.forEach((item) => {
+    getOrderItems(order).forEach((item) => {
       const key = item.product || item.name;
       if (!productSales[key]) {
         productSales[key] = { name: item.name, quantity: 0, revenue: 0 };
@@ -22,9 +34,9 @@ const buildAnalytics = (products, orders, users, expenses = []) => {
 
   const monthlyRevenue = Object.values(
     orders.reduce((acc, order) => {
-      const key = monthKey(order.createdAt || new Date());
+      const key = monthKey(getOrderDate(order));
       if (!acc[key]) acc[key] = { label: key, revenue: 0, orders: 0 };
-      acc[key].revenue += Number(order.totalPrice || 0);
+      acc[key].revenue += getOrderTotal(order);
       acc[key].orders += 1;
       return acc;
     }, {})
@@ -83,7 +95,8 @@ const getAnalytics = async (req, res) => {
     ]);
     res.json(buildAnalytics(products.map(withId), orders.map(normalizeOrder), users.map(withoutPassword), expenses.map(withId)));
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch analytics', error: error.message });
+     console.error(error);
+     res.status(500).json({ message: error.message });
   }
 };
 

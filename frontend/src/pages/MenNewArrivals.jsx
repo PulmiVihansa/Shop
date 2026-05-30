@@ -1,122 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import ProductVisual from '../components/ProductVisual.jsx';
 import useProducts from '../hooks/useProducts.js';
+import { createCartItem, getProductId, getProductSizes } from '../utils/cartProduct.js';
 import '../styles/men-new-arrivals.css';
 
-const fallbackProducts = [
-  {
-    id: 'linen-tailored-blazer',
-    name: 'Linen Tailored Blazer',
-    category: 'outerwear',
-    categoryLabel: 'Outerwear',
-    price: 580,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'bdark',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#1A1A1A', '#C8BAB0', '#A8B8A0'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'linen-oxford-shirt',
-    name: 'Linen Oxford Shirt',
-    category: 'shirts',
-    categoryLabel: 'Shirts',
-    price: 210,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b5',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#FAF7F2', '#AEB8C2', '#C8BAB0'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'twill-chino-trousers',
-    name: 'Twill Chino Trousers',
-    category: 'trousers',
-    categoryLabel: 'Trousers',
-    price: 290,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b4',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#C8BAB0', '#1A1A1A'],
-    imageClass: 'denim',
-  },
-  {
-    id: 'merino-crewneck',
-    name: 'Merino Crewneck',
-    category: 'knitwear',
-    categoryLabel: 'Knitwear',
-    price: 340,
-    badge: 'pltd',
-    badgeText: 'Limited',
-    bgClass: 'b9',
-    sizes: ['S', 'M', 'L'],
-    defaultSize: 'M',
-    swatches: ['#B8C2AA', '#C8BAB0', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-  {
-    id: 'poplin-band-collar-shirt',
-    name: 'Poplin Band Collar Shirt',
-    category: 'shirts',
-    categoryLabel: 'Shirts',
-    price: 185,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b7',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'S',
-    swatches: ['#FAF7F2', '#A6C0B2'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'linen-wide-trousers',
-    name: 'Linen Wide Trousers',
-    category: 'trousers',
-    categoryLabel: 'Trousers',
-    price: 260,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b1',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'L',
-    swatches: ['#C8BAB0', '#AEB8C2'],
-    imageClass: 'linen',
-  },
-  {
-    id: 'cotton-field-jacket',
-    name: 'Cotton Field Jacket',
-    category: 'outerwear',
-    categoryLabel: 'Outerwear',
-    price: 420,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b6',
-    sizes: ['S', 'M', 'L', 'XL'],
-    defaultSize: 'M',
-    swatches: ['#C6AEA0', '#A8B8A0'],
-    imageClass: 'cotton',
-  },
-  {
-    id: 'cashmere-polo-knit',
-    name: 'Cashmere Polo Knit',
-    category: 'knitwear',
-    categoryLabel: 'Knitwear',
-    price: 295,
-    badge: 'pnew',
-    badgeText: 'New',
-    bgClass: 'b8',
-    sizes: ['S', 'M', 'L'],
-    defaultSize: 'S',
-    swatches: ['#B6B0C2', '#C8BAB0', '#1A1A1A'],
-    imageClass: 'wool',
-  },
-];
+const fallbackProducts = [];
 
 const heroCards = [
   {
@@ -192,31 +81,13 @@ const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenNewArrivals() {
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, collection: 'male' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState(() => new Set());
   const toastTimer = useRef(null);
-  const [selectedSizes, setSelectedSizes] = useState(() =>
-    fallbackProducts.reduce((acc, product) => {
-      if (product.sizes?.length) {
-        acc[product.id] = product.defaultSize || product.sizes[0];
-      }
-      return acc;
-    }, {})
-  );
-
-  useEffect(() => {
-    setSelectedSizes((prev) =>
-      products.reduce((acc, product) => {
-        if (product.sizes?.length && !acc[product.id]) {
-          acc[product.id] = product.defaultSize || product.sizes[0];
-        }
-        return acc;
-      }, { ...prev })
-    );
-  }, [products]);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   const showToast = (message) => {
     setToast(message);
@@ -228,14 +99,13 @@ export default function MenNewArrivals() {
 
   const handleAddToBag = (product) => {
     if (!product) return;
-    const size = selectedSizes[product.id];
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      imageClass: product.imageClass,
-    });
+    const productId = getProductId(product);
+    const size = selectedSizes[productId];
+    if (!size) {
+      showToast('Please select a size');
+      return;
+    }
+    addItem(createCartItem(product, size));
     showToast(`Added: ${product.name}`);
   };
 
@@ -275,7 +145,7 @@ export default function MenNewArrivals() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [filter, products, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -395,10 +265,8 @@ export default function MenNewArrivals() {
         <div className="ftabs">
           {[
             { key: 'all', label: 'All' },
-            { key: 'shirts', label: 'Shirts' },
-            { key: 'trousers', label: 'Trousers' },
-            { key: 'outerwear', label: 'Outerwear' },
-            { key: 'knitwear', label: 'Knitwear' },
+            { key: 'Shirts', label: 'Shirts' },
+            { key: 'Trousers', label: 'Trousers' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -430,8 +298,7 @@ export default function MenNewArrivals() {
           {visibleProducts.map((product) => (
             <div key={product.id} className="pc">
               <div className="pci">
-                <div className={`pcbg ${product.bgClass}`} />
-                {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
+                <ProductVisual product={product} />
                 <div className="pc-acts">
                   <button
                     className={`pa ${wishlist.has(product.id) ? 'is-active' : ''}`}
@@ -456,20 +323,18 @@ export default function MenNewArrivals() {
                   </button>
                 </div>
                 <div className="pc-bar">
-                  {product.sizes?.length ? (
-                    <div className="pc-szs">
-                      {product.sizes.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
-                          onClick={() => handleSizeSelect(product.id, size)}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div className="pc-szs">
+                    {getProductSizes(product).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`sz ${selectedSizes[product.id] === size ? 'on' : ''}`}
+                        onClick={() => handleSizeSelect(product.id, size)}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                   <button className="add-btn" type="button" onClick={() => handleAddToBag(product)}>
                     Add to Bag
                   </button>
@@ -480,7 +345,7 @@ export default function MenNewArrivals() {
                 <div className="pname">{product.name}</div>
                 <div className="pprice">{formatCurrency(product.price)}</div>
                 <div className="pswatches">
-                  {product.swatches.map((color) => (
+                  {(Array.isArray(product.colors) ? product.colors : []).map((color) => (
                     <span
                       key={color}
                       className="swatch"
@@ -501,3 +366,4 @@ export default function MenNewArrivals() {
     </div>
   );
 }
+

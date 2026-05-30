@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import useProducts from '../hooks/useProducts.js';
+import { Link } from 'react-router-dom';
 
 export default function SearchResults() {
   const { search } = useLocation();
@@ -16,14 +17,14 @@ export default function SearchResults() {
         {error && <p>{error}</p>}
         {!loading && products.length === 0 && <p>No products found.</p>}
         {products.map((product) => (
-          <div className="product-card" key={product.id}>
+          <Link className="product-card" key={product.id} to={`/products/${product.id}`}>
             <div className="product-image">Image</div>
             <div className="product-info">
               <h3>{product.name}</h3>
-              <p className="product-category">{product.category}</p>
+              <p className="product-category">{product.collection} · {product.category}</p>
               <p className="product-price">LKR{Number(product.price).toLocaleString()}</p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
