@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 import '../styles/men-new-arrivals.css';
 
 const fallbackProducts = [
@@ -191,8 +192,9 @@ const stats = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenNewArrivals() {
+  const content = usePageContent('menNewArrivals');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'men' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -275,7 +277,7 @@ export default function MenNewArrivals() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -285,13 +287,13 @@ export default function MenNewArrivals() {
       <section className="hero">
         <div className="hl">
           <div className="h-in">
-            <div className="h-ey">Spring / Summer 2026</div>
+            <div className="h-ey">{content.eyebrow}</div>
             <h1 className="h-t">
-              Men&apos;s
-              <br />
-              <em>New</em>
-              <br />
-              Arrivals
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
             <p className="h-desc">
               Twelve pieces for the considered man. Cut from European linen, Merino, and brushed cotton — each detail
@@ -431,6 +433,9 @@ export default function MenNewArrivals() {
             <div key={product.id} className="pc">
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
                 <div className="pc-acts">
                   <button

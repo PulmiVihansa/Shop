@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import '../styles/giftvoucher.css';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 
 const amountOptions = [
   { value: 100, label: 'LKR100', sub: 'Starter' },
@@ -50,6 +51,7 @@ const formatExpiry = (dateString) => {
 };
 
 export default function GiftVoucher() {
+  const content = usePageContent('giftvoucher');
   const today = new Date().toISOString().split('T')[0];
   const [amount, setAmount] = useState(250);
   const [selectedAmount, setSelectedAmount] = useState(250);
@@ -153,28 +155,27 @@ export default function GiftVoucher() {
     <div className="gift-page">
       <section className="page-hero">
         <div className="hero-left">
-          <div className="hero-eyebrow">For those you love</div>
+          <div className="hero-eyebrow">{content.eyebrow}</div>
           <h1 className="hero-title">
-            Gift
-            <br />
-            <em>Vouchers</em>
+            {lines(content.title).map((line, index) => (
+              index === lines(content.title).length - 1
+                ? <em key={line}>{line}</em>
+                : <span key={line}>{line}<br /></span>
+            ))}
           </h1>
-          <p className="hero-desc">
-            Give the gift of choice. An Atelier gift voucher lets someone special discover pieces they will cherish
-            for a lifetime - on their terms, in their time.
-          </p>
+          <p className="hero-desc">{content.description}</p>
           <div className="hero-facts">
             <div>
-              <span className="hero-fact-val">3 yrs</span>
-              <span className="hero-fact-lbl">Validity</span>
+              <span className="hero-fact-val">{content.factOneValue}</span>
+              <span className="hero-fact-lbl">{content.factOneLabel}</span>
             </div>
             <div>
-              <span className="hero-fact-val">No expiry</span>
-              <span className="hero-fact-lbl">On balance</span>
+              <span className="hero-fact-val">{content.factTwoValue}</span>
+              <span className="hero-fact-lbl">{content.factTwoLabel}</span>
             </div>
             <div>
-              <span className="hero-fact-val">Instant</span>
-              <span className="hero-fact-lbl">Digital delivery</span>
+              <span className="hero-fact-val">{content.factThreeValue}</span>
+              <span className="hero-fact-lbl">{content.factThreeLabel}</span>
             </div>
           </div>
         </div>
@@ -215,7 +216,7 @@ export default function GiftVoucher() {
               </div>
             </div>
           </div>
-          <p className="flip-hint">Live preview - Updates as you configure below</p>
+          <p className="flip-hint">{content.previewHint}</p>
         </div>
       </section>
 
@@ -223,7 +224,7 @@ export default function GiftVoucher() {
         <div className="config-panel">
           <div className="config-section">
             <div className="config-label">
-              <span>1</span> Choose an Amount
+              <span>1</span> {content.amountTitle}
             </div>
             <div className="amount-grid">
               {amountOptions.map((option) => (
@@ -256,7 +257,7 @@ export default function GiftVoucher() {
 
           <div className="config-section">
             <div className="config-label">
-              <span>2</span> Choose a Design
+              <span>2</span> {content.designTitle}
             </div>
             <div className="theme-grid">
               {['classic', 'Ash', 'sage', 'cream'].map((variant) => (
@@ -280,7 +281,7 @@ export default function GiftVoucher() {
 
           <div className="config-section">
             <div className="config-label">
-              <span>3</span> Personalise
+              <span>3</span> {content.personalTitle}
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -344,7 +345,7 @@ export default function GiftVoucher() {
 
           <div className="config-section">
             <div className="config-label">
-              <span>4</span> Delivery Method
+              <span>4</span> {content.deliveryTitle}
             </div>
             <div className="delivery-grid">
               <label className={`delivery-option ${delivery === 'email' ? 'active' : ''}`}>
@@ -390,7 +391,7 @@ export default function GiftVoucher() {
         </div>
 
         <aside className="order-panel">
-          <div className="order-title">Order Summary</div>
+          <div className="order-title">{content.summaryTitle}</div>
 
           <div className="order-row">
             <span className="order-row-lbl">Voucher value</span>
@@ -424,10 +425,10 @@ export default function GiftVoucher() {
               ? 'Processing...'
               : purchaseState === 'success'
                 ? 'Voucher Purchased'
-                : 'Purchase Voucher'}
+                : content.purchaseButton}
           </button>
           <button className="save-btn" type="button" onClick={handleSave}>
-            Save for Later
+            {content.saveButton}
           </button>
 
           <div className="order-guarantee">
@@ -465,8 +466,8 @@ export default function GiftVoucher() {
 
       <section className="how-section">
         <div className="how-header">
-          <span className="how-label">The Process</span>
-          <h2 className="how-title">How it works</h2>
+          <span className="how-label">{content.processEyebrow}</span>
+          <h2 className="how-title">{content.processTitle}</h2>
         </div>
         <div className="how-steps">
           {[
@@ -501,7 +502,7 @@ export default function GiftVoucher() {
       </section>
 
       <section className="faq-section">
-        <h3 className="faq-title">Common questions</h3>
+        <h3 className="faq-title">{content.faqTitle}</h3>
 
         {faqItems.map((item, index) => (
           <div key={item.question} className={`faq-item ${openFaq === index ? 'open' : ''}`}>

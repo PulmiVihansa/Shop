@@ -13,7 +13,7 @@ const normalize = (product) => ({
   categoryLabel: product.categoryLabel || product.category || 'Atelier',
 });
 
-export default function useProducts({ fallback = [], category, tag, query } = {}) {
+export default function useProducts({ fallback = [], category, tag, query, placement } = {}) {
   const [products, setProducts] = useState(fallback);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,6 +29,7 @@ export default function useProducts({ fallback = [], category, tag, query } = {}
           params: {
             category,
             tag,
+            placement: placement || undefined,
             q: query || undefined,
           },
         });
@@ -50,7 +51,7 @@ export default function useProducts({ fallback = [], category, tag, query } = {}
     return () => {
       active = false;
     };
-  }, [category, tag, query]);
+  }, [category, tag, query, placement]);
 
   return useMemo(() => ({ products, loading, error }), [products, loading, error]);
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 import '../styles/sales.css';
 
 const fallbackProducts = [
@@ -162,8 +163,9 @@ const marqueeItems = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Sales() {
+  const content = usePageContent('sales');
   const { addItem, openCart } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts, tag: 'sale' });
+  const { products } = useProducts({ fallback: fallbackProducts, tag: 'sale', placement: 'sales' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('disc');
   const [activePill, setActivePill] = useState('Women');
@@ -304,7 +306,7 @@ export default function Sales() {
     }
 
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const resultCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -321,11 +323,13 @@ export default function Sales() {
         <div className="hero-bg-text" aria-hidden="true">
           SALE
         </div>
-        <div className="hero-eyebrow">End of Season</div>
+        <div className="hero-eyebrow">{content.eyebrow}</div>
         <h1 className="hero-title">
-          Up to
-          <br />
-          <em>60% Off</em>
+          {lines(content.title).map((line, index) => (
+            index === lines(content.title).length - 1
+              ? <em key={line}>{line}</em>
+              : <span key={line}>{line}<br /></span>
+          ))}
         </h1>
 
         <div className="hero-discount-row">
@@ -341,13 +345,10 @@ export default function Sales() {
           ))}
         </div>
 
-        <p className="hero-subtitle">
-          Carefully selected pieces from our previous seasons - same artisan quality, at a fraction of the price.
-          Stock is strictly limited.
-        </p>
+        <p className="hero-subtitle">{content.subtitle}</p>
 
         <div className="countdown-wrap">
-          <div className="countdown-label">Sale ends in</div>
+          <div className="countdown-label">{content.countdownLabel}</div>
           <div className="countdown">
             <div className="cd-unit">
               <div className="cd-num">{countdown.days}</div>
@@ -373,7 +374,7 @@ export default function Sales() {
 
         <div className="hero-cta-row">
           <a href="#sales-products" className="cta-primary">
-            Shop the Sale
+            {content.shopButton}
           </a>
           <a href="#" className="cta-ghost">
             View Lookbook
@@ -510,6 +511,9 @@ export default function Sales() {
 
               <div className="card-image">
                 <div className={`card-img-bg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="card-img" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 <span className="card-img-label">{product.label}</span>
 
                 {product.soldOut && (

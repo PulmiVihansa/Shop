@@ -179,6 +179,13 @@ a {
 
 .product-card {
   background: #fff;
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
   border-radius: 18px;
   padding: 1rem;
   display: flex;

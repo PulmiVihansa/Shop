@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 import '../styles/dresses.css';
 
 const heroTiles = [
@@ -205,8 +206,9 @@ const filterLabels = {
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Women() {
+  const content = usePageContent('women');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'women' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -293,11 +295,18 @@ export default function Women() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
-  const gridTitle = filterLabels[filter] || filterLabels.all;
+  const cmsFilterLabels = {
+    all: content.categoryAll,
+    midi: `${content.categoryMidi} Dresses`,
+    maxi: `${content.categoryMaxi} Dresses`,
+    mini: `${content.categoryMini} Dresses`,
+    evening: content.categoryEvening,
+  };
+  const gridTitle = cmsFilterLabels[filter] || cmsFilterLabels.all || filterLabels.all;
 
   return (
     <div className="dresses">
@@ -305,23 +314,22 @@ export default function Women() {
         <div className="ph-inner">
           <div className="ph-l">
             <div className="ph-txt">
-              <div className="ph-ey">Women&apos;s Collection \u2014 SS26</div>
+              <div className="ph-ey">{content.eyebrow}</div>
               <h1 className="ph-h">
-                The
-                <br />
-                Dress <em>Edit</em>
+                {lines(content.title).map((line, index) => (
+                  index === lines(content.title).length - 1
+                    ? <em key={line}>{line}</em>
+                    : <span key={line}>{line}<br /></span>
+                ))}
               </h1>
-              <p className="ph-desc">
-                From effortless day dresses in laundered linen to considered evening silhouettes in silk \u2014 each
-                cut to move with you, not against you.
-              </p>
+              <p className="ph-desc">{content.description}</p>
               <div className="ph-cats">
                 {[
-                  { key: 'all', label: 'All Dresses' },
-                  { key: 'midi', label: 'Midi' },
-                  { key: 'maxi', label: 'Maxi' },
-                  { key: 'mini', label: 'Mini' },
-                  { key: 'evening', label: 'Evening' },
+                  { key: 'all', label: content.categoryAll },
+                  { key: 'midi', label: content.categoryMidi },
+                  { key: 'maxi', label: content.categoryMaxi },
+                  { key: 'mini', label: content.categoryMini },
+                  { key: 'evening', label: content.categoryEvening },
                 ].map((cat) => (
                   <button
                     key={cat.key}
@@ -392,11 +400,11 @@ export default function Women() {
       <div className="fbar">
         <div className="ftabs">
           {[
-            { key: 'all', label: 'All' },
-            { key: 'midi', label: 'Midi' },
-            { key: 'maxi', label: 'Maxi' },
-            { key: 'mini', label: 'Mini' },
-            { key: 'evening', label: 'Evening' },
+            { key: 'all', label: content.categoryAll },
+            { key: 'midi', label: content.categoryMidi },
+            { key: 'maxi', label: content.categoryMaxi },
+            { key: 'mini', label: content.categoryMini },
+            { key: 'evening', label: content.categoryEvening },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -429,6 +437,9 @@ export default function Women() {
             <div key={product.id} className="pc">
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 {product.badgeText && (
                   <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>
                 )}

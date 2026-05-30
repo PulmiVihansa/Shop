@@ -2,14 +2,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
 
-export default function Header() {
+export default function Header({ pathnameOverride } = {}) {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
   const navigate = useNavigate();
   const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
   const location = useLocation();
-  const isNewArrivals = location.pathname === '/new-arrivals';
-  const isWomen = location.pathname.startsWith('/women') || isNewArrivals;
-  const isMen = location.pathname.startsWith('/men');
+  const pathname = pathnameOverride ?? location.pathname;
+  const isNewArrivals = pathname === '/new-arrivals';
+  const isWomen = pathname.startsWith('/women') || isNewArrivals;
+  const isMen = pathname.startsWith('/men');
 
   return (
     <>

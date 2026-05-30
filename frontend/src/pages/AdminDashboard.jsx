@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api, { getErrorMessage } from '../services/api.js';
+import {
+  pageContentDefaults,
+  parsePageContent,
+  publicPageOptions,
+  serializePageContent,
+} from '../content/pageContentDefaults.js';
+import AdminVisualCmsEmbed from '../cms/AdminVisualCmsEmbed.jsx';
+import FinanceIntelligence from '../admin/FinanceIntelligence.jsx';
 import '../styles/admin.css';
 
 const money = (value) => `LKR${Number(value || 0).toLocaleString()}`;
@@ -10,8 +19,9 @@ const emptyProduct = {
   description: '',
   category: '',
   stock: '',
-  sizes: '',
-  tags: '',
+  sizes: [],
+  tags: [],
+  placements: [],
   swatches: '',
   bgClass: 'b1',
   imageClass: 'linen',
@@ -20,7 +30,7 @@ const emptyProduct = {
   images: [],
 };
 
-const emptyExpense = { title: '', category: 'Material cost', amount: '' };
+const emptyExpense = { title: '', category: 'Material cost', amount: '', date: '' };
 const emptyBulkCustomer = { name: '', email: '', company: '', discount: '', notes: '' };
 
 const menuItems = [
@@ -147,6 +157,8 @@ function PieChart({ data, valueKey = 'amount', labelKey = 'label' }) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [active, setActive] = useState('Dashboard');
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -156,7 +168,10 @@ export default function AdminDashboard() {
   const [bulkCustomers, setBulkCustomers] = useState([]);
   const [homepageContent, setHomepageContent] = useState(null);
   const [banners, setBanners] = useState([]);
-  const [pageEditor, setPageEditor] = useState({ pageName: 'about', content: '' });
+  const [pageEditor, setPageEditor] = useState({
+    pageName: 'women',
+    fields: pageContentDefaults.women,
+  });
   const [bannerForm, setBannerForm] = useState({ title: '', imageUrl: '', link: '', isActive: true });
   const [settings, setSettings] = useState({
     paymentProvider: 'PayHere',
@@ -168,10 +183,11 @@ export default function AdminDashboard() {
     whatsappNumber: '',
   });
   const [productForm, setProductForm] = useState(emptyProduct);
+  const [customSize, setCustomSize] = useState('');
+  const [customTag, setCustomTag] = useState('');
   const [expenseForm, setExpenseForm] = useState(emptyExpense);
   const [bulkForm, setBulkForm] = useState(emptyBulkCustomer);
   const [inventoryFilter, setInventoryFilter] = useState('all');
-  const [expenseFilter, setExpenseFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -179,17 +195,18 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
 
   const loadAdminData = async () => {
-    const [productRes, orderRes, userRes, analyticsRes, financeRes, bulkRes, settingsRes, homepageRes, bannerRes, siteRes] = await Promise.all([
+    const [productRes, orderRes, userRes, analyticsRes, financeRes, bulkRes, settingsRes, homepageRes, bannerRes, siteRes, pageRes] = await Promise.all([
       api.get('/products'),
       api.get('/orders'),
       api.get('/users'),
       api.get('/analytics'),
-      api.get('/finance', { params: { category: expenseFilter === 'all' ? undefined : expenseFilter } }),
+      api.get('/finance'),
       api.get('/bulk-orders/customers'),
       api.get('/settings/payment'),
       api.get('/content/homepage'),
       api.get('/content/banners'),
       api.get('/settings'),
+      api.get(`/content/page/${pageEditor.pageName}`),
     ]);
     setProducts(productRes.data);
     setOrders(orderRes.data);
@@ -200,11 +217,21 @@ export default function AdminDashboard() {
     setSettings((prev) => ({ ...prev, ...siteRes.data, ...settingsRes.data, merchantSecret: '' }));
     setHomepageContent(homepageRes.data);
     setBanners(bannerRes.data);
+    setPageEditor((prev) => ({
+      ...prev,
+      fields: parsePageContent(pageRes.data.content, pageContentDefaults[prev.pageName] || {}),
+    }));
   };
 
   useEffect(() => {
     loadAdminData().catch((err) => setError(getErrorMessage(err)));
-  }, [expenseFilter]);
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin/cms')) {
+      setActive('CMS');
+    }
+  }, [location.pathname]);
 
   const totals = analytics?.totals || {
     users: customers.length,
@@ -232,10 +259,33 @@ export default function AdminDashboard() {
     ...productForm,
     price: Number(productForm.price || 0),
     stock: Number(productForm.stock || 0),
-    sizes: productForm.sizes.split(',').map((item) => item.trim()).filter(Boolean),
-    tags: productForm.tags.split(',').map((item) => item.trim()).filter(Boolean),
+    sizes: Array.isArray(productForm.sizes) ? productForm.sizes : [],
+    tags: Array.isArray(productForm.tags) ? productForm.tags : [],
+    placements: Array.isArray(productForm.placements) ? productForm.placements : [],
     swatches: productForm.swatches.split(',').map((item) => item.trim()).filter(Boolean),
     images: productForm.images.map((item) => item.trim()).filter(Boolean),
+  };
+
+  const toggleMultiValue = (field, value) => {
+    setProductForm((prev) => {
+      const current = Array.isArray(prev[field]) ? prev[field] : [];
+      const trimmed = String(value || '').trim();
+      if (!trimmed) return prev;
+      const next = current.includes(trimmed)
+        ? current.filter((entry) => entry !== trimmed)
+        : [...current, trimmed];
+      return { ...prev, [field]: next };
+    });
+  };
+
+  const addMultiValue = (field, value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return;
+    setProductForm((prev) => {
+      const current = Array.isArray(prev[field]) ? prev[field] : [];
+      if (current.includes(trimmed)) return prev;
+      return { ...prev, [field]: [...current, trimmed] };
+    });
   };
 
   const updateImageAt = (index, value) => {
@@ -283,6 +333,8 @@ export default function AdminDashboard() {
         setMessage('Product added');
       }
       setProductForm(emptyProduct);
+      setCustomSize('');
+      setCustomTag('');
       setEditingId(null);
       await loadAdminData();
     } catch (err) {
@@ -299,8 +351,9 @@ export default function AdminDashboard() {
       description: product.description || '',
       category: product.category || '',
       stock: product.stock || '',
-      sizes: product.sizes?.join(', ') || '',
-      tags: product.tags?.join(', ') || '',
+      sizes: product.sizes || [],
+      tags: product.tags || [],
+      placements: product.placements || [],
       swatches: product.swatches?.join(', ') || '',
       images: product.images?.length ? product.images : [],
       bgClass: product.bgClass || 'b1',
@@ -340,6 +393,7 @@ export default function AdminDashboard() {
     event.preventDefault();
     await api.post('/finance/expenses', expenseForm);
     setExpenseForm(emptyExpense);
+    setMessage('Expense saved');
     await loadAdminData();
   };
 
@@ -412,14 +466,32 @@ export default function AdminDashboard() {
 
   const loadPageContent = async (pageName) => {
     const response = await api.get(`/content/page/${pageName}`);
-    setPageEditor({ pageName, content: response.data.content || '' });
+    setPageEditor({
+      pageName,
+      fields: parsePageContent(response.data.content, pageContentDefaults[pageName] || {}),
+    });
   };
 
   const savePageContent = async (event) => {
     event.preventDefault();
-    const response = await api.put(`/content/page/${pageEditor.pageName}`, { content: pageEditor.content });
-    setPageEditor({ pageName: response.data.pageName, content: response.data.content || '' });
+    const response = await api.put(`/content/page/${pageEditor.pageName}`, {
+      content: serializePageContent(pageEditor.fields),
+    });
+    setPageEditor({
+      pageName: response.data.pageName,
+      fields: parsePageContent(response.data.content, pageContentDefaults[response.data.pageName] || {}),
+    });
     setMessage('Page content saved');
+  };
+
+  const updatePageField = (key, value) => {
+    setPageEditor((prev) => ({
+      ...prev,
+      fields: {
+        ...prev.fields,
+        [key]: value,
+      },
+    }));
   };
 
   const renderDashboard = () => (
@@ -470,8 +542,6 @@ export default function AdminDashboard() {
             ['description', 'Description'],
             ['category', 'Category'],
             ['stock', 'Stock quantity'],
-            ['sizes', 'Sizes (S, M, L, XL)'],
-            ['tags', 'Tags (new, sale, featured)'],
             ['swatches', 'Swatches'],
             ['bgClass', 'Background class'],
             ['imageClass', 'Image class'],
@@ -479,6 +549,96 @@ export default function AdminDashboard() {
           ].map(([name, label]) => (
               <label key={name}>{label}<input name={name} value={productForm[name]} onChange={(e) => setProductForm((prev) => ({ ...prev, [name]: e.target.value }))} /></label>
           ))}
+
+          <div className="wide">
+            <p className="admin-form-label">Sizes</p>
+            <div className="admin-filter-row">
+              {Array.from(new Set(['XS', 'S', 'M', 'L', 'XL', ...(productForm.sizes || [])])).map((size) => (
+                <label key={size} className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={(productForm.sizes || []).includes(size)}
+                    onChange={() => toggleMultiValue('sizes', size)}
+                  />
+                  {size}
+                </label>
+              ))}
+            </div>
+            <div className="admin-inline">
+              <input
+                value={customSize}
+                onChange={(event) => setCustomSize(event.target.value)}
+                placeholder="Add custom size (e.g., XXL)"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  addMultiValue('sizes', customSize);
+                  setCustomSize('');
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div className="wide">
+            <p className="admin-form-label">Tags</p>
+            <div className="admin-filter-row">
+              {Array.from(new Set(['new', 'sale', 'featured', ...(productForm.tags || [])])).map((tag) => (
+                <label key={tag} className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={(productForm.tags || []).includes(tag)}
+                    onChange={() => toggleMultiValue('tags', tag)}
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
+            <div className="admin-inline">
+              <input
+                value={customTag}
+                onChange={(event) => setCustomTag(event.target.value)}
+                placeholder="Add custom tag"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  addMultiValue('tags', customTag);
+                  setCustomTag('');
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div className="wide">
+            <p className="admin-form-label">Visible On Pages</p>
+            <p className="admin-help">Leave blank to show everywhere. If you select pages, the product shows only on those pages.</p>
+            <div className="admin-filter-row">
+              {[
+                { value: 'home-essentials', label: 'Home essentials' },
+                { value: 'women', label: 'Women' },
+                { value: 'men', label: 'Men' },
+                { value: 'accessories', label: 'Accessories' },
+                { value: 'tops', label: 'Tops' },
+                { value: 'new-arrivals', label: 'New arrivals' },
+                { value: 'sales', label: 'Sales' },
+              ].map((placement) => (
+                <label key={placement.value} className="admin-check">
+                  <input
+                    type="checkbox"
+                    checked={(productForm.placements || []).includes(placement.value)}
+                    onChange={() => toggleMultiValue('placements', placement.value)}
+                  />
+                  {placement.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="admin-image-manager">
             <div className="admin-image-head">
               <span>Images</span>
@@ -597,41 +757,15 @@ export default function AdminDashboard() {
   );
 
   const renderFinance = () => (
-    <>
-      <div className="admin-metrics">
-        <MetricCard label="Revenue" value={money(finance?.revenue)} />
-        <MetricCard label="Expenses" value={money(finance?.expenses)} />
-        <MetricCard label="Profit" value={money(finance?.profit)} />
-      </div>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Expenses</span><h2>Add Expense</h2></div>
-        <div className="admin-filter-row">
-          {['all', 'Material cost', 'Shipping cost', 'Marketing'].map((category) => (
-            <button key={category} className={expenseFilter === category ? 'active' : ''} onClick={() => setExpenseFilter(category)}>
-              {category}
-            </button>
-          ))}
-        </div>
-        <form className="admin-form compact" onSubmit={submitExpense}>
-          <label>Title<input value={expenseForm.title} onChange={(e) => setExpenseForm((prev) => ({ ...prev, title: e.target.value }))} /></label>
-          <label>Category<select value={expenseForm.category} onChange={(e) => setExpenseForm((prev) => ({ ...prev, category: e.target.value }))}><option>Material cost</option><option>Shipping cost</option><option>Marketing</option><option>Other</option></select></label>
-          <label>Amount<input type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))} /></label>
-          <button className="admin-primary" type="submit">Save Expense</button>
-        </form>
-      </section>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Ledger</span><h2>Expense Table</h2></div>
-        <DataTable
-          columns={[
-            { key: 'title', label: 'Title' },
-            { key: 'category', label: 'Category' },
-            { key: 'amount', label: 'Amount' },
-          ]}
-          rows={(finance?.expenseItems || []).map((expense) => ({ id: expense._id, title: expense.title, category: expense.category, amount: money(expense.amount) }))}
-        />
-      </section>
-      <section className="admin-panel"><div className="admin-section-head"><span>Breakdown</span><h2>Expense Breakdown</h2></div><PieChart data={Object.entries(finance?.breakdown || {}).map(([label, amount]) => ({ label, amount }))} valueKey="amount" /></section>
-    </>
+    <FinanceIntelligence
+      finance={finance}
+      orders={orders}
+      products={products}
+      customers={customers}
+      expenseForm={expenseForm}
+      setExpenseForm={setExpenseForm}
+      onSubmitExpense={submitExpense}
+    />
   );
 
   const renderAnalytics = () => (
@@ -671,69 +805,7 @@ export default function AdminDashboard() {
     </section>
   );
 
-  const renderCMS = () => (
-    <>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Homepage</span><h2>Homepage Editor</h2></div>
-        {homepageContent && (
-          <form className="admin-form" onSubmit={saveHomepage}>
-            <label>Hero Title<textarea value={homepageContent.heroTitle || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, heroTitle: e.target.value }))} /></label>
-            <label>Hero Subtitle<textarea value={homepageContent.heroSubtitle || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, heroSubtitle: e.target.value }))} /></label>
-            <label>Button Text<input value={homepageContent.buttonText || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, buttonText: e.target.value }))} /></label>
-            <label>Button Link<input value={homepageContent.buttonLink || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, buttonLink: e.target.value }))} /></label>
-            <label>Section Title<input value={homepageContent.section2Title || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, section2Title: e.target.value }))} /></label>
-            <label>Featured Categories<input value={(homepageContent.featuredCategories || []).join(', ')} onChange={(e) => setHomepageContent((prev) => ({ ...prev, featuredCategories: e.target.value.split(',').map((item) => item.trim()).filter(Boolean) }))} /></label>
-            <div className="admin-image-manager">
-              <div className="admin-image-head"><span>Hero Images</span></div>
-              <div className="admin-image-list">
-                {[
-                  ['heroImage', 'Primary hero image'],
-                  ['heroImageSecondary', 'Secondary hero image'],
-                  ['section2Image', 'Section image'],
-                ].map(([key, label]) => (
-                  <div className="admin-image-row" key={key}>
-                    <div className="admin-image-preview">{homepageContent[key] ? <img src={homepageContent[key]} alt={label} /> : <span>Image</span>}</div>
-                    <input value={homepageContent[key] || ''} placeholder={label} onChange={(e) => setHomepageContent((prev) => ({ ...prev, [key]: e.target.value }))} />
-                    <label className="admin-upload-inline">Upload<input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadCmsImage(e.target.files[0], (url) => setHomepageContent((prev) => ({ ...prev, [key]: url })))} /></label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button className="admin-primary" type="submit">Save Homepage</button>
-          </form>
-        )}
-      </section>
-
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Banners</span><h2>Banner Manager</h2></div>
-        <form className="admin-form compact" onSubmit={saveBanner}>
-          <label>Title<input value={bannerForm.title} onChange={(e) => setBannerForm((prev) => ({ ...prev, title: e.target.value }))} /></label>
-          <label>Image URL<input value={bannerForm.imageUrl} onChange={(e) => setBannerForm((prev) => ({ ...prev, imageUrl: e.target.value }))} /></label>
-          <label>Link<input value={bannerForm.link} onChange={(e) => setBannerForm((prev) => ({ ...prev, link: e.target.value }))} /></label>
-          <label className="admin-check"><input type="checkbox" checked={bannerForm.isActive} onChange={(e) => setBannerForm((prev) => ({ ...prev, isActive: e.target.checked }))} /> Active</label>
-          <button className="admin-primary" type="submit">Add Banner</button>
-        </form>
-        <DataTable
-          columns={[
-            { key: 'title', label: 'Title' },
-            { key: 'link', label: 'Link' },
-            { key: 'active', label: 'Active' },
-            { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button onClick={() => toggleBanner(row.raw)}>{row.raw.isActive ? 'Disable' : 'Enable'}</button><button onClick={() => deleteBanner(row.id)}>Delete</button></div> },
-          ]}
-          rows={banners.map((banner) => ({ id: banner._id, raw: banner, title: banner.title, link: banner.link || '-', active: banner.isActive ? 'Yes' : 'No' }))}
-        />
-      </section>
-
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Pages</span><h2>Pages Editor</h2></div>
-        <form className="admin-form" onSubmit={savePageContent}>
-          <label>Page<select value={pageEditor.pageName} onChange={(e) => loadPageContent(e.target.value)}><option value="about">About</option><option value="contact">Contact</option><option value="returns">Returns</option><option value="sizeguide">Size Guide</option></select></label>
-          <label className="wide">Content<textarea value={pageEditor.content} onChange={(e) => setPageEditor((prev) => ({ ...prev, content: e.target.value }))} /></label>
-          <button className="admin-primary" type="submit">Save Page</button>
-        </form>
-      </section>
-    </>
-  );
+  const renderCMS = () => <AdminVisualCmsEmbed />;
 
   const renderSettings = () => (
     <>
@@ -831,15 +903,35 @@ export default function AdminDashboard() {
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-brand">ATELIER<span>Admin</span></div>
-        <nav>{menuItems.map((item) => <button key={item} className={active === item ? 'active' : ''} onClick={() => setActive(item)}>{item}</button>)}</nav>
+        <nav>
+          {menuItems.map((item) => (
+            <button
+              key={item}
+              className={active === item ? 'active' : ''}
+              onClick={() => {
+                if (item === 'CMS') {
+                  setActive('CMS');
+                  navigate('/admin/cms');
+                } else {
+                  setActive(item);
+                  if (location.pathname.startsWith('/admin/cms')) navigate('/admin');
+                }
+              }}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
       </aside>
-      <main className="admin-main">
-        <header className="admin-topbar">
-          <div><span className="admin-eyebrow">Business Management</span><h1>{active}</h1></div>
-          <div className="admin-top-note">SS26 Operations</div>
-        </header>
-        {error && <p className="admin-alert error">{error}</p>}
-        {message && <p className="admin-alert success">{message}</p>}
+      <main className={active === 'CMS' ? 'admin-main is-cms' : 'admin-main'}>
+        {active !== 'CMS' && (
+          <header className="admin-topbar">
+            <div><span className="admin-eyebrow">Business Management</span><h1>{active}</h1></div>
+            <div className="admin-top-note">SS26 Operations</div>
+          </header>
+        )}
+        {active !== 'CMS' && error && <p className="admin-alert error">{error}</p>}
+        {active !== 'CMS' && message && <p className="admin-alert success">{message}</p>}
         {renderActive()}
       </main>
     </div>

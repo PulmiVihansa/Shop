@@ -1,9 +1,12 @@
-// Men category page placeholder.
+import usePageContent from '../hooks/usePageContent.js';
+
 export default function Men() {
+  const content = usePageContent('men');
+
   return (
     <section className="page category">
-      <h1>Men</h1>
-      <p>Placeholder for men products.</p>
+      <h1>{content.title}</h1>
+      <p>{content.body}</p>
     </section>
   );
 }

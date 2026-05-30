@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 import '../styles/tops.css';
 
 const heroCards = [
@@ -153,8 +154,9 @@ const fallbackProducts = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Tops() {
+  const content = usePageContent('tops');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'tops' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -248,7 +250,7 @@ export default function Tops() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -261,18 +263,15 @@ export default function Tops() {
             TOPS
           </div>
           <div className="ht-in">
-            <div className="ht-ey">Women&apos;s Tops \u2014 SS26</div>
+            <div className="ht-ey">{content.eyebrow}</div>
             <h1 className="ht-h">
-              The
-              <br />
-              <em>Perfect</em>
-              <br />
-              Top
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
-            <p className="ht-desc">
-              From weightless silk to structured organic cotton \u2014 tops that anchor any silhouette, in natural
-              fibres that breathe with you.
-            </p>
+            <p className="ht-desc">{content.description}</p>
             <div className="ht-stats">
               <div>
                 <span className="hs-v">8</span>
@@ -381,6 +380,9 @@ export default function Tops() {
             <div key={product.id} className="pc">
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 {product.badgeText && (
                   <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>
                 )}

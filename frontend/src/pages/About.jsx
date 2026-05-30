@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import '../styles/about.css';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 
 const marqueeItems = [
   'Handcrafted in Paris',
@@ -104,6 +105,8 @@ const teamMembers = [
 ];
 
 export default function About() {
+  const content = usePageContent('about');
+
   useEffect(() => {
     document.title = 'ATELIER - Our Story';
     const items = document.querySelectorAll('.about-page .ti');
@@ -131,11 +134,13 @@ export default function About() {
             2014
           </div>
           <div className="hero-txt">
-            <div className="eyebrow">Est. Paris, 2014</div>
+            <div className="eyebrow">{content.eyebrow}</div>
             <h1 className="hero-h1">
-              Our
-              <br />
-              <em>Story</em>
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
             <div className="hero-stats">
               <div>
@@ -154,11 +159,8 @@ export default function About() {
           </div>
         </div>
         <div className="hero-r">
-          <blockquote className="hero-quote">
-            "We did not set out to build a brand. We set out to make clothes that would last longer than the season
-            they were designed for."
-          </blockquote>
-          <p className="hero-attr">Margaux Leconte, Co-Founder</p>
+          <blockquote className="hero-quote">{content.quote}</blockquote>
+          <p className="hero-attr">{content.quoteBy}</p>
         </div>
       </section>
 
@@ -174,10 +176,9 @@ export default function About() {
 
       <section className="origin">
         <div>
-          <div className="sec-ey">Where it began</div>
+          <div className="sec-ey">{content.originEyebrow}</div>
           <h2 className="orig-h">
-            A small atelier.
-            <br />A <em>singular</em> idea.
+            {lines(content.originTitle).map((line) => <span key={line}>{line}<br /></span>)}
           </h2>
           <div className="orig-body">
             <p>
@@ -215,9 +216,9 @@ export default function About() {
       <section className="tl-section">
         <div className="tl-head">
           <div className="sec-ey" style={{ marginBottom: 0 }}>
-            A decade of making
+            {content.timelineEyebrow}
           </div>
-          <h2 className="tl-h">The journey so far</h2>
+          <h2 className="tl-h">{content.timelineTitle}</h2>
         </div>
         <div className="tl-track">
           {timelineItems.map((item) => (
@@ -233,8 +234,8 @@ export default function About() {
 
       <section className="vals">
         <div className="vals-hd">
-          <div className="vals-ey">What we believe</div>
-          <h2 className="vals-h">Three things we will never compromise on</h2>
+          <div className="vals-ey">{content.valuesEyebrow}</div>
+          <h2 className="vals-h">{content.valuesTitle}</h2>
         </div>
         <div className="vgrid">
           {values.map((value) => (
@@ -256,10 +257,9 @@ export default function About() {
       </section>
 
       <section className="mfst">
-        <div className="mfst-lbl">Our manifesto</div>
+        <div className="mfst-lbl">{content.manifestoLabel}</div>
         <p className="mfst-txt">
-          "The best garment you will ever own is one you <em>never need to replace</em>. Our job is to make sure you
-          never need to."
+          {content.manifestoText}
         </p>
         <p className="mfst-sig">Margaux Leconte</p>
         <p className="mfst-role">Co-Founder & Creative Director, Atelier</p>
@@ -268,14 +268,9 @@ export default function About() {
       <section className="team">
         <div className="team-hd">
           <h2 className="team-h">
-            The people
-            <br />
-            behind the pieces
+            {lines(content.teamTitle).map((line) => <span key={line}>{line}<br /></span>)}
           </h2>
-          <p className="team-d">
-            Twelve artisans. One workshop. No hierarchy - every hand that touches your garment has final say over the
-            quality of their work. Hover to learn more.
-          </p>
+          <p className="team-d">{content.teamDescription}</p>
         </div>
         <div className="tgrid">
           {teamMembers.map((member) => (

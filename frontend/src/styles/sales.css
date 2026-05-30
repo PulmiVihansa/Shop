@@ -591,6 +591,14 @@
   transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.sales-page .card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .sales-page .prod-card:hover .card-img-bg {
   transform: scale(1.06);
 }

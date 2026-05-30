@@ -12,6 +12,7 @@ const bulkOrderRoutes = require('./routes/bulkOrderRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const contentRoutes = require('./routes/contentRoutes');
+const cmsRoutes = require('./routes/cmsRoutes');
 
 // Load environment variables.
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/bulk-orders', bulkOrderRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/cms', cmsRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {
@@ -43,6 +45,35 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Stop the other process or set PORT to a free value.`);
+    process.exit(1);
+  }
+
+  console.error('Server error:', err);
+  process.exit(1);
+});
+
+const shutdown = (signal) => {
+  server.close(() => {
+    process.exit(0);
+  });
+
+  // Force-exit if the server doesn't close in time.
+  setTimeout(() => process.exit(1), 5000).unref();
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+// Nodemon uses SIGUSR2 for restarts on many platforms.
+process.once('SIGUSR2', () => {
+  server.close(() => {
+    process.kill(process.pid, 'SIGUSR2');
+  });
 });

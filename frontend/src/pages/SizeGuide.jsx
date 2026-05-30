@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import '../styles/sizeguide.css';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 
 const womenRows = [
   {
@@ -125,6 +126,7 @@ const womenFitGuide = [
 ];
 
 export default function SizeGuide() {
+  const content = usePageContent('sizeguide');
   const [activeTab, setActiveTab] = useState('women');
   const [unit, setUnit] = useState('cm');
   const [bust, setBust] = useState('');
@@ -172,18 +174,17 @@ export default function SizeGuide() {
       <header className="ph">
         <div className="ph-inner">
           <div>
-            <div className="ey">Find your perfect fit</div>
+            <div className="ey">{content.eyebrow}</div>
             <h1 className="ph-h">
-              Size
-              <br />
-              <em>Guide</em>
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
           </div>
           <div>
-            <p className="ph-desc">
-              All Atelier garments are cut generously and with movement in mind. If you&apos;re between sizes, we
-              always recommend sizing up - our pieces are designed to drape, not constrict.
-            </p>
+            <p className="ph-desc">{content.description}</p>
             <div className="ph-note">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" />
@@ -239,7 +240,7 @@ export default function SizeGuide() {
 
       <div className="body">
         <div className="htom">
-          <h2 className="htom-h">How to measure yourself</h2>
+          <h2 className="htom-h">{content.measureTitle}</h2>
           <div className="mgrid">
             <div className="mc">
               <span className="mc-num">01</span>
@@ -309,7 +310,7 @@ export default function SizeGuide() {
           <div id="tw">
             <div className="ff">
               <div className="ff-in">
-                <h2 className="ff-h">Fit Finder</h2>
+                <h2 className="ff-h">{content.fitFinderTitle}</h2>
                 <p className="ff-sub">Enter your measurements and we&apos;ll suggest your Atelier size.</p>
                 <div className="ff-row">
                   <div className="ff-f">
@@ -488,7 +489,7 @@ export default function SizeGuide() {
         )}
 
         <div className="care">
-          <h2 className="care-h">Caring for your Atelier pieces</h2>
+          <h2 className="care-h">{content.careTitle}</h2>
           <div className="cgrid">
             <div className="cc">
               <svg className="cc-ic" viewBox="0 0 24 24" aria-hidden="true">

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import usePageContent from '../hooks/usePageContent.js';
 
 const initialItems = [
   {
@@ -79,6 +80,7 @@ const initialItems = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Wishlist() {
+  const content = usePageContent('wishlist');
   const [items, setItems] = useState(initialItems);
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('saved');
@@ -750,14 +752,14 @@ export default function Wishlist() {
       <div className="wishlist-page">
         <header className="page-header">
           <div className="header-left">
-            <div className="header-eyebrow">Curated by you</div>
+            <div className="header-eyebrow">{content.eyebrow}</div>
             <h1 className="page-title">
-              My <em>Wishlist</em>
+              <em>{content.title}</em>
             </h1>
           </div>
           <div className="header-right">
             <div className={`item-count ${items.length ? 'has-items' : ''}`}>{items.length}</div>
-            <div className="item-label">pieces saved</div>
+            <div className="item-label">{content.savedLabel}</div>
           </div>
         </header>
 
@@ -790,7 +792,7 @@ export default function Wishlist() {
                   <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="1">
                     <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
                   </svg>
-                  <h2 className="empty-title">Your wishlist is empty</h2>
+                  <h2 className="empty-title">{content.emptyTitle}</h2>
                   <p className="empty-sub">
                     You haven&apos;t saved any pieces yet. Browse our collection and tap the heart to save pieces you love.
                   </p>
@@ -852,7 +854,7 @@ export default function Wishlist() {
 
             {items.length > 0 && (
               <aside className="summary-panel">
-                <div className="summary-title">Summary</div>
+                <div className="summary-title">{content.summaryTitle}</div>
                 <div className="summary-row">
                   <span className="summary-row-label">Pieces saved</span>
                   <span className="summary-row-val">{visibleItems.length}</span>

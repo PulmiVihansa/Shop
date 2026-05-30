@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 import '../styles/newarrivals.css';
 
 const fallbackProducts = [
@@ -194,8 +195,9 @@ const marqueeItems = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function NewArrivals() {
+  const content = usePageContent('newArrivals');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'new-arrivals' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -278,7 +280,7 @@ export default function NewArrivals() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -288,16 +290,15 @@ export default function NewArrivals() {
       <section className="hero">
         <div className="hl">
           <div className="h-in">
-            <div className="h-ey">Spring / Summer 2026</div>
+            <div className="h-ey">{content.eyebrow}</div>
             <h1 className="h-t">
-              New
-              <br />
-              <em>Arrivals</em>
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
-            <p className="h-desc">
-              Twelve new pieces, each cut by hand from fabric sourced within 200km of our Paris atelier. Designed for
-              movement. Made to last a lifetime.
-            </p>
+            <p className="h-desc">{content.description}</p>
             <div className="h-btns">
               <a href="#arrivals" className="h-btn1">
                 Shop All Arrivals
@@ -334,7 +335,7 @@ export default function NewArrivals() {
       </div>
 
       <div className="ed-sec" id="arrivals">
-        <div className="ed-label">Editor's Picks</div>
+        <div className="ed-label">{content.editorLabel}</div>
         <div className="ed-grid">
           <div className="ec main">
             <div className="ec-img">
@@ -419,6 +420,9 @@ export default function NewArrivals() {
             <div key={product.id} className="pc">
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                 {product.images?.[0] && (
+                   <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                 )}
                 {product.badgeText && (
                   <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>
                 )}

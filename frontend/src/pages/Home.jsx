@@ -1,16 +1,82 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer/Footer.jsx';
 import featuredEditorial from '../assets/featured-editorial.jpg';
 import lookbook from '../assets/lookbook.jpg';
 import api from '../services/api.js';
 
-export default function Home() {
+function EditableText({ as: Tag = 'span', className = '', value, isAdmin, onSave, children }) {
+  if (!isAdmin) {
+    return <Tag className={className}>{children ?? value}</Tag>;
+  }
+
+  return (
+    <Tag
+      className={`${className} cms-editable-text`}
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck={false}
+      onBlur={(event) => onSave(event.currentTarget.innerText)}
+    >
+      {value}
+    </Tag>
+  );
+}
+
+function EditableCta({ text, href, isAdmin, onTextSave }) {
+  return (
+    <span className="cms-cta-wrap">
+      <a
+        href={href || '#'}
+        className="cta-button"
+        onClick={(event) => {
+          if (isAdmin) event.preventDefault();
+        }}
+      >
+        <EditableText as="span" value={text} isAdmin={isAdmin} onSave={onTextSave} />
+      </a>
+    </span>
+  );
+}
+
+function EditableImage({ src, fallback, alt, label, isAdmin, onUpload, onLabelSave, labelClassName = 'hero-image-label' }) {
+  const imageSrc = src || fallback;
+
+  return (
+    <div className={`cms-image-edit ${isAdmin ? 'is-admin' : ''}`}>
+      {imageSrc && <img src={imageSrc} alt={alt} />}
+      <EditableText
+        as="div"
+        className={labelClassName}
+        value={label}
+        isAdmin={isAdmin}
+        onSave={onLabelSave}
+      />
+      {isAdmin && (
+        <label className="cms-image-button">
+          Change Image
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onUpload(file);
+              event.target.value = '';
+            }}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
+export default function Home({ isAdmin = false }) {
   const [content, setContent] = useState(null);
+  const [saveState, setSaveState] = useState('');
 
   useEffect(() => {
     let active = true;
-    api.get('/content/homepage')
+    api.get('/cms')
       .then((response) => {
         if (active) setContent(response.data);
       })
@@ -23,13 +89,41 @@ export default function Home() {
     };
   }, []);
 
-  const heroTitle = content?.heroTitle || 'Timeless\nElegance,\nRedefined';
+  const saveCmsPatch = async (patch) => {
+    if (!isAdmin) return;
+    const next = { ...(content || {}), ...patch };
+    setContent(next);
+    setSaveState('Saving');
+    try {
+      const response = await api.put('/cms', next);
+      setContent(response.data);
+      setSaveState('Saved');
+    } catch {
+      setSaveState('Could not save');
+    }
+  };
+
+  const uploadCmsImage = async (field, file) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      setSaveState('Uploading');
+      try {
+        const response = await api.post('/content/upload', { image: reader.result });
+        await saveCmsPatch({ [field]: response.data.url });
+      } catch {
+        setSaveState('Could not upload');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (!content) return null;
+
+  const heroTitle = content.heroTitle;
   const heroLines = heroTitle.split('\n');
-  const heroPrimaryImage = content?.heroImage || featuredEditorial;
-  const heroSecondaryImage = content?.heroImageSecondary || lookbook;
 
   return (
-    <>
+    <div className={isAdmin ? 'cms-mode' : undefined}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;600&display=swap');
 
@@ -208,6 +302,83 @@ export default function Home() {
           display: block;
         }
 
+        .cms-mode .cms-editable-text {
+          outline: 1px dashed rgba(143, 147, 144, 0.65);
+          outline-offset: 6px;
+          border-radius: 2px;
+          cursor: text;
+          white-space: pre-line;
+          transition: outline-color 0.2s ease, background 0.2s ease;
+        }
+
+        .cms-mode .cms-editable-text:hover,
+        .cms-mode .cms-editable-text:focus {
+          outline-color: var(--charcoal);
+          background: rgba(250, 247, 242, 0.18);
+        }
+
+        .cms-status {
+          position: fixed;
+          right: 1rem;
+          bottom: 1rem;
+          z-index: 1000;
+          padding: 0.7rem 0.9rem;
+          background: rgba(26, 26, 26, 0.86);
+          color: var(--cream);
+          font-size: 0.68rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        .cms-cta-wrap {
+          display: inline-flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.75rem;
+          width: fit-content;
+        }
+
+        .cms-image-edit {
+          width: 100%;
+          height: 100%;
+          position: relative;
+        }
+
+        .cms-image-edit.is-admin {
+          outline: 1px dashed rgba(250, 247, 242, 0.8);
+          outline-offset: -10px;
+        }
+
+        .cms-image-button {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0;
+          padding: 0.78rem 1rem;
+          border: 1px solid var(--cream);
+          background: rgba(26, 26, 26, 0.72);
+          color: var(--cream);
+          cursor: pointer;
+          font-size: 0.68rem;
+          font-weight: 600;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          transition: opacity 0.2s ease;
+          z-index: 5;
+        }
+
+        .cms-image-button input {
+          position: absolute;
+          inset: 0;
+          opacity: 0;
+          cursor: pointer;
+        }
+
+        .cms-image-edit.is-admin:hover .cms-image-button {
+          opacity: 1;
+        }
+
         .hero-image-label {
           position: absolute;
           left: 1.25rem;
@@ -343,6 +514,25 @@ export default function Home() {
           transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
           overflow: hidden;
+        }
+
+        .collection-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .collection-image-label {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 2;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.5rem;
+          color: rgba(26, 26, 26, 0.45);
+          text-align: center;
         }
 
         .collection-image::after {
@@ -573,7 +763,7 @@ export default function Home() {
         }
 
         .process-strip::before {
-          content: 'PROCESS';
+          content: attr(data-process-label);
           position: absolute;
           top: 50%;
           left: 4rem;
@@ -707,36 +897,73 @@ export default function Home() {
 
         }
       `}</style>
+      {isAdmin && <div className="cms-status">{saveState || 'Visual CMS'}</div>}
       <Header />
 
       <section className="hero">
         <div className="hero-left">
-          <div className="hero-label">Spring / Summer 2026</div>
-          <h1 className="hero-title">
-            {heroLines.map((line, index) => (
-              <span key={`${line}-${index}`}>
-                {line}
-                {index < heroLines.length - 1 && <br />}
-              </span>
-            ))}
-          </h1>
-          <p className="hero-description">
-            {content?.heroSubtitle ||
-              'Discover our curated collection of contemporary pieces that blend minimalist design with artisanal craftsmanship. Each garment tells a story of conscious creation and enduring style.'}
-          </p>
-          <a href={content?.buttonLink || '#collections'} className="cta-button">
-            <span>{content?.buttonText || 'Explore Collection'}</span>
-          </a>
+          <EditableText
+            as="div"
+            className="hero-label"
+            value={content.heroLabel}
+            isAdmin={isAdmin}
+            onSave={(value) => saveCmsPatch({ heroLabel: value })}
+          />
+          {isAdmin ? (
+            <EditableText
+              as="h1"
+              className="hero-title"
+              value={heroTitle}
+              isAdmin={isAdmin}
+              onSave={(value) => saveCmsPatch({ heroTitle: value })}
+            />
+          ) : (
+            <h1 className="hero-title">
+              {heroLines.map((line, index) => (
+                <span key={`${line}-${index}`}>
+                  {line}
+                  {index < heroLines.length - 1 && <br />}
+                </span>
+              ))}
+            </h1>
+          )}
+          <EditableText
+            as="p"
+            className="hero-description"
+            value={content.heroSubtitle}
+            isAdmin={isAdmin}
+            onSave={(value) => saveCmsPatch({ heroSubtitle: value })}
+          />
+          <EditableCta
+            text={content.buttonText}
+            href={content.buttonLink}
+            isAdmin={isAdmin}
+            onTextSave={(value) => saveCmsPatch({ buttonText: value })}
+          />
         </div>
         <div className="hero-right">
           <div className="hero-image-stack">
             <div className="hero-image">
-              <img src={heroPrimaryImage} alt="Featured editorial" />
-              <div className="hero-image-label">Featured Editorial</div>
+              <EditableImage
+                src={content?.heroImage}
+                fallback={featuredEditorial}
+                alt="Featured editorial"
+                label={content.primaryImageLabel}
+                isAdmin={isAdmin}
+                onUpload={(file) => uploadCmsImage('heroImage', file)}
+                onLabelSave={(value) => saveCmsPatch({ primaryImageLabel: value })}
+              />
             </div>
             <div className="hero-image">
-              <img src={heroSecondaryImage} alt="Boo Thing lookbook" />
-              <div className="hero-image-label">Boo Thing</div>
+              <EditableImage
+                src={content?.heroImageSecondary}
+                fallback={lookbook}
+                alt="Boo Thing lookbook"
+                label={content.secondaryImageLabel}
+                isAdmin={isAdmin}
+                onUpload={(file) => uploadCmsImage('heroImageSecondary', file)}
+                onLabelSave={(value) => saveCmsPatch({ secondaryImageLabel: value })}
+              />
             </div>
           </div>
         </div>
@@ -744,29 +971,71 @@ export default function Home() {
 
       <section className="featured-section" id="collections">
         <div className="section-header">
-          <div className="section-subtitle">New Arrivals</div>
-          <h2 className="section-title">{content?.section2Title || 'Essential Pieces'}</h2>
+          <EditableText
+            as="div"
+            className="section-subtitle"
+            value={content.sectionSubtitle}
+            isAdmin={isAdmin}
+            onSave={(value) => saveCmsPatch({ sectionSubtitle: value })}
+          />
+          <EditableText
+            as="h2"
+            className="section-title"
+            value={content.section2Title}
+            isAdmin={isAdmin}
+            onSave={(value) => saveCmsPatch({ section2Title: value })}
+          />
         </div>
         <div className="collection-grid">
           <div className="collection-item">
-            <div className="collection-image">Linen Blazer</div>
+            <div className="collection-image">
+              <EditableImage
+                src={content.productOneImage}
+                alt={content.productOneImageLabel}
+                label={content.productOneImageLabel}
+                isAdmin={isAdmin}
+                labelClassName="collection-image-label"
+                onUpload={(file) => uploadCmsImage('productOneImage', file)}
+                onLabelSave={(value) => saveCmsPatch({ productOneImageLabel: value })}
+              />
+            </div>
             <div className="collection-info">
-              <h3 className="collection-name">Structured Linen Blazer</h3>
-              <p className="collection-price">LKR385</p>
+              <EditableText as="h3" className="collection-name" value={content.productOneName} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ productOneName: value })} />
+              <EditableText as="p" className="collection-price" value={content.productOnePrice} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ productOnePrice: value })} />
             </div>
           </div>
           <div className="collection-item">
-            <div className="collection-image">Silk Dress</div>
+            <div className="collection-image">
+              <EditableImage
+                src={content.productTwoImage}
+                alt={content.productTwoImageLabel}
+                label={content.productTwoImageLabel}
+                isAdmin={isAdmin}
+                labelClassName="collection-image-label"
+                onUpload={(file) => uploadCmsImage('productTwoImage', file)}
+                onLabelSave={(value) => saveCmsPatch({ productTwoImageLabel: value })}
+              />
+            </div>
             <div className="collection-info">
-              <h3 className="collection-name">Flowing Silk Midi</h3>
-              <p className="collection-price">LKR450</p>
+              <EditableText as="h3" className="collection-name" value={content.productTwoName} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ productTwoName: value })} />
+              <EditableText as="p" className="collection-price" value={content.productTwoPrice} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ productTwoPrice: value })} />
             </div>
           </div>
           <div className="collection-item">
-            <div className="collection-image">Cotton Shirt</div>
+            <div className="collection-image">
+              <EditableImage
+                src={content.productThreeImage}
+                alt={content.productThreeImageLabel}
+                label={content.productThreeImageLabel}
+                isAdmin={isAdmin}
+                labelClassName="collection-image-label"
+                onUpload={(file) => uploadCmsImage('productThreeImage', file)}
+                onLabelSave={(value) => saveCmsPatch({ productThreeImageLabel: value })}
+              />
+            </div>
             <div className="collection-info">
-              <h3 className="collection-name">Relaxed Cotton Shirt</h3>
-              <p className="collection-price">LKR195</p>
+              <EditableText as="h3" className="collection-name" value={content.productThreeName} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ productThreeName: value })} />
+              <EditableText as="p" className="collection-price" value={content.productThreePrice} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ productThreePrice: value })} />
             </div>
           </div>
         </div>
@@ -775,150 +1044,73 @@ export default function Home() {
       <section className="statement-section" id="about">
         <div className="marquee-strip" aria-hidden="true">
           <div className="marquee-inner">
-            <span>Handcrafted in small batches</span><span className="dot">&middot;</span>
-            <span>Natural fibres only</span><span className="dot">&middot;</span>
-            <span>Zero-waste pattern cutting</span><span className="dot">&middot;</span>
-            <span>Made to last a lifetime</span><span className="dot">&middot;</span>
-            <span>Spring &amp; Summer 2026</span><span className="dot">&middot;</span>
-            <span>Atelier Collection</span><span className="dot">&middot;</span>
-            <span>Handcrafted in small batches</span><span className="dot">&middot;</span>
-            <span>Natural fibres only</span><span className="dot">&middot;</span>
-            <span>Zero-waste pattern cutting</span><span className="dot">&middot;</span>
-            <span>Made to last a lifetime</span><span className="dot">&middot;</span>
-            <span>Spring &amp; Summer 2026</span><span className="dot">&middot;</span>
-            <span>Atelier Collection</span><span className="dot">&middot;</span>
+            {[...Array(2)].map((_, round) => (
+              ['marqueeOne', 'marqueeTwo', 'marqueeThree', 'marqueeFour', 'marqueeFive', 'marqueeSix'].map((key) => (
+                <span key={`${round}-${key}`}>
+                  <EditableText
+                    value={content[key]}
+                    isAdmin={isAdmin}
+                    onSave={(value) => saveCmsPatch({ [key]: value })}
+                  />
+                  <span className="dot">&middot;</span>
+                </span>
+              ))
+            ))}
           </div>
         </div>
 
         <div className="pillars-section">
           <div className="pillars-header">
-            <span className="pillars-label">Our Principles</span>
-            <h2 className="pillars-title">Built on three commitments</h2>
+            <EditableText as="span" className="pillars-label" value={content.principlesLabel} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ principlesLabel: value })} />
+            <EditableText as="h2" className="pillars-title" value={content.principlesTitle} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ principlesTitle: value })} />
           </div>
           <div className="pillars-grid">
-            <div className="pillar-card">
-              <span className="pillar-index">01 - Sustainability</span>
-              <div className="pillar-icon-line" />
-              <h3 className="pillar-name">
-                Sustainable
-                <br />
-                Fashion
-              </h3>
-              <p className="pillar-body">
-                We use eco-friendly materials and ethical production methods throughout every stage of our supply
-                chain. From certified organic cotton to post-consumer recycled fibres, every piece is designed to
-                minimise its footprint on the planet without compromising on quality.
-              </p>
-              <a href="#" className="pillar-read-more">
-                Learn more
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-            </div>
-            <div className="pillar-card">
-              <span className="pillar-index">02 - Craftsmanship</span>
-              <div className="pillar-icon-line" />
-              <h3 className="pillar-name">
-                Artisan
-                <br />
-                Craftsmanship
-              </h3>
-              <p className="pillar-body">
-                Each garment is handcrafted by skilled artisans who bring decades of experience to every stitch. We
-                celebrate slow fashion - the kind that takes time, care, and an eye for detail that no machine can
-                replicate. Quality is not a finish; it is the foundation.
-              </p>
-              <a href="#" className="pillar-read-more">
-                Meet our makers
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-            </div>
-            <div className="pillar-card">
-              <span className="pillar-index">03 - Design</span>
-              <div className="pillar-icon-line" />
-              <h3 className="pillar-name">
-                Timeless
-                <br />
-                Design
-              </h3>
-              <p className="pillar-body">
-                We create pieces that transcend seasons and resist trends. Our silhouettes are drawn to be worn, loved,
-                and cherished for years - then handed on. A wardrobe built on intention rather than impulse is the most
-                sustainable wardrobe of all.
-              </p>
-              <a href="#" className="pillar-read-more">
-                View collection
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-            </div>
+            {[
+              ['One', 'pillarOneIndex', 'pillarOneTitle', 'pillarOneBody', 'pillarOneLink'],
+              ['Two', 'pillarTwoIndex', 'pillarTwoTitle', 'pillarTwoBody', 'pillarTwoLink'],
+              ['Three', 'pillarThreeIndex', 'pillarThreeTitle', 'pillarThreeBody', 'pillarThreeLink'],
+            ].map(([name, indexKey, titleKey, bodyKey, linkKey]) => (
+              <div className="pillar-card" key={name}>
+                <EditableText as="span" className="pillar-index" value={content[indexKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [indexKey]: value })} />
+                <div className="pillar-icon-line" />
+                <EditableText as="h3" className="pillar-name" value={content[titleKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [titleKey]: value })} />
+                <EditableText as="p" className="pillar-body" value={content[bodyKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [bodyKey]: value })} />
+                <a href="#" className="pillar-read-more" onClick={(event) => isAdmin && event.preventDefault()}>
+                  <EditableText value={content[linkKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [linkKey]: value })} />
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </a>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="process-strip">
+        <div className="process-strip" data-process-label={content.processBackground}>
           <div className="process-steps">
-            <div className="process-step">
-              <span className="process-index">01 - Concept</span>
-              <span className="process-name">
-                Sketch &amp;
-                <br />
-                Drape
-              </span>
-              <p className="process-note">Each silhouette begins on a live form, never a screen.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">02 - Source</span>
-              <span className="process-name">
-                Fabric
-                <br />
-                Selection
-              </span>
-              <p className="process-note">We visit mills in person. No catalogues. No shortcuts.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">03 - Cut</span>
-              <span className="process-name">
-                Hand
-                <br />
-                Tailoring
-              </span>
-              <p className="process-note">Two tailors per garment. One for the body, one for the finish.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">04 - Inspect</span>
-              <span className="process-name">
-                48-Hour
-                <br />
-                Quality Hold
-              </span>
-              <p className="process-note">Every piece rests before it ships. Tension reveals truth.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">05 - Yours</span>
-              <span className="process-name">
-                Delivered
-                <br />
-                &amp; Registered
-              </span>
-              <p className="process-note">Paired with a digital repair passport, valid for life.</p>
-            </div>
+            {[
+              ['processOneIndex', 'processOneTitle', 'processOneNote'],
+              ['processTwoIndex', 'processTwoTitle', 'processTwoNote'],
+              ['processThreeIndex', 'processThreeTitle', 'processThreeNote'],
+              ['processFourIndex', 'processFourTitle', 'processFourNote'],
+              ['processFiveIndex', 'processFiveTitle', 'processFiveNote'],
+            ].map(([indexKey, titleKey, noteKey], index, items) => (
+              <Fragment key={indexKey}>
+                <div className="process-step">
+                  <EditableText as="span" className="process-index" value={content[indexKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [indexKey]: value })} />
+                  <EditableText as="span" className="process-name" value={content[titleKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [titleKey]: value })} />
+                  <EditableText as="p" className="process-note" value={content[noteKey]} isAdmin={isAdmin} onSave={(value) => saveCmsPatch({ [noteKey]: value })} />
+                </div>
+                {index < items.length - 1 && <div className="process-arrow">&rarr;</div>}
+              </Fragment>
+            ))}
           </div>
         </div>
       </section>
 
       <Footer />
-    </>
+    </div>
   );
 }
 

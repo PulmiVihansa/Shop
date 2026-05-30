@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import '../styles/contact.css';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 
 const subjectOptions = [
   'I have a question about a product',
@@ -52,6 +53,7 @@ const generateRef = () => {
 };
 
 export default function Contact() {
+  const content = usePageContent('contact');
   const [activeDept, setActiveDept] = useState('General');
   const [formValues, setFormValues] = useState({
     firstName: '',
@@ -236,18 +238,17 @@ export default function Contact() {
       <section className="hero-band">
         <div className="hero-inner">
           <div className="hero-left">
-            <div className="hero-eyebrow">We&apos;re here for you</div>
+            <div className="hero-eyebrow">{content.eyebrow}</div>
             <h1 className="hero-title">
-              Let&apos;s
-              <br />
-              <em>talk</em>
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
           </div>
           <div className="hero-right">
-            <p className="hero-desc">
-              Whether you have a question about sizing, a collaboration idea, or simply want to know more about how
-              your garment was made - we read every message personally.
-            </p>
+            <p className="hero-desc">{content.description}</p>
             <div className="response-promise">
               <div className="promise-icon">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -256,8 +257,7 @@ export default function Contact() {
                 </svg>
               </div>
               <p className="promise-text">
-                <strong>We reply within 4 hours</strong> during atelier hours, and by 10am the next morning for
-                messages sent overnight.
+                <strong>{content.promiseTitle}</strong> {content.promiseBody}
               </p>
             </div>
           </div>
@@ -266,7 +266,7 @@ export default function Contact() {
 
       <div className="main-grid">
         <div className="form-panel">
-          <div className="dept-label">What can we help with?</div>
+          <div className="dept-label">{content.departmentLabel}</div>
           <div className="dept-grid">
             {deptOptions.map((dept) => (
               <button
@@ -413,9 +413,9 @@ export default function Contact() {
 
             <div className="submit-row">
               <button className="submit-btn" type="submit" disabled={isSubmitting}>
-                <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
+                <span>{isSubmitting ? 'Sending...' : content.submitButton}</span>
               </button>
-              <p className="submit-note">Your message goes directly to our team - not a chatbot.</p>
+              <p className="submit-note">{content.submitNote}</p>
             </div>
           </form>
 
@@ -425,11 +425,8 @@ export default function Contact() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 className="success-title">Message received</h2>
-            <p className="success-sub">
-              Thank you - your message has been passed to our team. You&apos;ll hear back within 4 hours during
-              atelier hours.
-            </p>
+            <h2 className="success-title">{content.successTitle}</h2>
+            <p className="success-sub">{content.successBody}</p>
             <div className="success-ref">{successRef}</div>
             <button className="success-back" type="button" onClick={resetForm}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -458,7 +455,7 @@ export default function Contact() {
 
           <div className="contact-details">
             <div className="detail-section">
-              <div className="detail-heading">Our Atelier</div>
+              <div className="detail-heading">{content.addressTitle}</div>
               <div className="address-block">
                 <div className="address-line">
                   <span>Street</span>
@@ -480,7 +477,7 @@ export default function Contact() {
             </div>
 
             <div className="detail-section">
-              <div className="detail-heading">Reach Us Directly</div>
+              <div className="detail-heading">{content.directTitle}</div>
               <div className="contact-methods">
                 <a href="mailto:hello@atelier.com" className="contact-method">
                   <div className="method-icon">
@@ -523,7 +520,7 @@ export default function Contact() {
             </div>
 
             <div className="detail-section">
-              <div className="detail-heading">Atelier Hours</div>
+              <div className="detail-heading">{content.hoursTitle}</div>
               <div className="hours-table">
                 {hours.map((slot, index) => {
                   const isToday = index === todayIndex;
@@ -547,7 +544,7 @@ export default function Contact() {
             </div>
 
             <div className="detail-section">
-              <div className="detail-heading">Follow the Atelier</div>
+              <div className="detail-heading">{content.socialTitle}</div>
               <div className="social-row">
                 <a href="#" className="social-link" title="Instagram">
                   <svg viewBox="0 0 24 24" aria-hidden="true">

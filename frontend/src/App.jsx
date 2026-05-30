@@ -3,6 +3,7 @@ import Header from './components/Header.jsx';
 import Footer from './components/Footer/Footer.jsx';
 import AppRoutes from './routes/AppRoutes.jsx';
 import { CartProvider } from './context/CartContext.jsx';
+import VisualCmsRuntime from './cms/VisualCmsRuntime.jsx';
 
 // Global app layout with header, routed pages, and footer.
 export default function App() {
@@ -25,30 +26,32 @@ export default function App() {
   return (
     <CartProvider>
       <div className="app-shell">
-        {!hideHeader && <Header />}
-        <main
-          className="main-content"
-          style={
-            isHome ||
-            isContact ||
-            isSizeGuide ||
-            isReturns ||
-            isAbout ||
-            isNewArrivals ||
-            isWomen ||
-            isTops ||
-            isAdmin ||
-            isMenNewArrivals ||
-            isMenShirts ||
-            isMenTrousers ||
-            isAccessories
-              ? { padding: 0 }
-              : undefined
-          }
-        >
-          <AppRoutes />
-        </main>
-        {!isHome && !isAdmin && <Footer />}
+        <VisualCmsRuntime>
+          {!hideHeader && <Header />}
+          <main
+            className="main-content"
+            style={
+              isHome ||
+              isContact ||
+              isSizeGuide ||
+              isReturns ||
+              isAbout ||
+              isNewArrivals ||
+              isWomen ||
+              isTops ||
+              isAdmin ||
+              isMenNewArrivals ||
+              isMenShirts ||
+              isMenTrousers ||
+              isAccessories
+                ? { padding: 0 }
+                : undefined
+            }
+          >
+            <AppRoutes />
+          </main>
+          {!isHome && !isAdmin && <Footer />}
+        </VisualCmsRuntime>
       </div>
     </CartProvider>
   );

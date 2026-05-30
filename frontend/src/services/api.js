@@ -15,4 +15,6 @@ api.interceptors.request.use((config) => {
 export default api;
 
 export const getErrorMessage = (error) =>
-  error?.response?.data?.message || error?.message || 'Something went wrong';
+  error?.response?.data?.error
+    ? `${error?.response?.data?.message || 'Request failed'}: ${error.response.data.error}`
+    : error?.response?.data?.message || error?.message || 'Something went wrong';

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent from '../hooks/usePageContent.js';
 import '../styles/accessories.css';
 
 const heroFeature = {
@@ -318,8 +319,9 @@ const craftItems = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function Accessories() {
+  const content = usePageContent('accessories');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'accessories' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -377,7 +379,7 @@ export default function Accessories() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const pieceCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -392,7 +394,7 @@ export default function Accessories() {
       { bags: 0, belts: 0, scarves: 0, small: 0 }
     );
     return { ...counts, all: products.length };
-  }, []);
+  }, [products]);
 
   const featureProduct = products.find((product) => product.id === heroFeature.productId);
   const editorialMain = products.find((product) => product.id === editorialStrip.main.productId);
@@ -569,6 +571,9 @@ export default function Accessories() {
               <div key={product.id} className={`pc ${shapeClass}`}>
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
                 <div className="pc-acts">
                   <button

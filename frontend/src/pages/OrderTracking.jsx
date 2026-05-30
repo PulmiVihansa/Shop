@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../services/api.js';
 import '../styles/order-tracking.css';
+import usePageContent from '../hooks/usePageContent.js';
 
 const formatCurrency = (value) => `LKR${Number(value || 0).toLocaleString()}`;
 
@@ -21,6 +22,7 @@ const statusIndex = {
 };
 
 export default function OrderTracking() {
+  const content = usePageContent('orderTracking');
   const [orders, setOrders] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [loading, setLoading] = useState(true);
@@ -63,8 +65,8 @@ export default function OrderTracking() {
     <section className="tracking-page">
       <header className="tracking-hero">
         <div>
-          <span className="tracking-eyebrow">Order Tracking</span>
-          <h1>Track your order.</h1>
+          <span className="tracking-eyebrow">{content.eyebrow}</span>
+          <h1>{content.title}</h1>
           <p>Follow what happens after payment, from confirmation to delivery.</p>
         </div>
         <Link to="/men-new-arrivals" className="tracking-shop-link">Continue Shopping</Link>
@@ -75,8 +77,8 @@ export default function OrderTracking() {
 
       {!loading && !orders.length ? (
         <div className="tracking-empty">
-          <span className="tracking-eyebrow">No Orders</span>
-          <h2>No orders to track yet.</h2>
+          <span className="tracking-eyebrow">{content.noOrdersEyebrow}</span>
+          <h2>{content.noOrdersTitle}</h2>
           <p>Complete checkout and your order timeline will appear here.</p>
           <Link to="/men-new-arrivals" className="tracking-primary">Shop New Arrivals</Link>
         </div>
@@ -85,7 +87,7 @@ export default function OrderTracking() {
           <aside className="tracking-orders">
             <div className="tracking-section-head">
               <span>History</span>
-              <h2>Your Orders</h2>
+              <h2>{content.ordersTitle}</h2>
             </div>
             {orders.map((order) => (
               <button
@@ -119,7 +121,7 @@ export default function OrderTracking() {
             <div className={`tracking-timeline ${selectedOrder.status === 'cancelled' ? 'cancelled' : ''}`}>
               {selectedOrder.status === 'cancelled' ? (
                 <div className="tracking-cancelled">
-                  <h2>Order Cancelled</h2>
+                  <h2>{content.cancelledTitle}</h2>
                   <p>This order has been cancelled. Contact support if this was unexpected.</p>
                 </div>
               ) : (
@@ -139,7 +141,7 @@ export default function OrderTracking() {
               <section className="tracking-card">
                 <div className="tracking-section-head">
                   <span>Items</span>
-                  <h2>Order Pieces</h2>
+                  <h2>{content.piecesTitle}</h2>
                 </div>
                 <div className="tracking-items">
                   {selectedOrder.items.map((item) => (
@@ -158,7 +160,7 @@ export default function OrderTracking() {
               <section className="tracking-card">
                 <div className="tracking-section-head">
                   <span>Delivery</span>
-                  <h2>Shipping Details</h2>
+                  <h2>{content.shippingTitle}</h2>
                 </div>
                 <div className="tracking-address">
                   <strong>{selectedOrder.address?.fullName}</strong>

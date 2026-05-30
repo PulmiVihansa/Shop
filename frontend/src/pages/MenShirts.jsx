@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 import '../styles/men-shirts.css';
 
 const heroPanels = [
@@ -133,8 +134,9 @@ const storyFeatures = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenShirts() {
+  const content = usePageContent('menShirts');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'men' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -217,7 +219,7 @@ export default function MenShirts() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const shirtCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -323,7 +325,7 @@ export default function MenShirts() {
 
       <div className="size-cta">
         <div className="size-cta-text">
-          <div className="size-cta-title">Not sure of your fit?</div>
+          <div className="size-cta-title">{content.sizeCtaTitle}</div>
           <div className="size-cta-sub">
             Our tailors recommend measuring chest, collar, and sleeve for the perfect shirt.
           </div>
@@ -342,6 +344,9 @@ export default function MenShirts() {
             <div key={product.id} className="pc">
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
                 <div className="pc-acts">
                   <button

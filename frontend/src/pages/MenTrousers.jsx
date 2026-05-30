@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import useProducts from '../hooks/useProducts.js';
+import usePageContent from '../hooks/usePageContent.js';
 import '../styles/men-trousers.css';
 
 const sidebarItems = [
@@ -142,8 +143,9 @@ const fallbackProducts = [
 const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
 
 export default function MenTrousers() {
+  const content = usePageContent('menTrousers');
   const { addItem } = useCart();
-  const { products } = useProducts({ fallback: fallbackProducts });
+  const { products } = useProducts({ fallback: fallbackProducts, placement: 'men' });
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('new');
   const [toast, setToast] = useState('');
@@ -226,7 +228,7 @@ export default function MenTrousers() {
       list.sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [filter, sort]);
+  }, [products, filter, sort]);
 
   const styleCount = visibleProducts.length;
   const marqueeLoop = [...marqueeItems, ...marqueeItems];
@@ -262,7 +264,7 @@ export default function MenTrousers() {
         </div>
         <aside className="hr">
           <div className="hr-top">
-            <div className="hr-label">This Season</div>
+            <div className="hr-label">{content.seasonLabel}</div>
             {sidebarItems.map((item) => {
               const product = products.find((entry) => entry.id === item.productId);
               return (
@@ -277,7 +279,7 @@ export default function MenTrousers() {
             })}
           </div>
           <div className="hr-bottom">
-            <div className="hr-bottom-title">Free hemming included</div>
+            <div className="hr-bottom-title">{content.hemmingTitle}</div>
             <div className="hr-bottom-sub">
               Every pair is hemmed to your exact inseam. Simply note your measurement at checkout.
             </div>
@@ -360,6 +362,9 @@ export default function MenTrousers() {
             <div key={product.id} className="pc">
               <div className="pci">
                 <div className={`pcbg ${product.bgClass}`} />
+                {product.images?.[0] && (
+                  <img className="pcimg" src={product.images[0]} alt={product.name} loading="lazy" />
+                )}
                 {product.badgeText && <span className={`pbadge ${product.badge}`}>{product.badgeText}</span>}
                 <div className="pc-acts">
                   <button

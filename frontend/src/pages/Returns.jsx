@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import '../styles/returns.css';
+import usePageContent, { lines } from '../hooks/usePageContent.js';
 
 const steps = [
   { id: 1, label: 'Order' },
@@ -33,6 +34,7 @@ const exchangeSizes = ['XS', 'S', 'M', 'L', 'XL'];
 const exchangeColors = ['Same colour', 'Ivory', 'Stone', 'Ash', 'Sage'];
 
 export default function Returns() {
+  const content = usePageContent('returns');
   const [step, setStep] = useState(1);
   const [returnType, setReturnType] = useState('refund');
   const [orderNum, setOrderNum] = useState('');
@@ -109,11 +111,13 @@ export default function Returns() {
       <header className="ph">
         <div className="ph-inner">
           <div>
-            <div className="ey">Hassle-free, always</div>
+            <div className="ey">{content.eyebrow}</div>
             <h1 className="ph-h">
-              Returns &amp;
-              <br />
-              <em>Exchanges</em>
+              {lines(content.title).map((line, index) => (
+                index === lines(content.title).length - 1
+                  ? <em key={line}>{line}</em>
+                  : <span key={line}>{line}<br /></span>
+              ))}
             </h1>
           </div>
           <div className="ph-promises">
@@ -180,8 +184,8 @@ export default function Returns() {
 
       <div className="main">
         <div className="portal">
-          <h2 className="portal-title">Start a Return or Exchange</h2>
-          <p className="portal-sub">Complete the form below and we'll email you a prepaid return label within 2 hours.</p>
+          <h2 className="portal-title">{content.portalTitle}</h2>
+          <p className="portal-sub">{content.portalSubtitle}</p>
 
           <div className="step-nav">
             {steps.map((s) => (
@@ -385,11 +389,8 @@ export default function Returns() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 className="s-h">Return submitted</h2>
-            <p className="s-p">
-              Your prepaid return label is on its way to your inbox. You'll receive a refund confirmation once we've
-              processed your item - usually within 24 hours of receipt.
-            </p>
+            <h2 className="s-h">{content.successTitle}</h2>
+            <p className="s-p">{content.successBody}</p>
             <div className="s-ref">{successRef}</div>
             <button className="s-dl" type="button" onClick={() => showToast('Label download started')}>
               Download Return Label
@@ -399,7 +400,7 @@ export default function Returns() {
 
         <aside className="info-panel">
           <div className="tracker">
-            <div className="tr-title">Track a Return</div>
+            <div className="tr-title">{content.trackTitle}</div>
             <div className="tr-input">
               <input
                 type="text"
@@ -483,7 +484,7 @@ export default function Returns() {
           </div>
 
           <div>
-            <div className="faq-title">Common questions</div>
+            <div className="faq-title">{content.faqTitle}</div>
             {[
               {
                 q: 'How long does a refund take?',

@@ -15,6 +15,7 @@ const normalizeProduct = (product) => ({
   stock: product.stock,
   sizeStock: product.sizeStock || {},
   tags: product.tags || [],
+  placements: product.placements || [],
   badge: product.badge,
   badgeText: product.badgeText,
   bgClass: product.bgClass,
@@ -27,17 +28,21 @@ const normalizeProduct = (product) => ({
 const productMatches = (product, filter) => {
   if (filter.category && product.category !== filter.category) return false;
   if (filter.tag && !product.tags?.includes(filter.tag)) return false;
+  if (filter.placement) {
+    const placements = Array.isArray(product.placements) ? product.placements : [];
+    if (placements.length > 0 && !placements.includes(filter.placement)) return false;
+  }
   if (filter.q && !product.name.toLowerCase().includes(filter.q.toLowerCase())) return false;
   return true;
 };
 
 const getProducts = async (req, res) => {
   try {
-    const { category, tag, q } = req.query;
+    const { category, tag, q, placement } = req.query;
 
     if (global.useMemoryStore) {
       seedProducts();
-      const products = store.products.filter((product) => productMatches(product, { category, tag, q }));
+      const products = store.products.filter((product) => productMatches(product, { category, tag, q, placement }));
       return res.json(products.map(normalizeProduct));
     }
 
@@ -45,6 +50,12 @@ const getProducts = async (req, res) => {
 
     if (category) where.category = category;
     if (tag) where.tags = { has: tag };
+    if (placement) {
+      where.OR = [
+        { placements: { has: placement } },
+        { placements: { isEmpty: true } },
+      ];
+    }
     if (q) where.name = { contains: q, mode: 'insensitive' };
 
     const products = await prisma.product.findMany({ where, orderBy: { createdAt: 'desc' } });
@@ -83,6 +94,7 @@ const createProduct = async (req, res) => {
         images: [],
         sizes: [],
         tags: [],
+        placements: [],
         swatches: [],
         stock: 0,
         sizeStock: { S: 0, M: 0, L: 0, XL: 0 },
