@@ -1,930 +1,795 @@
-import { useEffect, useState } from 'react';
-import Header from '../components/Header.jsx';
-import Footer from '../components/Footer/Footer.jsx';
-import featuredEditorial from '../assets/featured-editorial.jpg';
-import lookbook from '../assets/lookbook.jpg';
-import api from '../services/api.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FiCheck, FiLock, FiRefreshCw, FiShield, FiTruck, FiUpload } from 'react-icons/fi';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Link, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import LightPillar from '../components/home/LightPillar.jsx';
+import TShirtExperience from '../components/home/TShirtExperience.jsx';
+import IntroVideoGate from '../components/home/IntroVideoGate.jsx';
+import { useCart } from '../context/CartContext.jsx';
+import { compressTryOnImage, generateVirtualTryOn } from '../services/aiTryOn.js';
+import '../styles/home.css';
+
+gsap.registerPlugin(ScrollTrigger);
+
+const products = [
+  {
+    name: 'Break Rules Tee',
+    sub: 'Oversized Graphic - Black',
+    price: '3,800',
+    cat: 'graphic limited',
+    bg: undefined,
+    badge: 'New Drop',
+    badgeClass: 'badge-new',
+    glow: 'drop-shadow(0 10px 40px rgba(200,0,42,0.3))',
+    sizes: ['S', 'M', 'L', 'XL'],
+  },
+  {
+    name: 'Phantom Navy Tee',
+    sub: 'Heavyweight Oversized - Navy',
+    price: '4,200',
+    cat: 'oversized',
+    bg: '#0a0a12',
+    badge: 'Hot',
+    badgeClass: 'badge-hot',
+    glow: 'drop-shadow(0 10px 40px rgba(30,60,200,0.2))',
+    sizes: ['M', 'L', 'XL'],
+  },
+  {
+    name: 'Blood Script Tee',
+    sub: 'Limited Edition - Red Print',
+    price: '4,900',
+    cat: 'graphic limited',
+    bg: '#0f0808',
+    badge: 'Limited',
+    badgeClass: 'badge-new',
+    glow: 'drop-shadow(0 10px 40px rgba(200,0,42,0.5))',
+    sizes: ['L', 'XL'],
+  },
+  {
+    name: 'Olive Cargo Tee',
+    sub: 'Oversized - Washed Olive',
+    price: '2,800',
+    oldPrice: '3,500',
+    cat: 'oversized sale',
+    bg: '#0a0f0a',
+    badge: 'Sale',
+    badgeClass: 'badge-hot',
+    sizes: ['S', 'M', 'L'],
+  },
+  {
+    name: 'Ghost Type Tee',
+    sub: 'Graphic - Cream White',
+    price: '3,600',
+    cat: 'graphic',
+    bg: '#0d0d0d',
+    glow: 'drop-shadow(0 10px 30px rgba(255,255,255,0.1))',
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+  },
+  {
+    name: 'Shadow Box Tee',
+    sub: "Collector's Edition - Black",
+    price: '5,500',
+    cat: 'limited',
+    bg: '#080808',
+    badge: 'Sold Out',
+    badgeClass: 'badge-sold',
+    soldOut: true,
+    sizes: [],
+  },
+];
+
+const filters = [
+  ['All Drops', 'all'],
+  ['Graphic Tees', 'graphic'],
+  ['Oversized', 'oversized'],
+  ['Limited', 'limited'],
+  ['On Sale', 'sale'],
+];
+
+const tryOnProducts = [
+  { id: 'void-tee', name: 'Void Tee', price: '4,490', image: '/models/Tshirt6.png', vibe: 'minimal' },
+  { id: 'shadow-tee', name: 'Shadow Tee', price: '4,690', image: '/models/Tshirt7.png', vibe: 'night' },
+  { id: 'phantom-tee', name: 'Phantom Tee', price: '4,200', image: '/models/Tshirt11.png', vibe: 'minimal' },
+  { id: 'break-rules-tee', name: 'Break Rules Tee', price: '5,290', image: '/models/Tshirt5.png', vibe: 'statement' },
+  { id: 'ghost-type-tee', name: 'Astravia Tee', price: '3,600', image: '/models/Tshirt22.png', vibe: 'daily' },
+  { id: 'chaos-tee', name: 'Rebel Tee', price: '4,990', image: '/models/Tshirt8.png', vibe: 'statement' },
+];
+
+const lockerItems = [
+  {
+    id: 'break-rules-tee',
+    slot: '01',
+    name: 'Break Rules Tee',
+    price: '5,290',
+    image: '/models/Tshirt5.png',
+    score: '92%',
+    community: '4.8 / 5',
+    stock: 'LOW',
+    priority: '#1',
+  },
+  {
+    id: 'shadow-tee',
+    slot: '02',
+    name: 'Shadow Tee',
+    price: '4,690',
+    image: '/models/Tshirt7.png',
+    score: '88%',
+    community: '4.7 / 5',
+    stock: 'MEDIUM',
+    priority: '#2',
+  },
+  {
+    id: 'void-tee',
+    slot: '03',
+    name: 'Void Tee',
+    price: '4,490',
+    image: '/models/Tshirt6.png',
+    score: '84%',
+    community: '4.6 / 5',
+    stock: 'LIMITED',
+    priority: '#3',
+  },
+];
+
+const aiResponses = {
+  default: [
+    "Based on your vibe, I'd go with the Break Rules Tee - black, bold graphic, oversized. That's the one.",
+    'That is giving Blood Script Tee energy - limited edition, red print, makes a statement without saying a word.',
+    'The Phantom Navy Tee is calling your name. Heavyweight fabric, clean drop, works for anything.',
+    'Honestly? The Ghost Type Tee - cream on black, subtle flex, versatile enough for any occasion.',
+  ],
+  night: 'Night out? Break Rules Tee or Blood Script Tee. Pair with black cargo pants and chunky sneakers. That fit is locked.',
+  casual: 'Casual day? Ghost Type Tee in cream - pair it with olive joggers and clean white shoes. Effortless but intentional.',
+  statement: "Blood Script Tee. Limited run, red print on black. One piece, whole outfit. That's your statement.",
+  minimal: 'Ghost Type Tee - cream white, subtle typography, premium GSM. Clean, minimal, confident. No need for anything loud.',
+};
+
+function getAIResponse(message) {
+  const text = message.toLowerCase();
+  if (text.includes('night') || text.includes('edgy') || text.includes('dark')) return aiResponses.night;
+  if (text.includes('casual') || text.includes('day') || text.includes('chill')) return aiResponses.casual;
+  if (text.includes('statement') || text.includes('bold') || text.includes('loud')) return aiResponses.statement;
+  if (text.includes('minimal') || text.includes('clean') || text.includes('simple')) return aiResponses.minimal;
+  return aiResponses.default[Math.floor(Math.random() * aiResponses.default.length)];
+}
 
 export default function Home() {
-  const [content, setContent] = useState(null);
+  const location = useLocation();
+  const { addItem, openCart } = useCart();
+  const [introComplete, setIntroComplete] = useState(false);
+  const [cartCount, setCartCount] = useState(2);
+  const [filter, setFilter] = useState('all');
+  const [activeProductIndex, setActiveProductIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState('S');
+  const [chatInput, setChatInput] = useState('');
+  const [messages, setMessages] = useState([
+    {
+      type: 'ai',
+      text: "Yo, what's good. Tell me your vibe - occasion, style, what you're feelin' - and I'll pick the perfect tee for you.",
+    },
+  ]);
+  const [measurements, setMeasurements] = useState({ chest: '', shoulder: '', height: '', weight: '' });
+  const [sizeResult, setSizeResult] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterMessage, setNewsletterMessage] = useState(false);
+  const [addedProduct, setAddedProduct] = useState('');
+  const [notified, setNotified] = useState(false);
+  const [tryOnImage, setTryOnImage] = useState('');
+  const [tryOnFile, setTryOnFile] = useState(null);
+  const [tryOnDataUrl, setTryOnDataUrl] = useState('');
+  const [tryOnMeta, setTryOnMeta] = useState(null);
+  const [tryOnResult, setTryOnResult] = useState('');
+  const [tryOnLoading, setTryOnLoading] = useState(false);
+  const [tryOnError, setTryOnError] = useState('');
+  const [tryOnGlow, setTryOnGlow] = useState(false);
+  const [tryOnProductIndex, setTryOnProductIndex] = useState(5);
+  const [tryOnCompare, setTryOnCompare] = useState(50);
+  const [activeLockerIndex, setActiveLockerIndex] = useState(0);
+  const tryOnInputRef = useRef(null);
+
+  const visibleProducts = useMemo(() => {
+    if (filter === 'all') return products;
+    return products.filter((product) => product.cat.includes(filter));
+  }, [filter]);
+
+  const featuredProducts = useMemo(
+    () => [
+      { ...products[5], id: 'ghost-type-tee', number: 6, name: 'Ghost Type Tee', stackImage: '/models/Tshirt22.png', featureImage: '/models/Tshirt22.png', description: 'Collector-weight graphic tee with a clean oversized streetwear silhouette.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Collector Drop', price: '5,500' },
+      { ...products[4], id: 'shadow-box-tee', number: 5, name: 'Shadow Box Tee', stackImage: '/models/Tshirt11.png', featureImage: '/models/Tshirt11.png', description: 'Minimal black graphic tee with a premium matte finish and relaxed drape.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '3,600' },
+      { ...products[3], id: 'chaos-tee', number: 4, name: 'Chaos Tee', stackImage: '/models/Tshirt8.png', featureImage: '/models/Tshirt44.png', description: 'A loud red-on-black graphic piece with a clean premium drape.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '4,990' },
+      { ...products[2], id: 'shadow-tee', number: 3, name: 'Shadow Tee', stackImage: '/models/Tshirt7.png', featureImage: '/models/Tshirt33.png', description: 'A deep black oversized cut with red artwork and collector-level presence.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '4,690' },
+      { ...products[1], id: 'void-tee', number: 2, name: 'Void Tee', stackImage: '/models/Tshirt6.png', featureImage: '/models/Tshirt11.png', description: 'Dark graphic tee with a sharp campaign silhouette and premium streetwear weight.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '4,490' },
+      { ...products[0], id: 'break-rules-tee', number: 1, name: 'Break Rules Tee', stackImage: '/models/Tshirt5.png', featureImage: '/models/Tshirt22.png', description: 'Premium oversized tee crafted from heavy-weight 280GSM cotton. Built to stand out.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '5,290' },
+    ],
+    [],
+  );
+  const activeProduct = featuredProducts[activeProductIndex % Math.max(1, featuredProducts.length)] || products[0];
+
+  const stackRef = useRef(null);
+  const panelRef = useRef(null);
+  const selectedTryOnProduct = tryOnProducts[tryOnProductIndex] || tryOnProducts[0];
+  const activeLockerItem = lockerItems[activeLockerIndex] || lockerItems[0];
 
   useEffect(() => {
-    let active = true;
-    api.get('/content/homepage')
-      .then((response) => {
-        if (active) setContent(response.data);
-      })
-      .catch(() => {
-        if (active) setContent(null);
-      });
+    try {
+      window.sessionStorage.removeItem('astravia_skip_intro');
+    } catch {
+      // Ignore blocked session storage.
+    }
+
+    if (location.state?.skipIntro) {
+      setIntroComplete(true);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 },
+    );
+    reveals.forEach((element) => observer.observe(element));
 
     return () => {
-      active = false;
+      observer.disconnect();
     };
+  }, [visibleProducts.length]);
+
+  useEffect(() => {
+    const context = gsap.context(() => {
+      const scrollTrigger = ScrollTrigger.create({
+        trigger: '#products',
+        start: 'top 72%',
+        end: 'bottom 35%',
+        scrub: 0.7,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const nextIndex = Math.min(featuredProducts.length - 1, Math.floor(self.progress * featuredProducts.length));
+          setActiveProductIndex(nextIndex);
+        },
+      });
+
+      return () => {
+        scrollTrigger.kill();
+      };
+    });
+
+    return () => context.revert();
+  }, [featuredProducts.length]);
+
+  useEffect(() => {
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        '.virtual-tryon-section .tryon-animate',
+        { autoAlpha: 0, y: 42, force3D: true },
+        {
+          autoAlpha: 1,
+          y: 0,
+          force3D: true,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.virtual-tryon-section',
+            start: 'top 72%',
+            once: true,
+          },
+        },
+      );
+    });
+
+    return () => context.revert();
   }, []);
 
-  const heroTitle = content?.heroTitle || 'Timeless\nElegance,\nRedefined';
-  const heroLines = heroTitle.split('\n');
-  const heroPrimaryImage = content?.heroImage || featuredEditorial;
-  const heroSecondaryImage = content?.heroImageSecondary || lookbook;
+  useEffect(() => {
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: '.astravia-locker-section',
+          start: 'top 64%',
+          once: true,
+        },
+      });
+
+      timeline
+        .to('.locker-cabinet', { x: 5, duration: 0.08, repeat: 5, yoyo: true, ease: 'power1.inOut' })
+        .to('.locker-led, .locker-interior-light', { opacity: 1, duration: 0.35, ease: 'power2.out' }, '-=0.05')
+        .to('.locker-door-left', { rotateY: -82, x: -22, z: 18, duration: 1.05, ease: 'power3.inOut' }, '+=0.05')
+        .to('.locker-door-right', { rotateY: 82, x: 22, z: 18, duration: 1.05, ease: 'power3.inOut' }, '<')
+        .to('.locker-shirt', { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12, ease: 'back.out(1.3)' }, '-=0.35');
+    });
+
+    return () => context.revert();
+  }, []);
+
+  useEffect(() => {
+    setTryOnResult('');
+    setTryOnError('');
+  }, [tryOnProductIndex]);
+
+  const sendMsg = (message = chatInput) => {
+    const value = message.trim();
+    if (!value) return;
+    setMessages((current) => [
+      ...current,
+      { type: 'user', text: value },
+      { type: 'ai', text: getAIResponse(value) },
+    ]);
+    setChatInput('');
+  };
+
+  const findSize = () => {
+    const chest = Number(measurements.chest);
+    const weight = Number(measurements.weight);
+    const calculatedChest = chest || weight * 0.5 + 50;
+    const size = calculatedChest < 86 ? 'S' : calculatedChest < 96 ? 'M' : calculatedChest < 106 ? 'L' : calculatedChest < 116 ? 'XL' : 'XXL';
+    setSelectedSize(size);
+    setSizeResult(true);
+  };
+
+  const addToCart = (name) => {
+    setCartCount((count) => count + 1);
+    setAddedProduct(name);
+    window.setTimeout(() => setAddedProduct(''), 2000);
+  };
+
+  const subscribe = () => {
+    if (!newsletterEmail.includes('@')) {
+      window.alert('Enter a valid email.');
+      return;
+    }
+    setNewsletterEmail('');
+    setNewsletterMessage(true);
+  };
+
+  const handleTryOnUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setTryOnError('');
+    setTryOnResult('');
+
+    if (file.size > 10 * 1024 * 1024) {
+      setTryOnError('Max image size is 10MB. Please upload a smaller full-body photo.');
+      return;
+    }
+
+    try {
+      const { file: compressedFile, dataUrl, meta } = await compressTryOnImage(file);
+      setTryOnFile(compressedFile);
+      setTryOnDataUrl(dataUrl);
+      setTryOnMeta(meta);
+      const previewUrl = URL.createObjectURL(compressedFile);
+      setTryOnImage(previewUrl);
+      setTryOnGlow(true);
+      window.setTimeout(() => setTryOnGlow(false), 900);
+    } catch (error) {
+      setTryOnError(error.message || 'Please upload a clear JPG or PNG full-body photo.');
+      setTryOnFile(null);
+      setTryOnDataUrl('');
+      setTryOnMeta(null);
+      setTryOnImage('');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleGenerateTryOn = async ({ bypassCache = false } = {}) => {
+    if (!tryOnFile) {
+      setTryOnError('Upload a full-body photo first.');
+      return;
+    }
+
+    setTryOnLoading(true);
+    setTryOnError('');
+
+    try {
+      const result = await generateVirtualTryOn({
+        userImageFile: tryOnFile,
+        userImageDataUrl: tryOnDataUrl,
+        productImageUrl: selectedTryOnProduct.image,
+        productName: selectedTryOnProduct.name,
+        size: selectedSize,
+        humanMeta: tryOnMeta,
+        bypassCache,
+      });
+      setTryOnResult(result.imageUrl);
+      setTryOnCompare(50);
+      setTryOnGlow(true);
+      window.setTimeout(() => setTryOnGlow(false), 900);
+    } catch (error) {
+      setTryOnError(error.message || 'Astravia AI could not generate your try-on. Please try again.');
+    } finally {
+      setTryOnLoading(false);
+    }
+  };
+
+  const handleTryOnAddToCart = () => {
+    addItem({
+      productId: `tryon-${selectedTryOnProduct.name.toLowerCase().replace(/\s+/g, '-')}`,
+      name: selectedTryOnProduct.name,
+      price: Number(String(selectedTryOnProduct.price).replace(/,/g, '')),
+      image: selectedTryOnProduct.image,
+      size: selectedSize,
+      quantity: 1,
+    });
+    openCart();
+  };
+
+  const handleDownloadTryOn = async () => {
+    if (!tryOnResult) return;
+    const link = document.createElement('a');
+    link.download = `${selectedTryOnProduct.name.toLowerCase().replace(/\s+/g, '-')}-astravia-try-on.png`;
+    try {
+      const response = await fetch(tryOnResult);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      link.href = tryOnResult;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  };
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;600&display=swap');
-
-        :root {
-          --cream: #faf7f2;
-          --charcoal: #1a1a1a;
-          --Ash: #8f9390;
-          --sage: #a8b5a0;
-          --stone: #d4cdc5;
-        }
-
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-
-        body {
-          font-family: 'Archivo', sans-serif;
-          background: var(--cream);
-          color: var(--charcoal);
-          overflow-x: hidden;
-        }
-        .hero {
-          min-height: 100vh;
-          display: grid;
-          grid-template-columns: 1fr 1.2fr;
-          padding: 8rem 4rem 4rem;
-          gap: 4rem;
-          position: relative;
-          background: var(--cream);
-          border-radius: 0;
-          margin: 0;
-        }
-
-        .hero-left {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          animation: fadeInLeft 1.2s ease-out 0.3s both;
-        }
-
-        @keyframes fadeInLeft {
-          from {
-            transform: translateX(-50px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-
-        .hero-label {
-          font-size: 0.75rem;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          color: var(--Ash);
-          margin-bottom: 2rem;
-          font-weight: 600;
-        }
-
-        .hero-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 6rem;
-          font-weight: 300;
-          line-height: 0.9;
-          margin-bottom: 2rem;
-          letter-spacing: -0.02em;
-          color: #000;
-        }
-
-        .hero-description {
-          font-size: 1.1rem;
-          line-height: 1.8;
-          font-weight: 300;
-          max-width: 500px;
-          margin-bottom: 3rem;
-          color: rgba(26, 26, 26, 0.8);
-        }
-
-        .cta-button {
-          display: inline-block;
-          padding: 1.2rem 3rem;
-          background: var(--charcoal);
-          color: var(--cream);
-          text-decoration: none;
-          font-size: 0.85rem;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
-          width: fit-content;
-        }
-
-        .cta-button::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: var(--Ash);
-          transition: left 0.5s ease;
-        }
-
-        .cta-button:hover::before {
-          left: 0;
-        }
-
-        .cta-button span {
-          position: relative;
-          z-index: 1;
-        }
-
-        .hero-right {
-          position: relative;
-          animation: fadeInRight 1.2s ease-out 0.5s both;
-        }
-
-        @keyframes fadeInRight {
-          from {
-            transform: translateX(50px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-
-        .hero-image-stack {
-          position: relative;
-          width: 100%;
-          height: 600px;
-        }
-
-        .hero-image {
-          position: absolute;
-          background: var(--stone);
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.5rem;
-          color: rgba(26, 26, 26, 0.3);
-          overflow: hidden;
-        }
-
-        .hero-image:nth-child(1) {
-          width: 70%;
-          height: 500px;
-          top: 0;
-          left: 0;
-          z-index: 3;
-          background: linear-gradient(135deg, #b8a89a 0%, #d4cdc5 100%);
-          animation: floatImage1 6s ease-in-out infinite;
-        }
-
-        .hero-image:nth-child(2) {
-          width: 50%;
-          height: 350px;
-          bottom: 0;
-          right: 0;
-          z-index: 2;
-          background: linear-gradient(45deg, #a8b5a0 0%, #c4d3bd 100%);
-          animation: floatImage2 6s ease-in-out infinite;
-        }
-
-        .hero-image img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .hero-image-label {
-          position: absolute;
-          left: 1.25rem;
-          bottom: 1.25rem;
-          padding: 0.5rem 0.9rem;
-          background: rgba(26, 26, 26, 0.55);
-          color: var(--cream);
-          font-size: 0.85rem;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          font-family: 'Archivo', sans-serif;
-        }
-
-        @keyframes floatImage1 {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-20px) rotate(-1deg);
-          }
-        }
-
-        @keyframes floatImage2 {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          50% {
-            transform: translateY(15px) rotate(1deg);
-          }
-        }
-
-        .featured-section {
-          padding: 8rem 4rem;
-          background: var(--charcoal);
-          color: var(--cream);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .featured-section::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background:
-            radial-gradient(circle at 20% 50%, rgba(143, 147, 144, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 50%, rgba(168, 181, 160, 0.1) 0%, transparent 50%);
-          pointer-events: none;
-        }
-
-        .section-header {
-          text-align: center;
-          margin-bottom: 6rem;
-          animation: fadeInUp 1s ease-out;
-        }
-
-        @keyframes fadeInUp {
-          from {
-            transform: translateY(30px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        .section-subtitle {
-          font-size: 0.75rem;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          color: var(--Ash);
-          margin-bottom: 1rem;
-        }
-
-        .section-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 4rem;
-          font-weight: 300;
-          letter-spacing: -0.01em;
-        }
-
-        .collection-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 2rem;
-          max-width: 1400px;
-          margin: 0 auto;
-        }
-
-        .collection-item {
-          position: relative;
-          overflow: hidden;
-          cursor: pointer;
-          animation: fadeInStagger 0.8s ease-out both;
-        }
-
-        .collection-item:nth-child(1) {
-          animation-delay: 0.1s;
-        }
-        .collection-item:nth-child(2) {
-          animation-delay: 0.2s;
-        }
-        .collection-item:nth-child(3) {
-          animation-delay: 0.3s;
-        }
-
-        @keyframes fadeInStagger {
-          from {
-            transform: translateY(40px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        .collection-image {
-          width: 100%;
-          height: 500px;
-          background: var(--stone);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.5rem;
-          color: rgba(26, 26, 26, 0.2);
-          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .collection-image::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: var(--Ash);
-          opacity: 0;
-          transition: opacity 0.4s ease;
-        }
-
-        .collection-item:hover .collection-image {
-          transform: scale(1.05);
-        }
-
-        .collection-item:hover .collection-image::after {
-          opacity: 0.1;
-        }
-
-        .collection-info {
-          padding: 1.5rem 0;
-        }
-
-        .collection-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.8rem;
-          font-weight: 400;
-          margin-bottom: 0.5rem;
-        }
-
-        .collection-price {
-          font-size: 0.9rem;
-          letter-spacing: 0.1em;
-          color: rgba(250, 247, 242, 0.7);
-        }
-
-        /* Statement section */
-        .statement-section {
-          padding: 0;
-          background: var(--cream);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .statement-section::before {
-          content: '';
-          display: block;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, var(--stone) 20%, var(--stone) 80%, transparent);
-        }
-
-        .marquee-strip {
-          background: var(--Ash);
-          padding: 1rem 0;
-          overflow: hidden;
-          white-space: nowrap;
-        }
-
-        .marquee-inner {
-          display: inline-flex;
-          animation: marquee 22s linear infinite;
-          gap: 0;
-        }
-
-        .marquee-inner span {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 0.85rem;
-          font-weight: 300;
-          letter-spacing: 0.3em;
-          text-transform: uppercase;
-          color: var(--cream);
-          padding: 0 3rem;
-        }
-
-        .marquee-inner .dot {
-          color: rgba(250, 247, 242, 0.4);
-          padding: 0;
-          letter-spacing: 0;
-        }
-
-        @keyframes marquee {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-
-        .pillars-section {
-          padding: 7rem 4rem;
-          background: var(--cream);
-          border-top: 1px solid var(--stone);
-        }
-
-        .pillars-header {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          margin-bottom: 5rem;
-          padding-bottom: 2rem;
-          border-bottom: 1px solid var(--stone);
-        }
-
-        .pillars-label {
-          font-size: 0.72rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: var(--Ash);
-          font-weight: 600;
-        }
-
-        .pillars-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 3rem;
-          font-weight: 300;
-          color: var(--charcoal);
-          letter-spacing: -0.01em;
-        }
-
-        .pillars-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 0;
-        }
-
-        .pillar-card {
-          padding: 3rem 3.5rem;
-          border-right: 1px solid var(--stone);
-          position: relative;
-          overflow: hidden;
-          transition: background 0.4s ease;
-        }
-
-        .pillar-card:last-child {
-          border-right: none;
-        }
-
-        .pillar-card::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 3px;
-          height: 0;
-          background: var(--Ash);
-          transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .pillar-card:hover::after {
-          height: 100%;
-        }
-
-        .pillar-card:hover {
-          background: rgba(212, 205, 197, 0.14);
-        }
-
-        .pillar-index {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 0.72rem;
-          letter-spacing: 0.18em;
-          color: rgba(26, 26, 26, 0.35);
-          display: block;
-          margin-bottom: 2rem;
-        }
-
-        .pillar-icon-line {
-          width: 32px;
-          height: 1px;
-          background: var(--Ash);
-          margin-bottom: 1.8rem;
-        }
-
-        .pillar-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.9rem;
-          font-weight: 400;
-          color: var(--charcoal);
-          line-height: 1.15;
-          margin-bottom: 1.2rem;
-          letter-spacing: -0.01em;
-        }
-
-        .pillar-body {
-          font-size: 0.88rem;
-          line-height: 1.75;
-          font-weight: 300;
-          color: rgba(26, 26, 26, 0.6);
-        }
-
-        .pillar-read-more {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin-top: 2rem;
-          font-size: 0.72rem;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          color: var(--Ash);
-          text-decoration: none;
-          font-weight: 600;
-          transition: gap 0.3s ease;
-        }
-
-        .pillar-read-more:hover {
-          gap: 0.9rem;
-        }
-
-        .pillar-read-more svg {
-          width: 14px;
-          height: 14px;
-          stroke: currentColor;
-          fill: none;
-          stroke-width: 1.5;
-        }
-
-        .process-strip {
-          background: linear-gradient(120deg, #ffffff 0%, var(--stone) 100%);
-          padding: 5rem 4rem;
-          display: flex;
-          align-items: center;
-          gap: 0;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .process-strip::before {
-          content: 'PROCESS';
-          position: absolute;
-          top: 50%;
-          left: 4rem;
-          transform: translateY(-50%);
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 10rem;
-          font-weight: 300;
-          color: rgba(26, 26, 26, 0.05);
-          letter-spacing: 0.1em;
-          pointer-events: none;
-          white-space: nowrap;
-        }
-
-        .process-steps {
-          display: flex;
-          align-items: center;
-          gap: 0;
-          width: 100%;
-          position: relative;
-          z-index: 1;
-        }
-
-        .process-step {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 0.8rem;
-          padding: 0 2.5rem;
-          border-right: 1px solid rgba(26, 26, 26, 0.1);
-          position: relative;
-        }
-
-        .process-step:last-child {
-          border-right: none;
-        }
-
-        .process-index {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 0.75rem;
-          color: var(--Ash);
-          letter-spacing: 0.15em;
-        }
-
-        .process-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.55rem;
-          font-weight: 300;
-          color: var(--charcoal);
-          line-height: 1.2;
-        }
-
-        .process-note {
-          font-size: 0.78rem;
-          font-weight: 300;
-          color: rgba(26, 26, 26, 0.55);
-          line-height: 1.55;
-        }
-
-        .process-arrow {
-          width: 28px;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: rgba(143, 147, 144, 0.5);
-          font-size: 1rem;
-        }
-
-        .statement-section::after {
-          content: '';
-          display: block;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, var(--stone) 20%, var(--stone) 80%, transparent);
-        }
-
-        @media (max-width: 968px) {
-          .pillars-header {
-            flex-direction: column;
-            gap: 0.8rem;
-          }
-
-          .pillars-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .pillar-card {
-            border-right: none;
-            border-bottom: 1px solid var(--stone);
-          }
-
-          .pillar-card:last-child {
-            border-bottom: none;
-          }
-
-          .process-steps {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 2rem;
-          }
-
-          .process-step {
-            border-right: none;
-            border-bottom: 1px solid rgba(26, 26, 26, 0.1);
-            padding: 0 0 2rem;
-          }
-
-          .process-arrow {
-            display: none;
-          }
-
-          .process-strip::before {
-            display: none;
-          }
-        }
-
-
-        @media (max-width: 968px) {
-          .hero {
-            grid-template-columns: 1fr;
-            padding: 6rem 2rem 4rem;
-          }
-
-          .hero-title {
-            font-size: 4rem;
-          }
-
-          .collection-grid {
-            grid-template-columns: 1fr;
-          }
-
-
-        }
-      `}</style>
-      <Header />
+      {!introComplete && <IntroVideoGate onFinish={() => setIntroComplete(true)} />}
 
       <section className="hero">
+        <div className="hero-light-pillar-background" aria-hidden="true">
+          <LightPillar
+            topColor="#727176"
+            bottomColor="#f17474"
+            intensity={1}
+            rotationSpeed={0.3}
+            glowAmount={0.002}
+            pillarWidth={3}
+            pillarHeight={0.4}
+            noiseIntensity={0.5}
+            pillarRotation={25}
+            interactive={false}
+            mixBlendMode="screen"
+            quality="high"
+          />
+        </div>
+        <div className="hero-3d-layer" aria-hidden="true">
+          {introComplete && <TShirtExperience className="hero-canvas" />}
+        </div>
+
         <div className="hero-left">
-          <div className="hero-label">Spring / Summer 2026</div>
-          <h1 className="hero-title">
-            {heroLines.map((line, index) => (
-              <span key={`${line}-${index}`}>
-                {line}
-                {index < heroLines.length - 1 && <br />}
+          <p className="hero-eyebrow">New Drop - SS 2026</p>
+          <h1 className="hero-title">BREAK<br /><em>RULES</em><br />NOT STYLE</h1>
+          <p className="hero-sub">Premium oversized tees built for men who don't follow the script. Crafted in Sri Lanka. Worn everywhere.</p>
+          <div className="hero-ctas">
+            <a href="#products" className="btn-primary">Shop the Drop</a>
+            <a href="/sales" className="btn-ghost">View Sales</a>
+          </div>
+        </div>
+
+        <div className="hero-bg-text">RAW</div>
+        <div className="hero-stats">
+          <div className="stat">
+            <div className="stat-num">500+</div>
+            <div className="stat-label">Designs</div>
+          </div>
+          <div className="stat">
+            <div className="stat-num">12K</div>
+            <div className="stat-label">Orders</div>
+          </div>
+          <div className="stat">
+            <div className="stat-num">4.9★</div>
+            <div className="stat-label">Rating</div>
+          </div>
+        </div>
+      </section>
+
+      <div className="marquee-bar">
+        <div className="marquee-inner">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <span key={index}>FREE DELIVERY ISLAND-WIDE&nbsp;&nbsp;&nbsp; PREMIUM QUALITY&nbsp;&nbsp;&nbsp; NEW DROP EVERY FRIDAY&nbsp;&nbsp;&nbsp; OVERSIZED FIT&nbsp;&nbsp;&nbsp; CASH ON DELIVERY&nbsp;&nbsp;&nbsp;</span>
+          ))}
+        </div>
+      </div>
+
+      <section className="products-section" id="products">
+        <div className="collection-smoke" aria-hidden="true" />
+        <div className="section-header collection-header reveal">
+          <div>
+            <p className="section-kicker">/ Collection</p>
+            <h2 className="section-title collection-title">FEATURED DROPS</h2>
+          </div>
+          <p className="section-desc">Limited pieces. Maximum impact. Built for those who break the script.</p>
+        </div>
+
+        <div className="collection-showcase">
+          <div className="collection-stack" aria-label="Featured product stack" ref={stackRef}>
+            {featuredProducts
+              .map((product, index) => {
+                const number = product.number;
+                const step = index; // 04(back)=0 ... 01(front)=3
+                const label = String(number).padStart(2, '0');
+                const isActive = index === activeProductIndex;
+                const zIndex = isActive ? 50 : 10 + (featuredProducts.length - Math.abs(index - activeProductIndex));
+
+                return (
+                  <button
+                    type="button"
+                    className={`luxury-product-card stack-step-${step} ${isActive ? 'active' : ''}`}
+                    data-card-index={index}
+                    style={{ zIndex, '--stack-step': step }}
+                    key={product.name}
+                    onClick={() => setActiveProductIndex(index)}
+                  >
+                    <span className="stack-card-number">{label}</span>
+                    <span className="stack-brand">ASTRAVIA</span>
+                    <span className="stack-name">{product.name}</span>
+                    <span className="stack-price">Rs. {product.price}.00</span>
+                    <span className="product-img-wrap" aria-hidden="true">
+                      <span className="product-img-glow" />
+                      <img
+                        src={product.stackImage}
+                        alt=""
+                        className="stack-product-image"
+                        draggable={false}
+                      />
+                      <span className="product-img-shadow" />
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+
+          <motion.div className="active-product-panel reveal" ref={panelRef}>
+            <div className="active-product-visual">
+              <span className="product-img-glow product-img-glow--panel" aria-hidden="true" />
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={activeProduct.name}
+                  src={activeProduct.featureImage}
+                  alt={activeProduct.name}
+                  className="panel-product-image"
+                  initial={{ opacity: 0, y: -10, scale: 0.88 }}
+                  animate={{ opacity: 1, y: -18, scale: 0.9 }}
+                  exit={{ opacity: 0, y: -26, scale: 0.88 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  draggable={false}
+                />
+              </AnimatePresence>
+              <span className="product-img-shadow product-img-shadow--panel" aria-hidden="true" />
+            </div>
+
+            <div className="active-product-info">
+              <div className="product-badge badge-new">{activeProduct.limited || 'Limited Drop'}</div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  className="active-product-content"
+                  key={`${activeProduct.name}-info`}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                >
+                  <h3>{activeProduct.name}</h3>
+                  <p className="active-product-copy">
+                    {activeProduct.description} {activeProduct.sub}
+                  </p>
+
+                  <div className="active-product-meta">
+                    <div><span>Fabric</span><strong>{activeProduct.fabric}</strong></div>
+                    <div><span>Fit</span><strong>{activeProduct.fit}</strong></div>
+                    <div><span>Limited</span><strong>{activeProduct.limited}</strong></div>
+                  </div>
+
+                  <div className="active-product-price">
+                    <span className="currency">Rs. </span>{activeProduct.price}.00
+                  </div>
+
+                  <div className="active-size-row">
+                    <span>Size</span>
+                    <div className="product-sizes">
+                      {(activeProduct.sizes.length ? activeProduct.sizes : ['S', 'M', 'L', 'XL']).map((size) => (
+                        <button
+                          type="button"
+                          className={`size-dot ${selectedSize === size ? 'selected-size' : ''}`}
+                          key={size}
+                          onClick={() => setSelectedSize(size)}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Link className="view-product-btn" to={`/products/${activeProduct.id}`}>
+                    <span>VIEW PRODUCT</span>
+                    <span aria-hidden="true">-&gt;</span>
+                  </Link>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="collection-controls">
+          <button type="button" onClick={() => setActiveProductIndex((index) => Math.max(0, index - 1))} aria-label="Previous product">
+            &lt;
+          </button>
+          <button type="button" onClick={() => setActiveProductIndex((index) => Math.min(featuredProducts.length - 1, index + 1))} aria-label="Next product">
+            &gt;
+          </button>
+          <span>Scroll to explore</span>
+        </div>
+
+        <div className="collection-service-row">
+          {[
+            ['Worldwide Shipping', 'Fast and secure delivery', FiTruck],
+            ['Premium Quality', 'Built to last. Worn worldwide.', FiShield],
+            ['Easy Returns', '14-day return & exchange', FiRefreshCw],
+            ['Secure Payments', '100% safe & encrypted', FiLock],
+          ].map(([title, text, Icon]) => (
+            <div className="service-item" key={title}>
+              <span className="service-icon" aria-hidden="true">
+                <Icon />
               </span>
-            ))}
-          </h1>
-          <p className="hero-description">
-            {content?.heroSubtitle ||
-              'Discover our curated collection of contemporary pieces that blend minimalist design with artisanal craftsmanship. Each garment tells a story of conscious creation and enduring style.'}
+              <div>
+                <strong>{title}</strong>
+                <p>{text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="virtual-tryon-section astravia-locker-section" id="astravia-locker">
+        <div className="tryon-copy tryon-animate">
+          <p className="tryon-kicker">Personal Collection</p>
+          <h2 className="tryon-title">YOUR<br />ASTRAVIA<br /><span>LOCKER.</span></h2>
+          <p className="tryon-description">
+            Save up to 3 favorite Astravia tees. We'll analyze your picks and recommend which drop deserves your money first.
           </p>
-          <a href={content?.buttonLink || '#collections'} className="cta-button">
-            <span>{content?.buttonText || 'Explore Collection'}</span>
-          </a>
+          <ul className="tryon-features">
+            {['Save 3 tees', 'AI recommendation', 'Community ranking', 'Limited stock alerts'].map((item) => (
+              <li key={item}><FiCheck aria-hidden="true" />{item}</li>
+            ))}
+          </ul>
         </div>
-        <div className="hero-right">
-          <div className="hero-image-stack">
-            <div className="hero-image">
-              <img src={heroPrimaryImage} alt="Featured editorial" />
-              <div className="hero-image-label">Featured Editorial</div>
+
+        <div className="locker-stage tryon-animate">
+          <div className="locker-cabinet">
+            <span className="locker-led" aria-hidden="true" />
+            <span className="locker-interior-light" aria-hidden="true" />
+            <span className="locker-top-lip" aria-hidden="true" />
+            <span className="locker-bottom-shadow" aria-hidden="true" />
+            <div className="locker-interior">
+              <span className="locker-divider locker-divider-one" aria-hidden="true" />
+              <span className="locker-divider locker-divider-two" aria-hidden="true" />
+              <div className="locker-rail" aria-hidden="true" />
+              {lockerItems.map((item, index) => (
+                <button
+                  type="button"
+                  className={`locker-shirt locker-shirt-${index + 1} ${activeLockerIndex === index ? 'active' : ''}`}
+                  key={item.id}
+                  onClick={() => setActiveLockerIndex(index)}
+                >
+                  <span className="locker-hanger" aria-hidden="true" />
+                  <span className="locker-slot">#{item.slot} Tee</span>
+                  <img src={item.image} alt={item.name} />
+                </button>
+              ))}
             </div>
-            <div className="hero-image">
-              <img src={heroSecondaryImage} alt="Boo Thing lookbook" />
-              <div className="hero-image-label">Boo Thing</div>
+            <div className="locker-door locker-door-left" aria-hidden="true">
+              <span className="locker-hinges"><i /><i /><i /></span>
+              <span className="locker-vent locker-vent-top" />
+              <span className="locker-handle" />
+              <span className="locker-vent locker-vent-bottom" />
+            </div>
+            <div className="locker-door locker-door-right" aria-hidden="true">
+              <span className="locker-hinges"><i /><i /><i /></span>
+              <span className="locker-vent locker-vent-top" />
+              <span className="locker-handle" />
+              <span className="locker-vent locker-vent-bottom" />
             </div>
           </div>
+        </div>
+
+        <aside className="locker-recommendation tryon-animate">
+          <p className="drop-finder-label">Best Pick Today</p>
+          <div className="locker-preview">
+            <img src={activeLockerItem.image} alt={activeLockerItem.name} />
+          </div>
+          <h3>{activeLockerItem.name}</h3>
+          <div className="tryon-product-price">Rs. {activeLockerItem.price}.00</div>
+          <div className="locker-metrics">
+            <div><span>Style Match</span><strong>{activeLockerItem.score}</strong></div>
+            <div><span>Community Score</span><strong>{activeLockerItem.community}</strong></div>
+            <div><span>Stock Level</span><strong>{activeLockerItem.stock}</strong></div>
+            <div><span>Buy Priority</span><strong>{activeLockerItem.priority}</strong></div>
+          </div>
+          <div className="locker-progress-list">
+            {[
+              ['Style Match', 92],
+              ['Community Popularity', 88],
+              ['Limited Stock Score', 81],
+            ].map(([label, value]) => (
+              <div className="locker-progress" key={label}>
+                <div><span>{label}</span><strong>{value}%</strong></div>
+                <i style={{ '--value': `${value}%` }} />
+              </div>
+            ))}
+          </div>
+          <Link className="tryon-cart-btn drop-finder-link" to={`/products/${activeLockerItem.id}`}>
+            View Product →
+          </Link>
+        </aside>
+      </section>
+
+      <section className="newsletter reveal">
+        <div>
+          <h2 className="newsletter-title">GET FIRST<br />ACCESS TO<br />EVERY DROP</h2>
+          <p className="newsletter-desc">Join 8,000+ subscribers. New tees, exclusive deals, early access - straight to your inbox.</p>
+        </div>
+        <div>
+          <div className="newsletter-form">
+            <input
+              type="email"
+              className="newsletter-input"
+              placeholder="your@email.com"
+              id="nlEmail"
+              value={newsletterEmail}
+              onChange={(event) => setNewsletterEmail(event.target.value)}
+            />
+            <button className="newsletter-btn" onClick={subscribe}>Subscribe</button>
+          </div>
+          <p className="newsletter-note">No spam. Unsubscribe anytime. We only email when it matters.</p>
+          {newsletterMessage && <div className="newsletter-success">✓ YOU'RE IN. FIRST DROP ALERT INCOMING.</div>}
         </div>
       </section>
 
-      <section className="featured-section" id="collections">
-        <div className="section-header">
-          <div className="section-subtitle">New Arrivals</div>
-          <h2 className="section-title">{content?.section2Title || 'Essential Pieces'}</h2>
+      {false && (
+      <footer>
+        <div className="footer-top">
+          <div>
+            <div className="footer-logo">RAW<span>K</span>ODE</div>
+            <p className="footer-about">Premium men's graphic tees made in Sri Lanka. Raw aesthetics. Unfiltered style. Built for those who wear their attitude.</p>
+            <div className="social-links">
+              {['IG', 'FB', 'TK', 'WA'].map((item) => <a href="#" className="social-link" key={item}>{item}</a>)}
+            </div>
+          </div>
+          {[
+            ['Shop', ['New Arrivals', 'Graphic Tees', 'Oversized', 'Limited Edition', 'Sale']],
+            ['Help', ['Size Guide', 'Track Order', 'Returns', 'FAQ', 'Contact Us']],
+            ['Info', ['About Us', 'Our Story', 'Sustainability', 'Privacy Policy', 'Terms']],
+          ].map(([title, links]) => (
+            <div key={title}>
+              <div className="footer-col-title">{title}</div>
+              <ul className="footer-links">
+                {links.map((link) => <li key={link}><a href="#">{link}</a></li>)}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div className="collection-grid">
-          <div className="collection-item">
-            <div className="collection-image">Linen Blazer</div>
-            <div className="collection-info">
-              <h3 className="collection-name">Structured Linen Blazer</h3>
-              <p className="collection-price">LKR385</p>
-            </div>
-          </div>
-          <div className="collection-item">
-            <div className="collection-image">Silk Dress</div>
-            <div className="collection-info">
-              <h3 className="collection-name">Flowing Silk Midi</h3>
-              <p className="collection-price">LKR450</p>
-            </div>
-          </div>
-          <div className="collection-item">
-            <div className="collection-image">Cotton Shirt</div>
-            <div className="collection-info">
-              <h3 className="collection-name">Relaxed Cotton Shirt</h3>
-              <p className="collection-price">LKR195</p>
-            </div>
-          </div>
+        <div className="footer-bottom">
+          <span>© 2026 RAWKODE. Made in Sri Lanka</span>
+          <span>Visa · Mastercard · Cash on Delivery · Bank Transfer</span>
         </div>
-      </section>
-
-      <section className="statement-section" id="about">
-        <div className="marquee-strip" aria-hidden="true">
-          <div className="marquee-inner">
-            <span>Handcrafted in small batches</span><span className="dot">&middot;</span>
-            <span>Natural fibres only</span><span className="dot">&middot;</span>
-            <span>Zero-waste pattern cutting</span><span className="dot">&middot;</span>
-            <span>Made to last a lifetime</span><span className="dot">&middot;</span>
-            <span>Spring &amp; Summer 2026</span><span className="dot">&middot;</span>
-            <span>Atelier Collection</span><span className="dot">&middot;</span>
-            <span>Handcrafted in small batches</span><span className="dot">&middot;</span>
-            <span>Natural fibres only</span><span className="dot">&middot;</span>
-            <span>Zero-waste pattern cutting</span><span className="dot">&middot;</span>
-            <span>Made to last a lifetime</span><span className="dot">&middot;</span>
-            <span>Spring &amp; Summer 2026</span><span className="dot">&middot;</span>
-            <span>Atelier Collection</span><span className="dot">&middot;</span>
-          </div>
-        </div>
-
-        <div className="pillars-section">
-          <div className="pillars-header">
-            <span className="pillars-label">Our Principles</span>
-            <h2 className="pillars-title">Built on three commitments</h2>
-          </div>
-          <div className="pillars-grid">
-            <div className="pillar-card">
-              <span className="pillar-index">01 - Sustainability</span>
-              <div className="pillar-icon-line" />
-              <h3 className="pillar-name">
-                Sustainable
-                <br />
-                Fashion
-              </h3>
-              <p className="pillar-body">
-                We use eco-friendly materials and ethical production methods throughout every stage of our supply
-                chain. From certified organic cotton to post-consumer recycled fibres, every piece is designed to
-                minimise its footprint on the planet without compromising on quality.
-              </p>
-              <a href="#" className="pillar-read-more">
-                Learn more
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-            </div>
-            <div className="pillar-card">
-              <span className="pillar-index">02 - Craftsmanship</span>
-              <div className="pillar-icon-line" />
-              <h3 className="pillar-name">
-                Artisan
-                <br />
-                Craftsmanship
-              </h3>
-              <p className="pillar-body">
-                Each garment is handcrafted by skilled artisans who bring decades of experience to every stitch. We
-                celebrate slow fashion - the kind that takes time, care, and an eye for detail that no machine can
-                replicate. Quality is not a finish; it is the foundation.
-              </p>
-              <a href="#" className="pillar-read-more">
-                Meet our makers
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-            </div>
-            <div className="pillar-card">
-              <span className="pillar-index">03 - Design</span>
-              <div className="pillar-icon-line" />
-              <h3 className="pillar-name">
-                Timeless
-                <br />
-                Design
-              </h3>
-              <p className="pillar-body">
-                We create pieces that transcend seasons and resist trends. Our silhouettes are drawn to be worn, loved,
-                and cherished for years - then handed on. A wardrobe built on intention rather than impulse is the most
-                sustainable wardrobe of all.
-              </p>
-              <a href="#" className="pillar-read-more">
-                View collection
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div className="process-strip">
-          <div className="process-steps">
-            <div className="process-step">
-              <span className="process-index">01 - Concept</span>
-              <span className="process-name">
-                Sketch &amp;
-                <br />
-                Drape
-              </span>
-              <p className="process-note">Each silhouette begins on a live form, never a screen.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">02 - Source</span>
-              <span className="process-name">
-                Fabric
-                <br />
-                Selection
-              </span>
-              <p className="process-note">We visit mills in person. No catalogues. No shortcuts.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">03 - Cut</span>
-              <span className="process-name">
-                Hand
-                <br />
-                Tailoring
-              </span>
-              <p className="process-note">Two tailors per garment. One for the body, one for the finish.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">04 - Inspect</span>
-              <span className="process-name">
-                48-Hour
-                <br />
-                Quality Hold
-              </span>
-              <p className="process-note">Every piece rests before it ships. Tension reveals truth.</p>
-            </div>
-            <div className="process-arrow">&rarr;</div>
-            <div className="process-step">
-              <span className="process-index">05 - Yours</span>
-              <span className="process-name">
-                Delivered
-                <br />
-                &amp; Registered
-              </span>
-              <p className="process-note">Paired with a digital repair passport, valid for life.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
+      </footer>
+      )}
     </>
   );
 }
-
-
-
-
-
-
-

@@ -1,406 +1,644 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Archivo:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap');
 
-.checkout-page {
-  --cream: #faf7f2;
-  --charcoal: #1a1a1a;
-  --ash: #8f9390;
-  --ash-deep: #6f7471;
-  --stone: #d4cdc5;
-  --stone-light: #eae6e0;
-  --ink: rgba(26, 26, 26, 0.58);
+.astravia-checkout-page {
   min-height: 100vh;
-  padding: 8rem 4rem 5rem;
-  background: var(--cream);
-  color: var(--charcoal);
-  font-family: 'Archivo', sans-serif;
+  padding: 116px 80px 72px;
+  background:
+    radial-gradient(circle at 24% 0%, rgba(255, 27, 50, 0.08), transparent 32%),
+    radial-gradient(circle at 78% 20%, rgba(255, 255, 255, 0.035), transparent 26%),
+    #050505;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.01em;
+  overflow-x: hidden;
+  position: relative;
 }
 
-.checkout-page.empty {
-  display: grid;
-  place-items: center;
-  text-align: center;
+.astravia-checkout-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.11;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 70px 70px;
+  mask-image: radial-gradient(circle at 52% 22%, #000, transparent 72%);
 }
 
-.checkout-page.empty h1,
-.checkout-hero h1,
-.checkout-section-head h2 {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 300;
+.checkout-steps,
+.checkout-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1600px;
+  margin-inline: auto;
 }
 
-.checkout-page.empty h1,
-.checkout-hero h1 {
-  font-size: clamp(3.5rem, 7vw, 6.5rem);
-  line-height: 0.9;
-  margin: 0.8rem 0 1rem;
-}
-
-.checkout-page p {
-  color: var(--ink);
-  line-height: 1.7;
-}
-
-.checkout-eyebrow,
-.checkout-section-head span {
-  color: var(--ash-deep);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+.checkout-steps {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.35rem;
+  margin-bottom: 32px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.checkout-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--stone);
-  margin-bottom: 2rem;
+.checkout-steps div {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-.checkout-progress {
+.checkout-steps div.active {
+  color: #ff1b32;
+}
+
+.checkout-steps span {
+  color: inherit;
+}
+
+.checkout-steps i {
+  width: clamp(52px, 6vw, 92px);
+  height: 1px;
+  margin-left: 1.1rem;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.checkout-container {
+  display: grid;
+  grid-template-columns: minmax(0, 0.6fr) minmax(420px, 0.4fr);
+  gap: 24px;
+}
+
+.checkout-title-row {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  color: var(--ink);
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
+  gap: 2.2rem;
+  margin-bottom: 22px;
+}
+
+.checkout-title-row h1 {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(4.1rem, 5.4vw, 6.25rem);
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.checkout-progress i {
-  width: 46px;
-  height: 1px;
-  background: var(--stone);
-}
-
-.checkout-progress .active {
-  color: var(--charcoal);
-}
-
-.checkout-layout {
+.checkout-title-row > div {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 2rem;
-  align-items: start;
-}
-
-.checkout-panel,
-.checkout-summary {
-  border: 1px solid var(--stone);
-  background: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 18px 50px rgba(26, 26, 26, 0.045);
-}
-
-.checkout-panel {
-  padding: 2rem;
-}
-
-.checkout-summary {
-  position: sticky;
-  top: 6rem;
-  padding: 1.5rem;
-}
-
-.checkout-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.4rem;
-}
-
-.checkout-section-head h2 {
-  font-size: 2.2rem;
-}
-
-.checkout-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
-  gap: 1rem;
-}
-
-.checkout-fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  color: var(--ink);
-  font-size: 0.7rem;
-  font-weight: 600;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.75rem;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.68);
+  font-family: 'Bebas Neue', sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.checkout-fields label.wide,
-.checkout-check {
-  grid-column: 1 / -1;
+.checkout-title-row svg {
+  grid-row: span 2;
+  color: rgba(255, 255, 255, 0.64);
 }
 
-.checkout-fields input {
-  width: 100%;
-  min-height: 46px;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid var(--stone);
-  background: #fff;
-  color: var(--charcoal);
-  font-family: 'Archivo', sans-serif;
+.checkout-title-row span {
+  font-size: 1rem;
 }
 
-.checkout-fields input:focus {
-  outline: none;
-  border-color: var(--ash-deep);
-  box-shadow: 0 0 0 3px rgba(143, 147, 144, 0.2);
-}
-
-.checkout-check {
-  flex-direction: row !important;
-  align-items: center;
-}
-
-.checkout-check input {
-  width: auto;
-  min-height: auto;
-}
-
-.checkout-primary,
-.checkout-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 46px;
-  margin-top: 1.5rem;
-  padding: 0.9rem 1.4rem;
-  border: 1px solid var(--charcoal);
-  cursor: pointer;
+.checkout-title-row p {
+  margin: 0.2rem 0 0;
+  color: rgba(255, 255, 255, 0.48);
   font-size: 0.72rem;
-  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.checkout-info-panel,
+.checkout-summary-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent),
+    #0a0a0a;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+}
+
+.checkout-info-panel {
+  padding: 30px 32px;
+}
+
+.checkout-block {
+  padding: 0 0 28px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.checkout-block:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+
+.checkout-block-title {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.checkout-block-title svg {
+  color: #ff1b32;
+  stroke-width: 1.8;
+}
+
+.checkout-block-title h2,
+.checkout-summary-head h2 {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-.checkout-primary {
-  background: var(--charcoal);
-  color: var(--cream);
+.checkout-display-row,
+.checkout-address-box,
+.checkout-option-list button,
+.checkout-payment-grid button,
+.checkout-coupon-row label,
+.checkout-coupon-row button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.checkout-secondary {
-  background: transparent;
-  color: var(--charcoal);
-}
-
-.checkout-primary:hover,
-.checkout-secondary:hover {
-  border-color: var(--ash-deep);
-  background: var(--ash-deep);
-  color: var(--cream);
-}
-
-.checkout-primary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.payment-methods {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  border: 1px solid var(--stone);
-  background: var(--stone);
-  margin-bottom: 1.5rem;
-}
-
-.payment-methods button {
-  min-height: 110px;
-  padding: 1rem;
-  border: 0;
-  background: var(--cream);
-  color: var(--charcoal);
-  cursor: pointer;
-  text-align: left;
-}
-
-.payment-methods button.selected {
-  background: var(--charcoal);
-  color: var(--cream);
-}
-
-.payment-methods strong,
-.payment-methods span {
-  display: block;
-}
-
-.payment-methods span {
-  margin-top: 0.45rem;
-  color: inherit;
-  opacity: 0.68;
-}
-
-.payment-card-area {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.checkout-card-preview {
-  aspect-ratio: 1.58;
-  padding: 1.4rem;
-  background: linear-gradient(135deg, var(--charcoal), var(--ash-deep));
-  color: var(--cream);
+.checkout-display-row,
+.checkout-address-box {
+  min-height: 58px;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 20px 45px rgba(26, 26, 26, 0.18);
-}
-
-.checkout-card-preview span {
-  letter-spacing: 0.24em;
-}
-
-.checkout-card-preview strong {
-  font-size: 1.3rem;
-  letter-spacing: 0.12em;
-}
-
-.checkout-card-preview small {
-  letter-spacing: 0.16em;
-}
-
-.checkout-note {
-  border: 1px solid var(--stone);
-  padding: 1.2rem;
-  background: var(--cream);
-}
-
-.checkout-actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.checkout-items {
-  display: grid;
-  gap: 1rem;
-}
-
-.checkout-item {
-  display: grid;
-  grid-template-columns: 54px 1fr auto;
+  align-items: center;
   gap: 0.9rem;
+  padding: 1rem 1.2rem;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.checkout-display-row button,
+.checkout-address-box button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: #ff1b32;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: none;
+}
+
+.checkout-address-box {
+  align-items: flex-start;
+}
+
+.checkout-address-box p {
+  margin: 0 0 0.42rem;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.25;
+}
+
+.checkout-address-box p:last-child {
+  margin-bottom: 0;
+}
+
+.checkout-option-list {
+  display: grid;
+  gap: 12px;
+}
+
+.checkout-option-list button {
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #fff;
+  text-align: left;
+  cursor: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.checkout-option-list button:hover,
+.checkout-option-list button.selected,
+.checkout-payment-grid button:hover,
+.checkout-payment-grid button.selected {
+  border-color: rgba(255, 27, 50, 0.82);
+  box-shadow: 0 0 28px rgba(255, 27, 50, 0.12);
+}
+
+.checkout-radio {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+  position: relative;
+}
+
+.selected .checkout-radio {
+  border-color: #ff1b32;
+}
+
+.selected .checkout-radio::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: #ff1b32;
+}
+
+.checkout-option-list strong {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+
+.checkout-option-list em {
+  display: block;
+  margin-top: 0.35rem;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.9rem;
+  font-style: normal;
+}
+
+.checkout-option-list b {
+  font-weight: 500;
+}
+
+.checkout-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.checkout-payment-grid button {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #fff;
+  text-align: left;
+  cursor: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.checkout-payment-grid button > svg {
+  width: 30px;
+  height: 30px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.checkout-payment-grid strong {
+  font-weight: 500;
+}
+
+.checkout-summary-card {
+  padding: 30px;
+}
+
+.checkout-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 22px;
+}
+
+.checkout-summary-head a {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.checkout-products {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.checkout-product-row {
+  display: grid;
+  grid-template-columns: 112px 1fr auto;
+  gap: 18px;
   align-items: center;
 }
 
-.checkout-item-img {
-  width: 54px;
-  height: 68px;
-  background: linear-gradient(160deg, #c8b8ab, #ddd2c8);
-  overflow: hidden;
+.checkout-product-thumb {
+  width: 112px;
+  height: 112px;
   display: grid;
   place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #070707;
 }
 
-.checkout-item-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.checkout-product-thumb img {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
 }
 
-.checkout-item-img span {
-  padding: 0.35rem;
-  color: rgba(26, 26, 26, 0.5);
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.25;
+.checkout-product-thumb span {
+  padding: 0.75rem;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 0.7rem;
   text-align: center;
   text-transform: uppercase;
 }
 
-.checkout-item strong,
-.checkout-item span {
+.checkout-product-meta h3 {
+  margin: 0 0 0.45rem;
+  color: #fff;
+  font-size: 1.04rem;
+  font-weight: 500;
+}
+
+.checkout-product-meta p,
+.checkout-product-meta span {
   display: block;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.88rem;
 }
 
-.checkout-item span {
-  margin-top: 0.3rem;
-  color: var(--ink);
-  font-size: 0.82rem;
+.checkout-product-meta span {
+  margin-top: 0.55rem;
 }
 
-.checkout-item p {
-  color: var(--charcoal);
+.checkout-product-price {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+  white-space: nowrap;
 }
 
-.checkout-totals {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--stone);
+.checkout-product-price strong {
+  color: #ff1b32;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
 }
 
-.checkout-totals p {
+.checkout-product-price del {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.checkout-summary-lines {
+  display: grid;
+  gap: 0.9rem;
+  padding: 22px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.checkout-summary-lines p,
+.checkout-total-line {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.7rem;
+  gap: 1rem;
+  margin: 0;
 }
 
-.checkout-totals .total {
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--stone-light);
-  color: var(--charcoal);
+.checkout-summary-lines span {
+  color: rgba(255, 255, 255, 0.84);
 }
 
-.checkout-totals .total strong {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2rem;
-  font-weight: 300;
+.checkout-summary-lines strong {
+  color: #fff;
+  font-weight: 500;
 }
 
-.checkout-secure,
-.checkout-alert {
-  margin-top: 1.2rem;
-  padding: 1rem;
-  border: 1px solid var(--stone);
-  background: var(--cream);
+.checkout-summary-lines .discount {
+  color: #ff1b32;
 }
 
-.checkout-secure strong,
-.checkout-secure span {
-  display: block;
+.checkout-total-line {
+  padding: 22px 0;
 }
 
-.checkout-secure span {
-  margin-top: 0.35rem;
-  color: var(--ink);
-  font-size: 0.8rem;
+.checkout-total-line span {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.checkout-alert {
-  margin-bottom: 1.2rem;
-  color: var(--ash-deep);
+.checkout-total-line strong {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2rem, 2.4vw, 2.8rem);
+  letter-spacing: 0.09em;
 }
 
-@media (max-width: 980px) {
-  .checkout-page {
-    padding: 6.5rem 1.4rem 4rem;
+.checkout-coupon-row {
+  display: grid;
+  grid-template-columns: 1fr 112px;
+  margin-bottom: 22px;
+}
+
+.checkout-coupon-row label {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0 1rem;
+  border-radius: 8px 0 0 8px;
+}
+
+.checkout-coupon-row label svg {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.checkout-coupon-row input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+}
+
+.checkout-coupon-row input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.checkout-coupon-row button {
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: none;
+}
+
+.checkout-pay-button {
+  width: 100%;
+  min-height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff1b32, #ff3347);
+  color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: none;
+  box-shadow: 0 20px 44px rgba(255, 27, 50, 0.18);
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.checkout-pay-button:hover {
+  transform: scale(1.01);
+  filter: brightness(1.1);
+}
+
+.checkout-security-note {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 18px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.checkout-fade-card {
+  animation: checkoutFadeUp 0.5s ease both;
+}
+
+.checkout-info-panel {
+  animation-delay: 0.06s;
+}
+
+.checkout-summary-card {
+  animation-delay: 0.12s;
+}
+
+.checkout-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1600;
+  max-width: 360px;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(255, 27, 50, 0.42);
+  border-radius: 10px;
+  background: rgba(10, 10, 10, 0.96);
+  color: #fff;
+  box-shadow: 0 0 34px rgba(255, 27, 50, 0.18);
+}
+
+@keyframes checkoutFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
   }
 
-  .checkout-hero,
-  .checkout-layout,
-  .payment-card-area {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1180px) {
+  .astravia-checkout-page {
+    padding-inline: 28px;
+  }
+
+  .checkout-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .astravia-checkout-page {
+    padding: 96px 16px 56px;
+  }
+
+  .checkout-steps {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .checkout-steps i {
+    display: none;
+  }
+
+  .checkout-title-row,
+  .checkout-summary-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .checkout-info-panel,
+  .checkout-summary-card {
+    padding: 20px;
+  }
+
+  .checkout-payment-grid,
+  .checkout-coupon-row {
     grid-template-columns: 1fr;
   }
 
-  .checkout-hero {
-    display: grid;
+  .checkout-coupon-row label,
+  .checkout-coupon-row button {
+    border-radius: 8px;
   }
 
-  .checkout-summary {
-    position: static;
+  .checkout-coupon-row button {
+    min-height: 54px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 10px;
   }
 
-  .payment-methods,
-  .checkout-fields {
-    grid-template-columns: 1fr;
+  .checkout-product-row {
+    grid-template-columns: 82px 1fr;
+  }
+
+  .checkout-product-thumb {
+    width: 82px;
+    height: 96px;
+  }
+
+  .checkout-product-price {
+    grid-column: 2;
+    justify-items: start;
   }
 }

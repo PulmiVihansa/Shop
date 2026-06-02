@@ -1,52 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FiPackage, FiShield, FiTruck } from 'react-icons/fi';
 import api, { getErrorMessage } from '../services/api.js';
-import '../styles/order-tracking.css';
+import '../styles/customer-care.css';
 
-const formatCurrency = (value) => `LKR${Number(value || 0).toLocaleString()}`;
+const formatCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString()}`;
 
 const steps = [
-  { key: 'pending', label: 'Order Confirmed', body: 'Your order has been received by ATELIER.' },
-  { key: 'processing', label: 'Processing', body: 'Your pieces are being checked, packed, and prepared.' },
-  { key: 'shipped', label: 'Shipped', body: 'Your parcel is on the way with delivery updates.' },
-  { key: 'delivered', label: 'Delivered', body: 'Your order has reached you. Thank you for shopping ATELIER.' },
+  ['Confirmed', 'Your Astravia order has entered the system.'],
+  ['Packed', 'The drop is being checked, folded, and sealed.'],
+  ['In Transit', 'Your package is moving with the courier.'],
+  ['Delivered', 'The order has reached your door.'],
 ];
 
-const statusIndex = {
-  pending: 0,
-  processing: 1,
-  shipped: 2,
-  delivered: 3,
-  cancelled: -1,
-};
+const statusIndex = { pending: 0, processing: 1, shipped: 2, delivered: 3 };
 
 export default function OrderTracking() {
   const [orders, setOrders] = useState([]);
   const [selectedId, setSelectedId] = useState('');
+  const [manualId, setManualId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let active = true;
-
-    async function loadOrders() {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await api.get('/orders/user');
-        if (active) {
-          setOrders(response.data);
-          setSelectedId(response.data[0]?._id || response.data[0]?.id || '');
-        }
-      } catch (err) {
-        if (active) setError(getErrorMessage(err));
-      } finally {
+    api.get('/orders/user')
+      .then((response) => {
+        if (!active) return;
+        setOrders(response.data || []);
+        setSelectedId(response.data?.[0]?._id || response.data?.[0]?.id || '');
+      })
+      .catch((error) => {
+        if (active) setMessage(getErrorMessage(error));
+      })
+      .finally(() => {
         if (active) setLoading(false);
-      }
-    }
-
-    loadOrders();
-
+      });
     return () => {
       active = false;
     };
@@ -54,135 +43,101 @@ export default function OrderTracking() {
 
   const selectedOrder = useMemo(
     () => orders.find((order) => (order._id || order.id) === selectedId) || orders[0],
-    [orders, selectedId]
+    [orders, selectedId],
   );
+  const status = String(selectedOrder?.orderStatus || selectedOrder?.status || 'pending').toLowerCase();
+  const currentStep = statusIndex[status] ?? 0;
 
-  const currentStatus = selectedOrder?.orderStatus || selectedOrder?.status;
-  const currentStep = statusIndex[currentStatus] ?? 0;
+  const trackManual = (event) => {
+    event.preventDefault();
+    setMessage(manualId.trim() ? `Tracking request received for ${manualId.trim().toUpperCase()}.` : 'Enter an Astravia order number.');
+  };
 
   return (
-    <section className="tracking-page">
-      <header className="tracking-hero">
-        <div>
-          <span className="tracking-eyebrow">Order Tracking</span>
-          <h1>Track your order.</h1>
-          <p>Follow what happens after payment, from confirmation to delivery.</p>
+    <section className="care-page">
+      <div className="care-shell">
+        <header className="care-hero">
+          <div className="care-hero-copy">
+            <p className="care-kicker">Track Order</p>
+            <h1>FOLLOW<br /><em>THE DROP.</em></h1>
+            <p>Track your Astravia package from payment confirmation to delivery. Every order update, clean and direct.</p>
+          </div>
+          <div className="care-logo-panel">
+            <img src="/models/logo.png" alt="Astravia" />
+          </div>
+        </header>
+
+        <div className="care-grid">
+          {[
+            [FiPackage, 'Order Sync', 'Logged-in customers see recent Astravia orders automatically.'],
+            [FiTruck, 'Courier Flow', 'Track packing, dispatch, transit, and delivery stages.'],
+            [FiShield, 'Secure Lookup', 'Order details stay protected inside your account.'],
+          ].map(([Icon, title, text]) => (
+            <article className="care-card" key={title}>
+              <Icon aria-hidden="true" />
+              <span>{title}</span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
         </div>
-        <Link to="/men-new-arrivals" className="tracking-shop-link">Continue Shopping</Link>
-      </header>
 
-      {loading && <div className="tracking-alert">Loading your orders...</div>}
-      {error && <div className="tracking-alert">{error}</div>}
-
-      {!loading && !orders.length ? (
-        <div className="tracking-empty">
-          <span className="tracking-eyebrow">No Orders</span>
-          <h2>No orders to track yet.</h2>
-          <p>Complete checkout and your order timeline will appear here.</p>
-          <Link to="/men-new-arrivals" className="tracking-primary">Shop New Arrivals</Link>
-        </div>
-      ) : selectedOrder ? (
-        <div className="tracking-layout">
-          <aside className="tracking-orders">
-            <div className="tracking-section-head">
-              <span>History</span>
-              <h2>Your Orders</h2>
-            </div>
-            {orders.map((order) => {
-              const rowId = order._id || order.id;
-              return (
-                <button
-                  key={rowId}
-                  type="button"
-                  className={(selectedOrder._id || selectedOrder.id) === rowId ? 'active' : ''}
-                  onClick={() => setSelectedId(rowId)}
-                >
-                  <strong>#{order.orderId || String(rowId).slice(-8).toUpperCase()}</strong>
-                  <span>{formatCurrency(order.totalAmount ?? order.totalPrice)} - {order.orderStatus || order.status}</span>
-                </button>
-              );
-            })}
-          </aside>
-
-          <main className="tracking-panel">
-            <div className="tracking-summary-line">
-              <div>
-                <span>Order ID</span>
-                <strong>#{selectedOrder.orderId || String(selectedOrder._id || selectedOrder.id).slice(-8).toUpperCase()}</strong>
-              </div>
-              <div>
-                <span>Payment</span>
-                <strong>{selectedOrder.payment?.status || selectedOrder.paymentStatus?.toLowerCase() || 'pending'}</strong>
-              </div>
-              <div>
-                <span>Total</span>
-                <strong>{formatCurrency(selectedOrder.totalAmount ?? selectedOrder.totalPrice)}</strong>
-              </div>
-            </div>
-
-            <div className={`tracking-timeline ${currentStatus === 'cancelled' ? 'cancelled' : ''}`}>
-              {currentStatus === 'cancelled' ? (
-                <div className="tracking-cancelled">
-                  <h2>Order Cancelled</h2>
-                  <p>This order has been cancelled. Contact support if this was unexpected.</p>
-                </div>
-              ) : (
-                steps.map((step, index) => (
-                  <div key={step.key} className={`tracking-step ${index <= currentStep ? 'done' : ''}`}>
-                    <div className="tracking-dot">{index + 1}</div>
-                    <div>
-                      <h3>{step.label}</h3>
-                      <p>{step.body}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="tracking-two-col">
-              <section className="tracking-card">
-                <div className="tracking-section-head">
-                  <span>Items</span>
-                  <h2>Order Pieces</h2>
-                </div>
-                <div className="tracking-items">
-                  {(selectedOrder.items?.length
-                    ? selectedOrder.items
-                    : [{ name: selectedOrder.productName, size: selectedOrder.size, quantity: selectedOrder.quantity, price: selectedOrder.price }]
-                  ).map((item) => (
-                    <div className="tracking-item" key={`${item.product || item.productId || item.name}-${item.size}`}>
-                      <div className="tracking-item-image">
-                        {item.image ? <img src={item.image} alt={item.name} /> : null}
-                      </div>
+        <div className="care-layout">
+          <main className="care-panel">
+            <span className="care-panel-label">Live Status</span>
+            <h2>{selectedOrder ? `#${selectedOrder.orderId || String(selectedOrder._id || selectedOrder.id).slice(-8).toUpperCase()}` : 'No Active Order'}</h2>
+            {loading && <p>Loading your Astravia orders...</p>}
+            {!loading && !orders.length && (
+              <>
+                <p>No orders found yet. Once you complete checkout, your timeline will appear here.</p>
+                <Link className="care-button" to="/collection">Shop Collection</Link>
+              </>
+            )}
+            {selectedOrder && (
+              <>
+                <div className="care-status">
+                  {steps.map(([title, text], index) => (
+                    <div className="care-status-step" key={title}>
+                      <div className="care-dot">{index <= currentStep ? '✓' : index + 1}</div>
                       <div>
-                        <strong>{item.name}</strong>
-                        <span>{item.size || 'One Size'} - Qty {item.quantity || 1}</span>
+                        <h3>{title}</h3>
+                        <p>{text}</p>
                       </div>
-                      <p>{formatCurrency(Number(item.price || 0) * Number(item.quantity || 1))}</p>
                     </div>
                   ))}
                 </div>
-              </section>
-
-              <section className="tracking-card">
-                <div className="tracking-section-head">
-                  <span>Delivery</span>
-                  <h2>Shipping Details</h2>
-                </div>
-                <div className="tracking-address">
-                  <strong>{selectedOrder.customerName || selectedOrder.address?.fullName}</strong>
-                  <p>{selectedOrder.address?.line1}</p>
-                  {selectedOrder.address?.line2 && <p>{selectedOrder.address.line2}</p>}
-                  <p>{selectedOrder.address?.city}, {selectedOrder.address?.postalCode}</p>
-                  <p>{selectedOrder.address?.country}</p>
-                  <p>{selectedOrder.phone || selectedOrder.address?.phone}</p>
-                </div>
-              </section>
-            </div>
+                <div className="care-toast">Total: {formatCurrency(selectedOrder.totalAmount ?? selectedOrder.totalPrice)} · Status: {status}</div>
+              </>
+            )}
           </main>
+
+          <aside className="care-panel">
+            <span className="care-panel-label">Order Lookup</span>
+            <h2>Your Orders</h2>
+            <div className="care-list">
+              {orders.map((order) => {
+                const rowId = order._id || order.id;
+                return (
+                  <article key={rowId}>
+                    <button className="care-button" type="button" onClick={() => setSelectedId(rowId)}>
+                      #{order.orderId || String(rowId).slice(-8).toUpperCase()}
+                    </button>
+                    <p>{formatCurrency(order.totalAmount ?? order.totalPrice)} · {order.orderStatus || order.status}</p>
+                  </article>
+                );
+              })}
+            </div>
+            <form className="care-form" onSubmit={trackManual}>
+              <label>
+                Track By Order ID
+                <input value={manualId} onChange={(event) => setManualId(event.target.value)} placeholder="AST-123456" />
+              </label>
+              <button className="care-button" type="submit">Track Order</button>
+            </form>
+            {message && <div className="care-toast">{message}</div>}
+          </aside>
         </div>
-      ) : null}
+      </div>
     </section>
   );
 }
-
