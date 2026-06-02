@@ -1,6 +1,8 @@
 const prisma = require('../config/prisma');
 const { store, createId, seedBusinessData } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
+const { getFinanceDashboard } = require('../services/financeService');
+const { formatTransaction } = require('./transactionController');
 
 const summarizeFinance = (orders, expenses) => {
   const revenue = orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
@@ -9,23 +11,33 @@ const summarizeFinance = (orders, expenses) => {
     acc[expense.category] = (acc[expense.category] || 0) + Number(expense.amount || 0);
     return acc;
   }, {});
-  return { revenue, expenses: expenseTotal, profit: revenue - expenseTotal, breakdown };
+  return { ...getFinanceDashboard(), revenue, expenses: expenseTotal, profit: revenue - expenseTotal, breakdown };
 };
 
 const getFinanceSummary = async (req, res) => {
   try {
     if (global.useMemoryStore) {
       await seedBusinessData();
-      return res.json({ ...summarizeFinance(store.orders, store.expenses), expenseItems: store.expenses });
+      return res.json({
+        ...summarizeFinance(store.orders, store.expenses),
+        recentTransactions: (store.transactions || []).slice(0, 6).map(formatTransaction),
+        expenseItems: store.expenses
+      });
     }
 
     const where = req.query.category ? { category: req.query.category } : {};
-    const [orders, expenses] = await Promise.all([
+    const [orders, expenses, transactions] = await Promise.all([
       prisma.order.findMany(),
-      prisma.expense.findMany({ where, orderBy: { date: 'desc' } })
+      prisma.expense.findMany({ where, orderBy: { date: 'desc' } }),
+      prisma.transaction.findMany({
+        include: { order: true, customer: true },
+        orderBy: { createdAt: 'desc' },
+        take: 6
+      })
     ]);
     res.json({
       ...summarizeFinance(orders, expenses),
+      recentTransactions: transactions.map(formatTransaction),
       expenseItems: expenses.map(withId)
     });
   } catch (error) {
@@ -55,6 +67,40 @@ const createExpense = async (req, res) => {
   }
 };
 
+const updateExpense = async (req, res) => {
+  try {
+    const { title, category, amount, date } = req.body;
+    if (!title || !category || !amount) {
+      return res.status(400).json({ message: 'Title, category, and amount are required' });
+    }
+
+    if (global.useMemoryStore) {
+      const index = store.expenses.findIndex((expense) => expense._id === req.params.id);
+      if (index === -1) return res.status(404).json({ message: 'Expense not found' });
+      const updatedExpense = {
+        ...store.expenses[index],
+        title,
+        category,
+        amount: Number(amount),
+        date: date ? new Date(date) : store.expenses[index].date,
+        updatedAt: new Date()
+      };
+      store.expenses[index] = updatedExpense;
+      return res.json(updatedExpense);
+    }
+
+    const expense = await prisma.expense.findUnique({ where: { id: req.params.id } });
+    if (!expense) return res.status(404).json({ message: 'Expense not found' });
+    const updatedExpense = await prisma.expense.update({
+      where: { id: req.params.id },
+      data: { title, category, amount: Number(amount), date: date ? new Date(date) : undefined }
+    });
+    res.json(withId(updatedExpense));
+  } catch (error) {
+    res.status(400).json({ message: 'Failed to update expense', error: error.message });
+  }
+};
+
 const deleteExpense = async (req, res) => {
   try {
     if (global.useMemoryStore) {
@@ -73,4 +119,4 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-module.exports = { getFinanceSummary, createExpense, deleteExpense };
+module.exports = { getFinanceSummary, createExpense, updateExpense, deleteExpense };

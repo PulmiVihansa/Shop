@@ -1,8 +1,13 @@
 const prisma = require('../config/prisma');
 const { store, createId } = require('../data/memoryStore');
-const { backfillOrderCustomerIds } = require('../utils/customerId');
 const { getPaymentSettingsDoc } = require('./paymentSettingsController');
 const { normalizeOrder } = require('../utils/dbFormat');
+const {
+  getNextPublicId,
+  ensureCustomerForOrder,
+  createTransactionAndInvoice
+} = require('../services/orderDocumentService');
+const { generateInvoiceForOrder } = require('../services/invoiceService');
 
 const ORDER_STATUS_ALLOWED = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_STATUS_ALLOWED = ['PENDING', 'PAID', 'REFUNDED'];
@@ -16,12 +21,6 @@ const toText = (value, fallback = '') => {
   if (typeof value === 'string') return value.trim();
   if (value === null || value === undefined) return fallback;
   return String(value).trim();
-};
-
-const createOrderId = () => {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const token = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `ATL-${date}-${token}`;
 };
 
 const buildSummaryProductName = (items) => {
@@ -126,16 +125,14 @@ const createOrder = async (req, res) => {
     const shippingCost = Math.max(0, toNumber(req.body.shippingCost, defaultDelivery + codHandling));
     const totalAmount = Math.max(0, toNumber(req.body.totalAmount, subtotal + shippingCost));
 
-    const paymentStatus = paymentMethod === 'COD' ? 'PENDING' : 'PAID';
-    const transactionId =
-      paymentMethod === 'ONLINE'
-        ? req.body.payment?.transactionId || req.body.transactionId || `SIM-${Date.now().toString(36).toUpperCase()}`
-        : '';
+    const incomingTransactionReference = req.body.payment?.transactionId || req.body.transactionId || '';
+    const paymentSucceeded = paymentMethod === 'ONLINE' && Boolean(incomingTransactionReference || req.body.paymentStatus === 'PAID');
+    const paymentStatus = paymentSucceeded ? 'PAID' : 'PENDING';
 
     const paymentInfo = {
       method: paymentMethod === 'COD' ? 'cod' : 'card',
       status: paymentStatus === 'PAID' ? 'paid' : 'pending',
-      reference: req.body.payment?.reference || transactionId || `ATL-${Date.now().toString(36).toUpperCase()}`,
+      reference: req.body.payment?.reference || incomingTransactionReference || '',
       paidAt: paymentStatus === 'PAID' ? new Date() : undefined
     };
 
@@ -144,14 +141,12 @@ const createOrder = async (req, res) => {
 
     await reduceStock(items);
 
-    const orderId = createOrderId();
+    const userId = req.user._id || req.user.id;
+    const orderId = global.useMemoryStore
+      ? `ORD-${1001 + store.orders.length}`
+      : await getNextPublicId(prisma, 'order', 'orderId', 'ORD', 1001);
     const orderPayload = {
-      orderId,
-      userId: req.user._id || req.user.id,
-      customerId: req.user.customerId,
-      customerName,
-      customerEmail,
-      phone,
+      userId,
       address,
       productName: toText(req.body.productName, buildSummaryProductName(items)),
       size: toText(req.body.size, buildSummarySize(items)),
@@ -159,13 +154,8 @@ const createOrder = async (req, res) => {
       price: toNumber(req.body.price, subtotal),
       shippingCost,
       totalAmount,
-      paymentMethod,
-      paymentStatus,
-      transactionId,
-      orderStatus: safeOrderStatus,
-      orderDate: req.body.orderDate ? new Date(req.body.orderDate) : new Date(),
+      status: safeOrderStatus,
       items,
-      payment: paymentInfo
     };
 
     const paymentRequest =
@@ -183,19 +173,110 @@ const createOrder = async (req, res) => {
         : null;
 
     if (global.useMemoryStore) {
+      const transactionId = paymentSucceeded ? `TXN-${1001 + (store.transactions?.length || 0)}` : '';
       const order = {
         _id: createId(),
-        user: req.user._id || req.user.id,
+        user: userId,
         customerId: req.user.customerId,
+        customerName,
+        customerEmail,
+        phone,
+        paymentMethod,
+        paymentStatus,
+        transactionId,
+        orderStatus: safeOrderStatus,
+        orderDate: new Date(),
         ...orderPayload,
+        orderId,
+        payment: { ...paymentInfo, reference: transactionId || paymentInfo.reference },
         createdAt: new Date(),
         updatedAt: new Date()
       };
       store.orders.unshift(order);
+      if (paymentSucceeded) {
+        store.transactions = store.transactions || [];
+        store.invoices = store.invoices || [];
+        const transaction = {
+          _id: createId(),
+          transactionId,
+          orderId: order._id,
+          orderReference: order.orderId,
+          customerId: order.customerId,
+          customer: customerName,
+          amount: totalAmount,
+          paymentMethod,
+          paymentStatus,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        const invoice = {
+          _id: createId(),
+          invoiceId: `INV-${new Date().getFullYear()}-${String(1001 + store.invoices.length).padStart(4, '0')}`,
+          orderId: order._id,
+          orderReference: order.orderId,
+          transactionId,
+          customerId: order.customerId,
+          customer: customerName,
+          email: customerEmail,
+          subtotal,
+          shipping: shippingCost,
+          tax: 0,
+          grandTotal: totalAmount,
+          status: 'Paid',
+          products: items,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        store.transactions.unshift(transaction);
+        store.invoices.unshift(invoice);
+        order.invoiceId = invoice.invoiceId;
+        await generateInvoiceForOrder(order._id, { paymentStatus: 'PAID', sendEmail: false }).catch(() => {});
+      }
       return res.status(201).json({ ...normalizeOrder(order), paymentRequest });
     }
 
-    const order = await prisma.order.create({ data: orderPayload });
+    const order = await prisma.$transaction(async (tx) => {
+      const customer = await ensureCustomerForOrder(tx, req.user, {
+        name: customerName,
+        email: customerEmail,
+        phone
+      });
+      const createdOrder = await tx.order.create({
+        data: {
+          ...orderPayload,
+          orderId,
+          customerId: customer.id
+        }
+      });
+
+      if (paymentSucceeded) {
+        await createTransactionAndInvoice(tx, createdOrder, {
+          paymentMethod,
+          paymentStatus,
+          amount: totalAmount,
+          subtotal,
+          shipping: shippingCost,
+          tax: 0,
+          grandTotal: totalAmount
+        });
+      }
+
+      return tx.order.findUnique({
+        where: { id: createdOrder.id },
+        include: {
+          customer: true,
+          user: { select: { id: true, name: true, email: true, customerId: true } },
+          transaction: true,
+          transactionRecord: true,
+          invoice: true
+        }
+      });
+    });
+    if (paymentSucceeded) {
+      await generateInvoiceForOrder(order.id, { paymentStatus: 'PAID', sendEmail: false }).catch((invoiceError) => {
+        console.warn('[invoice] automatic generation failed', invoiceError.message);
+      });
+    }
     return res.status(201).json({ ...normalizeOrder(order), paymentRequest });
   } catch (error) {
     return res.status(400).json({ message: 'Failed to create order', error: error.message });
@@ -211,7 +292,13 @@ const getUserOrders = async (req, res) => {
 
     const orders = await prisma.order.findMany({
       where: { userId: req.user._id || req.user.id },
-      orderBy: { orderDate: 'desc' }
+      include: {
+        customer: true,
+        transaction: true,
+        transactionRecord: true,
+        invoice: true
+      },
+      orderBy: { createdAt: 'desc' }
     });
     return res.json(orders.map(normalizeOrder));
   } catch (error) {
@@ -229,11 +316,15 @@ const getAllOrders = async (req, res) => {
       return res.json(orders.map(normalizeOrder));
     }
 
-    await backfillOrderCustomerIds(prisma);
-
     const orders = await prisma.order.findMany({
-      include: { user: { select: { id: true, name: true, email: true, customerId: true } } },
-      orderBy: { orderDate: 'desc' }
+      include: {
+        user: { select: { id: true, name: true, email: true, customerId: true } },
+        customer: true,
+        transaction: true,
+        transactionRecord: true,
+        invoice: true
+      },
+      orderBy: { createdAt: 'desc' }
     });
     return res.json(orders.map(normalizeOrder));
   } catch (error) {
@@ -261,8 +352,14 @@ const updateOrderStatus = async (req, res) => {
     if (!existing) return res.status(404).json({ message: 'Order not found' });
     const order = await prisma.order.update({
       where: { id: req.params.id },
-      data: { orderStatus },
-      include: { user: { select: { id: true, name: true, email: true } } }
+      data: { status: orderStatus },
+      include: {
+        user: { select: { id: true, name: true, email: true, customerId: true } },
+        customer: true,
+        transaction: true,
+        transactionRecord: true,
+        invoice: true
+      }
     });
     return res.json(normalizeOrder(order));
   } catch (error) {
@@ -289,20 +386,44 @@ const updateOrderPaymentStatus = async (req, res) => {
       return res.json(normalizeOrder(order));
     }
 
-    const existing = await prisma.order.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ message: 'Order not found' });
-    const currentPayment = existing.payment || {};
-    const order = await prisma.order.update({
+    const existing = await prisma.order.findUnique({
       where: { id: req.params.id },
-      data: {
-        paymentStatus,
-        payment: {
-          ...currentPayment,
-          status: paymentStatus.toLowerCase()
-        }
-      },
-      include: { user: { select: { id: true, name: true, email: true } } }
+      include: { transaction: true, transactionRecord: true }
     });
+    if (!existing) return res.status(404).json({ message: 'Order not found' });
+    if (paymentStatus === 'REFUNDED' && !(existing.transaction || existing.transactionRecord)) {
+      return res.status(400).json({ message: 'Cannot refund an order without a transaction' });
+    }
+
+    const order = await prisma.$transaction(async (tx) => {
+      if (paymentStatus === 'PAID' || paymentStatus === 'REFUNDED') {
+        await createTransactionAndInvoice(tx, existing, {
+          paymentMethod: req.body.paymentMethod || existing.transaction?.paymentMethod || existing.transactionRecord?.paymentMethod || 'COD',
+          paymentStatus
+        });
+      } else if (existing.transaction || existing.transactionRecord) {
+        await tx.transaction.update({
+          where: { id: (existing.transaction || existing.transactionRecord).id },
+          data: { paymentStatus }
+        });
+      }
+
+      return tx.order.findUnique({
+        where: { id: req.params.id },
+        include: {
+          user: { select: { id: true, name: true, email: true, customerId: true } },
+          customer: true,
+          transaction: true,
+          transactionRecord: true,
+          invoice: true
+        }
+      });
+    });
+    if (paymentStatus === 'PAID' || paymentStatus === 'REFUNDED') {
+      await generateInvoiceForOrder(order.id, { paymentStatus, sendEmail: false }).catch((invoiceError) => {
+        console.warn('[invoice] status-change generation failed', invoiceError.message);
+      });
+    }
     return res.json(normalizeOrder(order));
   } catch (error) {
     return res.status(400).json({ message: 'Failed to update payment status', error: error.message });

@@ -16,12 +16,14 @@ const normalizeOrder = (order) => {
   if (!order) return order;
   const items = Array.isArray(order.items) ? order.items : order.items || [];
   const fallbackFirstItem = items[0] || {};
-  const customerName = order.customerName || order.address?.fullName || order.user?.name || 'Customer';
-  const customerEmail = order.customerEmail || order.user?.email || '';
-  const customerId = order.customerId || order.user?.customerId || '';
+  const customer = order.customer || {};
+  const transaction = order.transaction || order.transactionRecord || {};
+  const customerName = order.customerName || customer.name || order.address?.fullName || order.user?.name || 'Customer';
+  const customerEmail = order.customerEmail || customer.email || order.user?.email || '';
+  const customerId = customer.customerId || order.customerPublicId || order.user?.customerId || order.customerId || '';
   const phone = order.phone || order.address?.phone || '';
   const orderStatus = order.orderStatus || order.status || 'pending';
-  const paymentStatus = order.paymentStatus || 'PENDING';
+  const paymentStatus = order.paymentStatus || transaction.paymentStatus || 'PENDING';
   const orderId = order.orderId || String(order._id || order.id || '').slice(-8).toUpperCase();
   const totalAmount = Number(order.totalAmount ?? order.totalPrice ?? 0);
   const quantity = Number(order.quantity ?? fallbackFirstItem.quantity ?? 1);
@@ -43,11 +45,19 @@ const normalizeOrder = (order) => {
     totalAmount,
     orderStatus,
     orderDate: order.orderDate || order.createdAt,
-    paymentMethod: order.paymentMethod || 'ONLINE',
+    paymentMethod: order.paymentMethod || transaction.paymentMethod || 'ONLINE',
     paymentStatus,
-    transactionId: order.transactionId || '',
+    transactionId: transaction.transactionId || order.transactionPublicId || '',
+    invoiceId: order.invoice?.invoiceId || '',
     user: order.user ? withId(order.user) : order.userId,
-    payment: order.payment || {},
+    customer: customer.id ? withId(customer) : customer,
+    transaction: transaction.id ? withId(transaction) : transaction,
+    invoice: order.invoice ? withId(order.invoice) : order.invoice,
+    payment: order.payment || {
+      method: (transaction.paymentMethod || order.paymentMethod || 'ONLINE').toLowerCase(),
+      status: String(paymentStatus || 'PENDING').toLowerCase(),
+      reference: transaction.transactionId || order.transactionPublicId || ''
+    },
     address: order.address || {},
     items,
     totalPrice: totalAmount,

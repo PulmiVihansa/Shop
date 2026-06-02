@@ -83,6 +83,17 @@ const findOrCreateGoogleUser = async (profile) => {
       where: { id: googleUser.id },
       data: { name: googleUser.name || name, email, avatar }
     });
+    await prisma.customer.upsert({
+      where: { userId: updated.id },
+      update: { name: updated.name, email },
+      create: {
+        customerId: updated.customerId || await getNextDbCustomerId(prisma, 'CUS'),
+        userId: updated.id,
+        name: updated.name,
+        email,
+        phone: ''
+      }
+    });
     devLog('[auth][google] matched existing db user by googleId', { userId: updated.id, email: updated.email });
     return withId(updated);
   }
@@ -96,6 +107,17 @@ const findOrCreateGoogleUser = async (profile) => {
         googleId,
         avatar,
         provider: emailUser.provider || 'local'
+      }
+    });
+    await prisma.customer.upsert({
+      where: { userId: updated.id },
+      update: { name: updated.name, email: updated.email },
+      create: {
+        customerId: updated.customerId || await getNextDbCustomerId(prisma, 'CUS'),
+        userId: updated.id,
+        name: updated.name,
+        email: updated.email,
+        phone: ''
       }
     });
     return withId(updated);
@@ -113,6 +135,15 @@ const findOrCreateGoogleUser = async (profile) => {
       googleId,
       avatar,
       role: 'user'
+    }
+  });
+  await prisma.customer.create({
+    data: {
+      customerId,
+      userId: user.id,
+      name,
+      email,
+      phone: ''
     }
   });
 

@@ -8,7 +8,7 @@ dotenv.config();
 
 async function createAdmin() {
   const name = process.env.ADMIN_NAME || 'ATELIER Admin';
-  const email = process.env.ADMIN_EMAIL || 'admin@atelier.com';
+  const email = process.env.ADMIN_EMAIL || 'admin@astravia.com';
   const password = process.env.ADMIN_PASSWORD || 'admin12345';
 
   await connectDB();

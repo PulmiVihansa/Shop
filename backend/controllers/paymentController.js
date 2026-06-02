@@ -1,10 +1,12 @@
 const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
+const { createTransactionAndInvoice } = require('../services/orderDocumentService');
+const { generateInvoiceForOrder } = require('../services/invoiceService');
 
 const notifyPayment = async (req, res) => {
   try {
     const orderId = req.body.order_id || req.body.orderId;
-    const transactionId = req.body.payment_id || req.body.transactionId || `SIM-${Date.now()}`;
+    const providerReference = req.body.payment_id || req.body.transactionId || '';
     const statusCode = String(req.body.status_code || '2');
     const isPaid = statusCode === '2' || req.body.status === 'PAID';
 
@@ -12,13 +14,53 @@ const notifyPayment = async (req, res) => {
       const order = store.orders.find((entry) => entry._id === orderId || entry.orderId === orderId);
       if (!order) return res.status(404).json({ message: 'Order not found' });
       order.paymentStatus = isPaid ? 'PAID' : 'PENDING';
-      order.transactionId = transactionId;
       order.payment = {
         ...(order.payment || {}),
         status: isPaid ? 'paid' : 'pending',
-        reference: transactionId,
+        reference: order.transactionId || providerReference,
         paidAt: isPaid ? new Date() : undefined
       };
+      if (isPaid && !order.transactionId) {
+        store.transactions = store.transactions || [];
+        store.invoices = store.invoices || [];
+        order.transactionId = `TXN-${1001 + store.transactions.length}`;
+        store.transactions.unshift({
+          _id: `${Date.now().toString(16)}${Math.random().toString(16).slice(2, 14)}`,
+          transactionId: order.transactionId,
+          orderId: order._id,
+          orderReference: order.orderId,
+          customerId: order.customerId,
+          customer: order.customerName,
+          amount: order.totalAmount,
+          paymentMethod: order.paymentMethod || 'ONLINE',
+          paymentStatus: 'PAID',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        store.invoices.unshift({
+          _id: `${Date.now().toString(16)}${Math.random().toString(16).slice(2, 14)}`,
+          invoiceId: `INV-${new Date().getFullYear()}-${String(1001 + store.invoices.length).padStart(4, '0')}`,
+          orderId: order._id,
+          orderReference: order.orderId,
+          transactionId: order.transactionId,
+          customerId: order.customerId,
+          customer: order.customerName,
+          email: order.customerEmail,
+          subtotal: order.price,
+          shipping: order.shippingCost,
+          tax: 0,
+          grandTotal: order.totalAmount,
+          status: 'Paid',
+          products: order.items || [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+      if (isPaid) {
+        await generateInvoiceForOrder(order._id, { paymentStatus: 'PAID', sendEmail: false }).catch((invoiceError) => {
+          console.warn('[invoice] automatic generation failed', invoiceError.message);
+        });
+      }
       return res.json({ message: 'Payment notification processed' });
     }
 
@@ -29,19 +71,17 @@ const notifyPayment = async (req, res) => {
     });
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        paymentStatus: isPaid ? 'PAID' : 'PENDING',
-        transactionId,
-        payment: {
-          ...(order.payment || {}),
-          status: isPaid ? 'paid' : 'pending',
-          reference: transactionId,
-          paidAt: isPaid ? new Date() : undefined
-        }
-      }
-    });
+    if (isPaid) {
+      await prisma.$transaction(async (tx) => {
+        await createTransactionAndInvoice(tx, order, {
+          paymentMethod: req.body.paymentMethod || req.body.method || 'ONLINE',
+          paymentStatus: 'PAID'
+        });
+      });
+      await generateInvoiceForOrder(order.id, { paymentStatus: 'PAID', sendEmail: false }).catch((invoiceError) => {
+        console.warn('[invoice] automatic generation failed', invoiceError.message);
+      });
+    }
 
     res.json({ message: 'Payment notification processed' });
   } catch (error) {

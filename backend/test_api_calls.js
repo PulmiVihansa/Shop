@@ -5,7 +5,7 @@ async function test() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@atelier.com',
+        email: 'admin@astravia.com',
         password: 'admin12345'
       })
     });

@@ -135,6 +135,15 @@ const registerUser = async (req, res) => {
       customerId
       }
     });
+    await prisma.customer.create({
+      data: {
+        customerId,
+        userId: user.id,
+        name,
+        email: normalizedEmail,
+        phone: ''
+      }
+    });
 
     logAuthStep('register completed in database', { userId: user.id, email: user.email });
     return res.status(201).json({

@@ -1,8 +1,12 @@
 const prisma = require('../config/prisma');
 const { ensureCustomerIds } = require('../utils/customerId');
+const {
+  getNextPublicId,
+  ensureCustomerForOrder,
+  createTransactionAndInvoice
+} = require('../services/orderDocumentService');
 
 const randomToken = () => Math.random().toString(36).slice(2, 8).toUpperCase();
-const orderIdForDate = (date) => `ATL-${date.toISOString().slice(0, 10).replace(/-/g, '')}-${randomToken()}`;
 
 const makeAddress = (name, phone, city) => ({
   fullName: name,
@@ -44,16 +48,17 @@ async function seedOrders() {
     const price = Number(product.price || 0) * template.qty;
     const shippingCost = price > 25000 || price === 0 ? 0 : template.method === 'COD' ? 900 : 650;
     const totalAmount = price + shippingCost;
-    const orderId = orderIdForDate(orderDate);
+    const customer = await ensureCustomerForOrder(prisma, user, {
+      name: user.name,
+      email: user.email,
+      phone: template.phone
+    });
 
-    await prisma.order.create({
+    const order = await prisma.order.create({
       data: {
-        orderId,
+        orderId: await getNextPublicId(prisma, 'order', 'orderId', 'ORD', 1001),
         userId: user.id,
-        customerId: user.customerId,
-        customerName: user.name,
-        customerEmail: user.email,
-        phone: template.phone,
+        customerId: customer.id,
         address: makeAddress(user.name, template.phone, template.city),
         productName: product.name,
         size,
@@ -61,11 +66,9 @@ async function seedOrders() {
         price,
         shippingCost,
         totalAmount,
-        paymentMethod: template.method,
-        paymentStatus: template.paymentStatus,
-        transactionId: template.method === 'ONLINE' ? `SIM-${randomToken()}${index}` : '',
-        orderStatus: template.status,
-        orderDate,
+        status: template.status,
+        createdAt: orderDate,
+        updatedAt: orderDate,
         items: [
           {
             product: product.id,
@@ -74,15 +77,20 @@ async function seedOrders() {
             quantity: template.qty,
             price: Number(product.price || 0),
           }
-        ],
-        payment: {
-          method: template.method === 'COD' ? 'cod' : 'card',
-          status: template.paymentStatus.toLowerCase(),
-          reference: `ATL-${randomToken()}${index}`,
-          paidAt: template.paymentStatus === 'PAID' ? orderDate : undefined
-        }
+        ]
       }
     });
+
+    if (['PAID', 'REFUNDED'].includes(template.paymentStatus)) {
+      await createTransactionAndInvoice(prisma, order, {
+        paymentMethod: template.method,
+        paymentStatus: template.paymentStatus,
+        amount: totalAmount,
+        subtotal: price,
+        shipping: shippingCost,
+        grandTotal: totalAmount
+      });
+    }
   }
 }
 

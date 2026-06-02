@@ -1,0 +1,5 @@
+ALTER TABLE "public"."BulkOrderRequest"
+ALTER COLUMN "status" DROP DEFAULT,
+ALTER COLUMN "status" TYPE TEXT USING "status"::TEXT,
+ALTER COLUMN "status" SET DEFAULT 'Pending',
+ALTER COLUMN "status" SET NOT NULL;

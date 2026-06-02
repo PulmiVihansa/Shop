@@ -1,0 +1,9 @@
+ALTER TABLE "public"."BulkCustomer"
+ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE "public"."BulkCustomer"
+SET "updatedAt" = COALESCE("updatedAt", "createdAt", CURRENT_TIMESTAMP);
+
+ALTER TABLE "public"."BulkCustomer"
+ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP,
+ALTER COLUMN "updatedAt" SET NOT NULL;

@@ -1,0 +1,103 @@
+.global-toast-stack {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 5000;
+  display: grid;
+  gap: 12px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.global-toast {
+  --toast-accent: #2f8f5b;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 15px;
+  border: 1px solid rgba(216, 196, 160, 0.32);
+  border-left: 4px solid var(--toast-accent);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 0 0, rgba(216, 196, 160, 0.16), transparent 42%),
+    rgba(10, 10, 10, 0.94);
+  color: #ffffff;
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+  animation: toastEnter 220ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.global-toast.leaving {
+  animation: toastExit 260ms ease both;
+}
+
+.global-toast.success {
+  --toast-accent: #2f9b66;
+}
+
+.global-toast.error {
+  --toast-accent: #c40000;
+}
+
+.global-toast.warning {
+  --toast-accent: #d8c4a0;
+}
+
+.global-toast-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--toast-accent), #ffffff 20%);
+  border-radius: 50%;
+  color: var(--toast-accent);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.global-toast strong {
+  display: block;
+  margin: 0 0 3px;
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.global-toast p {
+  margin: 0;
+  color: #e7dfd2;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, -8px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes toastExit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(18px, -8px, 0) scale(0.98);
+  }
+}
+
+@media (max-width: 640px) {
+  .global-toast-stack {
+    top: 14px;
+    right: 14px;
+    left: 14px;
+    width: auto;
+  }
+}

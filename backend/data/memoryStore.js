@@ -4,7 +4,10 @@ const store = {
   users: [],
   products: [],
   orders: [],
+  transactions: [],
+  invoices: [],
   expenses: [],
+  bulkOrderRequests: [],
   bulkCustomers: [],
   settings: {
     whatsappNumber: '94770000000',
@@ -66,7 +69,7 @@ const ensureCustomerId = (user) => {
 };
 
 const seedAdmin = async () => {
-  const email = process.env.ADMIN_EMAIL || 'admin@atelier.com';
+  const email = process.env.ADMIN_EMAIL || 'admin@astravia.com';
   const password = process.env.ADMIN_PASSWORD || 'admin12345';
   const existing = store.users.find((user) => user.email === email);
 
@@ -243,6 +246,7 @@ const seedBusinessData = async () => {
 
   if (!store.orders.length) {
     const users = store.users.filter((user) => user.role === 'user');
+    let orderSequence = 1001;
     const makeOrder = (user, productIndexes, status, daysAgo, phone) => {
       const items = productIndexes.map(([index, quantity, size]) => {
         const product = store.products[index];
@@ -256,7 +260,9 @@ const seedBusinessData = async () => {
       });
       const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const shippingCost = subtotal > 25000 || subtotal === 0 ? 0 : 650;
-      const orderId = `ATL-${new Date(Date.now() - 86400000 * daysAgo).toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      const sequence = orderSequence++;
+      const orderId = `ORD-${sequence}`;
+      const transactionId = `TXN-${sequence}`;
       return {
         _id: createId(),
         orderId,
@@ -273,7 +279,7 @@ const seedBusinessData = async () => {
         totalAmount: subtotal + shippingCost,
         paymentMethod: 'ONLINE',
         paymentStatus: 'PAID',
-        transactionId: `SIM-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+        transactionId,
         orderStatus: status,
         orderDate: new Date(Date.now() - 86400000 * daysAgo),
         items,
@@ -321,11 +327,141 @@ const seedBusinessData = async () => {
     );
   }
 
-  if (!store.bulkCustomers.length) {
+  if (!store.bulkOrderRequests.length) {
+    const approvedCustomerId = createId();
+    const productionCustomerId = createId();
+    const completedCustomerId = createId();
+
     store.bulkCustomers.push(
-      { _id: createId(), name: 'Ceylon Boutique Co.', email: 'orders@ceylonboutique.lk', company: 'Ceylon Boutique', discount: 12, notes: 'Prefers linen and tote restocks', createdAt: new Date(Date.now() - 86400000 * 9) },
-      { _id: createId(), name: 'Galle Resort Retail', email: 'retail@galleresort.lk', company: 'Galle Resort', discount: 18, notes: 'Monthly accessories order', createdAt: new Date(Date.now() - 86400000 * 21) }
+      {
+        _id: approvedCustomerId,
+        companyName: 'Maison Lune Resort',
+        contactPerson: 'Amara Jay',
+        email: 'amara@maisonlune.com',
+        phone: '+94 76 118 4400',
+        discount: 0,
+        notes: 'Generated automatically from approved wholesale orders.',
+        createdAt: new Date(Date.now() - 86400000 * 7),
+      },
+      {
+        _id: productionCustomerId,
+        companyName: 'Atelier North Wholesale',
+        contactPerson: 'Noah Laurent',
+        email: 'noah@ateliernorth.fr',
+        phone: '+33 6 18 44 90 10',
+        discount: 0,
+        notes: 'Generated automatically from approved wholesale orders.',
+        createdAt: new Date(Date.now() - 86400000 * 14),
+      },
+      {
+        _id: completedCustomerId,
+        companyName: 'Serene Retail Collective',
+        contactPerson: 'Leah Fernando',
+        email: 'leah@sereneretail.lk',
+        phone: '+94 71 990 1188',
+        discount: 0,
+        notes: 'Generated automatically from approved wholesale orders.',
+        createdAt: new Date(Date.now() - 86400000 * 30),
+      }
     );
+
+    store.bulkOrderRequests.push(
+      {
+        _id: 'BULK-2041',
+        companyName: 'Ceylon Boutique Group',
+        contactPerson: 'Rivanya Silva',
+        email: 'rivanya@ceylonboutique.lk',
+        phone: '+94 77 440 2211',
+        products: ['Linen Oxford Shirt', 'Raffia Structured Tote'],
+        quantity: 240,
+        orderValue: 2350000,
+        message: 'Needs custom woven label and staggered shipment.',
+        status: 'Pending',
+        createdAt: new Date(Date.now() - 86400000 * 3),
+        updatedAt: new Date(Date.now() - 86400000 * 3),
+      },
+      {
+        _id: 'BULK-2038',
+        companyName: 'Maison Lune Resort',
+        contactPerson: 'Amara Jay',
+        email: 'amara@maisonlune.com',
+        phone: '+94 76 118 4400',
+        products: ['Silk Scarf Botanical', 'Canvas Weekend Tote'],
+        quantity: 180,
+        orderValue: 1840000,
+        message: 'Resort capsule packaging requested.',
+        status: 'Approved',
+        bulkCustomerId: approvedCustomerId,
+        createdAt: new Date(Date.now() - 86400000 * 7),
+        updatedAt: new Date(Date.now() - 86400000 * 7),
+      },
+      {
+        _id: 'BULK-2034',
+        companyName: 'Atelier North Wholesale',
+        contactPerson: 'Noah Laurent',
+        email: 'noah@ateliernorth.fr',
+        phone: '+33 6 18 44 90 10',
+        products: ['Silk Wrap Maxi', 'Velvet Column Gown'],
+        quantity: 320,
+        orderValue: 3120000,
+        message: 'Priority production slot confirmed.',
+        status: 'Production',
+        bulkCustomerId: productionCustomerId,
+        createdAt: new Date(Date.now() - 86400000 * 14),
+        updatedAt: new Date(Date.now() - 86400000 * 6),
+      },
+      {
+        _id: 'BULK-2029',
+        companyName: 'Serene Retail Collective',
+        contactPerson: 'Leah Fernando',
+        email: 'leah@sereneretail.lk',
+        phone: '+94 71 990 1188',
+        products: ['Woven Leather Belt', 'Leather Card Holder'],
+        quantity: 90,
+        orderValue: 740000,
+        message: 'Delivered with branded invoice pack.',
+        status: 'Completed',
+        bulkCustomerId: completedCustomerId,
+        createdAt: new Date(Date.now() - 86400000 * 30),
+        updatedAt: new Date(Date.now() - 86400000 * 1),
+      }
+    );
+
+    store.orders.forEach((order, index) => {
+      const transactionId = order.transactionId || `TXN-${1001 + index}`;
+      order.transactionId = transactionId;
+      store.transactions.push({
+        _id: createId(),
+        transactionId,
+        orderId: order._id,
+        orderReference: order.orderId,
+        customerId: order.customerId,
+        customer: order.customerName,
+        amount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      });
+      store.invoices.push({
+        _id: createId(),
+        invoiceId: `INV-${new Date().getFullYear()}-${String(1001 + index).padStart(4, '0')}`,
+        orderId: order._id,
+        orderReference: order.orderId,
+        transactionId,
+        customerId: order.customerId,
+        customer: order.customerName,
+        email: order.customerEmail,
+        subtotal: order.price,
+        shipping: order.shippingCost,
+        tax: 0,
+        grandTotal: order.totalAmount,
+        status: 'Paid',
+        products: order.items,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      });
+    });
   }
 };
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import api from '../services/api.js';
 import '../styles/contact.css';
 
 const subjectOptions = [
@@ -57,6 +58,11 @@ export default function Contact() {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
+    companyName: '',
+    products: '',
+    quantity: '',
+    orderValue: '',
     orderRef: '',
     subject: '',
     message: '',
@@ -178,9 +184,14 @@ export default function Contact() {
     setFileLabel(file ? file.name : 'Attach a photo or document');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (isSubmitting) return;
+
+    if (activeDept === 'Wholesale' && !formValues.companyName.trim()) {
+      triggerShake('companyName');
+      return;
+    }
 
     if (!formValues.email.trim()) {
       triggerShake('email');
@@ -200,12 +211,29 @@ export default function Contact() {
     }
 
     setIsSubmitting(true);
-    const timeoutId = setTimeout(() => {
-      setSuccessRef(`REF: ${generateRef()}`);
+    try {
+      if (activeDept === 'Wholesale') {
+        const response = await api.post('/bulk-orders/requests', {
+          companyName: formValues.companyName,
+          contactPerson: `${formValues.firstName} ${formValues.lastName}`.trim() || formValues.email,
+          email: formValues.email,
+          phone: formValues.phone,
+          products: formValues.products,
+          quantity: formValues.quantity,
+          orderValue: formValues.orderValue,
+          message: formValues.message,
+        });
+        setSuccessRef(`REF: ${response.data.id || response.data._id || generateRef()}`);
+      } else {
+        setSuccessRef(`REF: ${generateRef()}`);
+      }
       setShowSuccess(true);
+    } catch (error) {
+      setSuccessRef('REF: Unable to send');
+      setShowSuccess(true);
+    } finally {
       setIsSubmitting(false);
-    }, 1400);
-    timeoutsRef.current.push(timeoutId);
+    }
   };
 
   const resetForm = () => {
@@ -214,6 +242,11 @@ export default function Contact() {
       firstName: '',
       lastName: '',
       email: '',
+      phone: '',
+      companyName: '',
+      products: '',
+      quantity: '',
+      orderValue: '',
       orderRef: '',
       subject: '',
       message: '',
@@ -327,6 +360,89 @@ export default function Contact() {
               </label>
               <span className="field-line" />
             </div>
+
+            {activeDept === 'Wholesale' && (
+              <>
+                <div className={`float-field ${shakeFields.companyName ? 'shake' : ''}`}>
+                  <input
+                    type="text"
+                    id="companyName"
+                    name="companyName"
+                    placeholder=" "
+                    value={formValues.companyName}
+                    onChange={setField('companyName')}
+                  />
+                  <label className="float-label" htmlFor="companyName">
+                    Company Name
+                  </label>
+                  <span className="field-line" />
+                </div>
+
+                <div className="field-row">
+                  <div className="float-field">
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      placeholder=" "
+                      value={formValues.phone}
+                      onChange={setField('phone')}
+                    />
+                    <label className="float-label" htmlFor="phone">
+                      Phone
+                    </label>
+                    <span className="field-line" />
+                  </div>
+                  <div className="float-field">
+                    <input
+                      type="number"
+                      min="0"
+                      id="quantity"
+                      name="quantity"
+                      placeholder=" "
+                      value={formValues.quantity}
+                      onChange={setField('quantity')}
+                    />
+                    <label className="float-label" htmlFor="quantity">
+                      Quantity
+                    </label>
+                    <span className="field-line" />
+                  </div>
+                </div>
+
+                <div className="field-row">
+                  <div className="float-field">
+                    <input
+                      type="text"
+                      id="products"
+                      name="products"
+                      placeholder=" "
+                      value={formValues.products}
+                      onChange={setField('products')}
+                    />
+                    <label className="float-label" htmlFor="products">
+                      Products
+                    </label>
+                    <span className="field-line" />
+                  </div>
+                  <div className="float-field">
+                    <input
+                      type="number"
+                      min="0"
+                      id="orderValue"
+                      name="orderValue"
+                      placeholder=" "
+                      value={formValues.orderValue}
+                      onChange={setField('orderValue')}
+                    />
+                    <label className="float-label" htmlFor="orderValue">
+                      Order Value
+                    </label>
+                    <span className="field-line" />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div>
               <button type="button" className="order-ref-toggle" onClick={() => setOrderRefOn((prev) => !prev)}>

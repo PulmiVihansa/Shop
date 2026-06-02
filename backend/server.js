@@ -16,6 +16,8 @@ const bulkOrderRoutes = require('./routes/bulkOrderRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const contentRoutes = require('./routes/contentRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
+const transactionRoutes = require('./routes/transactionRoutes');
 
 // Load environment variables.
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -40,6 +42,8 @@ configurePassport();
 app.use(cors());
 app.use(express.json({ limit: '12mb' }));
 app.use(passport.initialize());
+app.use('/uploads/invoices', express.static(path.join(__dirname, 'uploads', 'invoices')));
+app.use('/storage/invoices', express.static(path.join(__dirname, 'storage', 'invoices')));
 
 // API routes.
 app.use('/api/auth', authRoutes);
@@ -52,6 +56,8 @@ app.use('/api/bulk-orders', bulkOrderRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {

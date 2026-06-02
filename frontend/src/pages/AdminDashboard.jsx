@@ -1,11 +1,82 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import {
+  FaBuilding,
+  FaChevronLeft,
+  FaChevronRight,
+  FaClipboardList,
+  FaCog,
+  FaCreditCard,
+  FaDatabase,
+  FaDownload,
+  FaEnvelope,
+  FaEye,
+  FaFileInvoice,
+  FaGlobe,
+  FaPalette,
+  FaPaperPlane,
+  FaSave,
+  FaSearch,
+  FaSearchDollar,
+  FaShareAlt,
+  FaShieldAlt,
+  FaStore,
+  FaTruck,
+  FaUpload,
+} from 'react-icons/fa';
 import api, { getErrorMessage } from '../services/api.js';
 import InventoryManagementPanel from '../components/admin/InventoryManagementPanel.jsx';
 import { COLLECTION_OPTIONS, getCategoryOptions, getSubcategoryOptions } from '../utils/productStructure.js';
+import { useToast } from '../components/ToastProvider.jsx';
+import adminLogo from '../assets/Name 2.png';
 import '../styles/admin.css';
 
 const money = (value) => `LKR${Number(value || 0).toLocaleString()}`;
 const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
+const apiFileBase = () => String(api.defaults.baseURL || '').replace(/\/api\/?$/, '');
+const invoicePdfFileUrl = (invoice) => invoice?.pdfUrl ? `${apiFileBase()}${invoice.pdfUrl}` : '';
+const buildInvoiceEmailMessage = (invoice) => [
+  `Dear ${invoice.customer || invoice.customerName || 'Customer'},`,
+  '',
+  'Thank you for choosing Astravia.',
+  '',
+  'Your order has been successfully confirmed and your official invoice is attached for your records.',
+  '',
+  `Order ID: ${invoice.orderId || ''}`,
+  `Transaction ID: ${invoice.transactionId || ''}`,
+  `Invoice ID: ${invoice.invoiceId || invoice.invoiceNumber || ''}`,
+  `Order Date: ${formatDateTime(invoice.date || invoice.issueDate)}`,
+  '',
+  'We appreciate your trust in Astravia and look forward to serving you again.',
+  '',
+  'Thank you for being part of the Astravia experience.',
+  '',
+  'Astravia Luxury Fashion House',
+].join('\n');
+const compactMoney = (value) => {
+  const number = Number(value || 0);
+  if (Math.abs(number) >= 1000000) return `LKR ${(number / 1000000).toFixed(number % 1000000 ? 1 : 0)}M`;
+  if (Math.abs(number) >= 1000) return `LKR ${(number / 1000).toFixed(number % 1000 ? 1 : 0)}K`;
+  return `LKR ${number.toLocaleString()}`;
+};
+const formatDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+const formatDateTime = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+};
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 const SIZE_SET = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const newSizeStock = () => ({ XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0 });
 
@@ -32,7 +103,6 @@ const makeEmptyProduct = () => ({
 const getCollectionLabel = (value) => COLLECTION_OPTIONS.find((option) => option.value === value)?.label || value || '-';
 
 const emptyExpense = { title: '', category: 'Material cost', amount: '' };
-const emptyBulkCustomer = { name: '', email: '', company: '', discount: '', notes: '' };
 
 const menuItems = [
   'Dashboard',
@@ -43,14 +113,21 @@ const menuItems = [
   'Finance',
   'Analytics',
   'Bulk Orders',
+  'Transactions',
   'Invoices',
   'CMS',
   'Settings',
 ];
 
 function MetricCard({ label, value, note }) {
+  const metricClass = String(label || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const isRevenue = /revenue|amount|value|sales|profit|cash|income|total/i.test(String(label || ''));
+
   return (
-    <div className="admin-metric">
+    <div className={`admin-metric metric-${metricClass} ${isRevenue ? 'metric-revenue' : ''}`}>
       <span>{label}</span>
       <strong>{value}</strong>
       {note && <p>{note}</p>}
@@ -83,27 +160,32 @@ function BarChart({ data, valueKey = 'revenue', labelKey = 'label' }) {
   const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
   return (
     <div className="admin-chart">
-      {data.length === 0 ? <p>No chart data yet.</p> : data.map((item) => (
-        <div className="admin-bar-row" key={`${item[labelKey]}-${valueKey}`}>
-          <span>{item[labelKey]}</span>
-          <div><i style={{ width: `${(Number(item[valueKey] || 0) / max) * 100}%` }} /></div>
-          <strong>{Number(item[valueKey] || 0).toLocaleString()}</strong>
-        </div>
-      ))}
+      {data.length === 0 ? <p>No chart data yet.</p> : data.map((item, index) => {
+        const value = Number(item[valueKey] || 0);
+        const percent = Math.round((value / max) * 100);
+        return (
+          <div className="admin-bar-row" key={`${item[labelKey]}-${valueKey}`} title={`${item[labelKey]}: ${value.toLocaleString()}`}>
+            <span>{item[labelKey]}</span>
+            <div><i style={{ width: `${percent}%`, '--bar-index': index }} /></div>
+            <strong>{value.toLocaleString()}%</strong>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function ColumnChart({ data, valueKey = 'revenue', labelKey = 'label' }) {
+function ColumnChart({ data, valueKey = 'revenue', labelKey = 'label', tone = 'gold' }) {
   const max = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
   return (
-    <div className="admin-column-chart">
-      {data.length === 0 ? <p>No chart data yet.</p> : data.map((item) => {
+    <div className={`admin-column-chart ${tone}`}>
+      {data.length === 0 ? <p>No chart data yet.</p> : data.map((item, index) => {
         const value = Number(item[valueKey] || 0);
+        const height = Math.max(8, (value / max) * 100);
         return (
-          <div className="admin-column" key={`${item[labelKey]}-${valueKey}`}>
+          <div className="admin-column" key={`${item[labelKey]}-${valueKey}`} title={`${item[labelKey]}: ${value.toLocaleString()}`}>
             <strong>{value.toLocaleString()}</strong>
-            <div><i style={{ height: `${Math.max(8, (value / max) * 100)}%` }} /></div>
+            <div><i style={{ height: `${height}%`, '--column-index': index }} /></div>
             <span>{item[labelKey]}</span>
           </div>
         );
@@ -115,47 +197,412 @@ function ColumnChart({ data, valueKey = 'revenue', labelKey = 'label' }) {
 function PieChart({ data, valueKey = 'amount', labelKey = 'label' }) {
   const total = data.reduce((sum, item) => sum + Number(item[valueKey] || 0), 0);
   let offset = 25;
-  const colors = ['#8f9390', '#1a1a1a', '#a8b5a0', '#d4cdc5', '#9e8fa8'];
+  const colors = ['#C8A97E', '#1B1B1B', '#A7B29A', '#7D8683', '#E8DFD4'];
+  const isShareData = total <= 100;
 
   if (!total) {
-    return <div className="admin-pie-empty">No pie chart data yet.</div>;
+    return <div className="premium-chart-empty">No chart data yet.</div>;
   }
 
   return (
-    <div className="admin-pie-wrap">
-      <svg className="admin-pie" viewBox="0 0 42 42" aria-label="Pie chart">
-        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#eae6e0" strokeWidth="7" />
+    <div className="premium-donut-chart">
+      <div className="premium-donut-figure">
+        <svg className="admin-pie premium-donut-svg" viewBox="0 0 42 42" aria-label="Revenue distribution chart">
+          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#eee8df" strokeWidth="6.5" />
+          {data.map((item, index) => {
+            const value = Number(item[valueKey] || 0);
+            const dash = (value / total) * 100;
+            const circle = (
+              <circle
+                key={item[labelKey]}
+                cx="21"
+                cy="21"
+                r="15.915"
+                fill="transparent"
+                stroke={colors[index % colors.length]}
+                strokeWidth="6.5"
+                strokeDasharray={`${dash} ${100 - dash}`}
+                strokeDashoffset={offset}
+              >
+                <title>{`${item[labelKey]}: ${Math.round(dash)}%`}</title>
+              </circle>
+            );
+            offset -= dash;
+            return circle;
+          })}
+        </svg>
+        <div className="premium-donut-center">
+          <span>Total</span>
+          <strong>{isShareData ? '100%' : compactMoney(total)}</strong>
+        </div>
+      </div>
+      <div className="premium-donut-legend">
         {data.map((item, index) => {
           const value = Number(item[valueKey] || 0);
-          const dash = (value / total) * 100;
-          const circle = (
-            <circle
-              key={item[labelKey]}
-              cx="21"
-              cy="21"
-              r="15.915"
-              fill="transparent"
-              stroke={colors[index % colors.length]}
-              strokeWidth="7"
-              strokeDasharray={`${dash} ${100 - dash}`}
-              strokeDashoffset={offset}
-            />
+          const percent = Math.round((value / total) * 100);
+          return (
+            <div className="premium-donut-row" key={item[labelKey]}>
+              <span><i style={{ background: colors[index % colors.length] }} />{item[labelKey]}</span>
+              <strong>{percent}%</strong>
+              <em>{isShareData ? `${value}% share` : money(value)}</em>
+            </div>
           );
-          offset -= dash;
-          return circle;
         })}
-      </svg>
-      <div className="admin-pie-legend">
-        {data.map((item, index) => (
-          <span key={item[labelKey]}>
-            <i style={{ background: colors[index % colors.length] }} />
-            {item[labelKey]}: {Number(item[valueKey] || 0).toLocaleString()}
-          </span>
-        ))}
       </div>
     </div>
   );
 }
+
+function PremiumMetricCard({ item }) {
+  const formatted = item.suffix === '%' ? `${Number(item.value || 0).toFixed(1)}%` : typeof item.value === 'number' && item.value > 999 ? money(item.value) : item.value;
+  const note = item.note || (item.growth !== undefined ? `${item.trend === 'down' ? '↓' : '↑'} ${Math.abs(Number(item.growth || 0))}%` : '');
+  const metricNote = item.note || (item.growth !== undefined ? `${item.trend === 'down' ? 'Down' : 'Up'} ${Math.abs(Number(item.growth || 0))}%` : '');
+  const metricClass = String(item.label || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const isRevenue = /revenue|amount|value|sales|profit|cash|income|total/i.test(String(item.label || ''));
+
+  return (
+    <article className={`premium-metric-card metric-${metricClass} ${isRevenue ? 'metric-revenue' : ''}`}>
+      {item.icon && <span className="premium-metric-icon" aria-hidden="true">{item.icon}</span>}
+      <span>{item.label}</span>
+      <strong>{formatted}</strong>
+      {metricNote && <p className={item.trend === 'down' ? 'down' : 'up'}>{metricNote}</p>}
+    </article>
+  );
+  return (
+    <article className="premium-metric-card">
+      <span>{item.label}</span>
+      <strong>{formatted}</strong>
+      <p className={item.trend === 'down' ? 'down' : 'up'}>{item.trend === 'down' ? '↓' : '↑'} {Math.abs(Number(item.growth || 0))}%</p>
+    </article>
+  );
+}
+
+const lineChartTones = {
+  revenue: { line: '#C8A97E', soft: '#E8DFD4', glow: 'rgba(200, 169, 126, 0.28)' },
+  profit: { line: '#A7B29A', soft: '#DCE2D4', glow: 'rgba(167, 178, 154, 0.3)' },
+};
+
+const niceChartMax = (value) => {
+  if (!value) return 1;
+  const power = 10 ** Math.floor(Math.log10(value));
+  const normalized = value / power;
+  const rounded = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return rounded * power;
+};
+
+const smoothPath = (points) => points.reduce((path, point, index) => {
+  if (index === 0) return `M ${point.x},${point.y}`;
+  const previous = points[index - 1];
+  const middle = (previous.x + point.x) / 2;
+  return `${path} C ${middle},${previous.y} ${middle},${point.y} ${point.x},${point.y}`;
+}, '');
+
+const weekdayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const normalizeWeekdaySeries = (series = [], valueKey) => {
+  const lookup = new Map(series.map((item) => [String(item?.label || '').slice(0, 3), Number(item?.[valueKey] || 0)]));
+  return weekdayOrder.map((label) => ({ label, [valueKey]: lookup.get(label) || 0 }));
+};
+
+const getCustomerName = (order) => order?.customerName || order?.user?.name || order?.name || order?.email || order?.customerEmail || 'Customer';
+
+const getCustomerEmail = (order) => order?.customerEmail || order?.user?.email || order?.email || '';
+
+const getCustomerKey = (order) => String(order?.customerEmail || order?.user?.email || order?.email || order?.customerId || order?.userId || getCustomerName(order)).toLowerCase();
+
+const buildTopCustomers = (orders = []) => {
+  const grouped = new Map();
+
+  orders.forEach((order) => {
+    const key = getCustomerKey(order);
+    if (!key) return;
+
+    const revenue = Number(order?.totalAmount ?? order?.totalPrice ?? 0);
+    const orderDate = order?.orderDate || order?.createdAt || null;
+    const name = getCustomerName(order);
+    const email = getCustomerEmail(order);
+    const existing = grouped.get(key) || {
+      id: key,
+      name,
+      email,
+      orders: 0,
+      revenue: 0,
+      lastOrder: null,
+    };
+
+    existing.orders += 1;
+    existing.revenue += revenue;
+    if (orderDate && (!existing.lastOrder || new Date(orderDate) > new Date(existing.lastOrder))) {
+      existing.lastOrder = orderDate;
+    }
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 6)
+    .map((customer) => ({
+      ...customer,
+      avgOrder: customer.orders ? customer.revenue / customer.orders : 0,
+      initials: getInitials(customer.name, customer.email),
+    }));
+};
+
+const buildSizePerformance = (orders = []) => {
+  const sizeCounts = new Map([
+    ['XS', 0],
+    ['S', 0],
+    ['M', 0],
+    ['L', 0],
+    ['XL', 0],
+    ['XXL', 0],
+    ['ONE SIZE', 0],
+  ]);
+
+  orders.forEach((order) => {
+    const items = Array.isArray(order?.items) && order.items.length ? order.items : [{ size: order?.size, quantity: order?.quantity || 1 }];
+    items.forEach((item) => {
+      const size = String(item?.size || order?.size || 'One Size').trim().toUpperCase();
+      const quantity = Number(item?.quantity || order?.quantity || 1);
+      if (sizeCounts.has(size)) {
+        sizeCounts.set(size, sizeCounts.get(size) + quantity);
+      } else {
+        sizeCounts.set('ONE SIZE', sizeCounts.get('ONE SIZE') + quantity);
+      }
+    });
+  });
+
+  return Array.from(sizeCounts.entries())
+    .filter(([, value]) => value > 0)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+};
+
+function PremiumHorizontalBarChart({ data, valueKey = 'value', labelKey = 'label' }) {
+  const max = Math.max(...data.map((item) => Number(item?.[valueKey] || 0)), 1);
+
+  if (!data.length) {
+    return <div className="premium-chart-empty">No chart data yet.</div>;
+  }
+
+  return (
+    <div className="premium-ranking-chart">
+      {data.map((item, index) => {
+        const value = Number(item?.[valueKey] || 0);
+        const percent = Math.max(8, Math.round((value / max) * 100));
+        return (
+          <div className="premium-ranking-row" key={`${item?.[labelKey]}-${index}`} title={`${item?.[labelKey]}: ${value.toLocaleString()}`}>
+            <div className="premium-ranking-meta">
+              <strong>{item?.[labelKey]}</strong>
+              <span>{value.toLocaleString()}</span>
+            </div>
+            <div className="premium-ranking-track"><i style={{ width: `${percent}%` }} /></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PremiumLineChart({ data, valueKey, tone = 'revenue' }) {
+  const chartData = data || [];
+  const rawMax = Math.max(...chartData.map((item) => Number(item[valueKey] || 0)), 1);
+  const max = niceChartMax(rawMax);
+  const palette = lineChartTones[tone] || lineChartTones.revenue;
+  const bounds = { left: 72, right: 690, top: 28, bottom: 236 };
+  const points = chartData.map((item, index) => {
+    const x = chartData.length === 1 ? (bounds.left + bounds.right) / 2 : bounds.left + (index / (chartData.length - 1)) * (bounds.right - bounds.left);
+    const y = bounds.top + (1 - (Number(item[valueKey] || 0) / max)) * (bounds.bottom - bounds.top);
+    return { ...item, value: Number(item[valueKey] || 0), x, y };
+  });
+  const path = smoothPath(points);
+  const areaPath = points.length ? `${path} L ${points[points.length - 1].x},${bounds.bottom} L ${points[0].x},${bounds.bottom} Z` : '';
+  const ticks = [1, 0.75, 0.5, 0.25, 0].map((ratio) => ({ ratio, value: max * ratio, y: bounds.top + (1 - ratio) * (bounds.bottom - bounds.top) }));
+  const peak = Math.max(...points.map((point) => point.value), 0);
+  const xLabelStep = chartData.length <= 12 ? 1 : Math.max(1, Math.ceil((chartData.length - 1) / 6));
+  const visibleXPoints = points.filter((point, index) => {
+    if (chartData.length <= 12) return true;
+    return index === 0 || index === points.length - 1 || index % xLabelStep === 0;
+  });
+
+  return (
+    <div className="premium-line-chart" style={{ '--chart-line': palette.line, '--chart-soft': palette.soft, '--chart-glow': palette.glow }}>
+      {chartData.length === 0 ? <div className="premium-chart-empty">No chart data yet.</div> : (
+        <>
+          <div className="premium-chart-meta">
+            <span>Peak</span>
+            <strong>{compactMoney(peak)}</strong>
+          </div>
+          <svg viewBox="0 0 720 340" role="img" aria-label={`${valueKey} revenue trend chart`}>
+            <defs>
+              <linearGradient id={`${valueKey}-area`} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={palette.line} stopOpacity="0.2" />
+                <stop offset="100%" stopColor={palette.soft} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            {ticks.map((tick) => (
+              <g key={tick.ratio}>
+                <line className="premium-chart-grid" x1={bounds.left} x2={bounds.right} y1={tick.y} y2={tick.y} />
+                <text className="premium-chart-y-label" x="10" y={tick.y + 4}>{compactMoney(tick.value)}</text>
+              </g>
+            ))}
+            {visibleXPoints.map((point) => <line className="premium-chart-grid vertical" key={`${point.label}-${point.x}-grid`} x1={point.x} x2={point.x} y1={bounds.top} y2={bounds.bottom} />)}
+            <line className="premium-chart-axis" x1={bounds.left} x2={bounds.left} y1={bounds.top} y2={bounds.bottom} />
+            <line className="premium-chart-axis" x1={bounds.left} x2={bounds.right} y1={bounds.bottom} y2={bounds.bottom} />
+            <path className="premium-chart-area" d={areaPath} fill={`url(#${valueKey}-area)`} />
+            <path className="premium-chart-line" d={path} />
+            {points.map((point) => (
+              <g className="premium-chart-point" key={`${point.label}-${valueKey}`}>
+                <circle cx={point.x} cy={point.y} r="5.5">
+                  <title>{`${point.label}: ${money(point.value)}`}</title>
+                </circle>
+              </g>
+            ))}
+            {visibleXPoints.map((point) => <text className="premium-chart-x-label" key={`${point.label}-${point.x}-label`} x={point.x} y="304">{point.label}</text>)}
+          </svg>
+        </>
+      )}
+    </div>
+  );
+}
+
+function PremiumDonutChart({ data }) {
+  return <PieChart data={data} valueKey="value" />;
+}
+
+function StatusPill({ status }) {
+  return <span className={`erp-status ${String(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span>;
+}
+
+const BULK_ORDER_STATUSES = ['Pending', 'Approved', 'Production', 'Completed', 'Cancelled'];
+
+const BULK_ORDER_STATUS_META = {
+  Pending: { className: 'bulk-status-pending', label: 'Pending', note: 'Awaiting review' },
+  Approved: { className: 'bulk-status-approved', label: 'Approved', note: 'Confirmed by sales' },
+  Production: { className: 'bulk-status-production', label: 'Production', note: 'In manufacturing' },
+  Completed: { className: 'bulk-status-completed', label: 'Completed', note: 'Delivered and closed' },
+  Cancelled: { className: 'bulk-status-cancelled', label: 'Cancelled', note: 'Removed from pipeline' },
+};
+
+const normalizeBulkStatus = (status) => (BULK_ORDER_STATUSES.includes(status) ? status : 'Pending');
+
+const getBulkStatusMeta = (status) => BULK_ORDER_STATUS_META[normalizeBulkStatus(status)];
+
+const getBulkCompany = (order = {}) => order.companyName || order.company || '-';
+const getBulkProducts = (order = {}) => {
+  if (Array.isArray(order.products) && order.products.length) return order.products;
+  if (Array.isArray(order.requestedProducts) && order.requestedProducts.length) return order.requestedProducts;
+  return String(order.products || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+const getBulkOrderValue = (order = {}) => Number(order.orderValue ?? order.budget ?? 0);
+const getBulkDate = (order = {}) => order.createdAt || order.date || order.updatedAt || '';
+
+const buildBulkMonthlyRevenue = (orders = []) => {
+  const revenueByMonth = new Map();
+
+  orders.forEach((order) => {
+    const date = new Date(getBulkDate(order) || Date.now());
+    if (Number.isNaN(date.getTime())) return;
+    const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
+    const label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    const existing = revenueByMonth.get(key) || { key, label, revenue: 0 };
+    existing.revenue += getBulkOrderValue(order);
+    revenueByMonth.set(key, existing);
+  });
+
+  return Array.from(revenueByMonth.values()).sort((left, right) => left.key.localeCompare(right.key));
+};
+
+const buildBulkStatusMix = (orders = []) => BULK_ORDER_STATUSES.map((status) => ({
+  label: status,
+  value: orders.filter((order) => normalizeBulkStatus(order.status) === status).length,
+})).filter((item) => item.value > 0);
+
+const buildTopWholesaleClients = (orders = []) => {
+  const byCompany = new Map();
+
+  orders.forEach((order) => {
+    const company = String(getBulkCompany(order) || 'Unknown Client').trim() || 'Unknown Client';
+    const current = byCompany.get(company) || {
+      id: company,
+      company,
+      contactPerson: order.contactPerson || '-',
+      email: order.email || '',
+      orders: 0,
+      quantity: 0,
+      revenue: 0,
+      lastOrder: '',
+    };
+
+    current.orders += 1;
+    current.quantity += Number(order.quantity || 0);
+    current.revenue += getBulkOrderValue(order);
+    current.contactPerson = current.contactPerson === '-' ? (order.contactPerson || '-') : current.contactPerson;
+    current.email = current.email || order.email || '';
+
+    const orderDate = getBulkDate(order);
+    if (!current.lastOrder || String(orderDate) > String(current.lastOrder)) {
+      current.lastOrder = orderDate;
+    }
+
+    byCompany.set(company, current);
+  });
+
+  return Array.from(byCompany.values())
+    .sort((left, right) => right.revenue - left.revenue)
+    .slice(0, 5)
+    .map((item) => ({
+      ...item,
+      initials: getInitials(item.company, item.email),
+      avgOrder: item.orders ? item.revenue / item.orders : 0,
+    }));
+};
+
+const buildBulkCustomerRecords = (customers = []) => {
+  return customers
+    .map((customer) => {
+      const company = customer.companyName || customer.company || '-';
+      const stats = {
+        orders: Number(customer.orders || 0),
+        revenue: Number(customer.revenue || 0),
+      };
+      const lastOrder = customer.lastOrder || '';
+      const status = stats.revenue >= 2000000 || Number(customer.discount || 0) >= 15
+        ? 'VIP'
+        : stats.orders > 0
+          ? 'Active'
+          : 'Inactive';
+
+      return {
+        id: customer.id || customer._id,
+        name: customer.contactPerson || customer.name || '-',
+        company,
+        contactPerson: customer.contactPerson || customer.name || '-',
+        phone: customer.phone || '-',
+        email: customer.email || '-',
+        discount: Number(customer.discount || 0),
+        orders: stats.orders,
+        revenue: stats.revenue,
+        lastOrder,
+        status,
+        notes: customer.notes || '',
+        initials: getInitials(company, customer.email),
+      };
+    })
+    .sort((left, right) => right.revenue - left.revenue || right.orders - left.orders);
+};
+
+const bulkCustomerStatusClass = {
+  VIP: 'bulk-customer-vip',
+  Active: 'bulk-customer-active',
+  Inactive: 'bulk-customer-inactive',
+};
 
 export default function AdminDashboard() {
   const [active, setActive] = useState('Dashboard');
@@ -164,6 +611,9 @@ export default function AdminDashboard() {
   const [customers, setCustomers] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [finance, setFinance] = useState(null);
+  const [bulkOrders, setBulkOrders] = useState({ summary: [], orders: [] });
+  const [transactions, setTransactions] = useState([]);
+  const [invoices, setInvoices] = useState({ summary: [], invoices: [] });
   const [bulkCustomers, setBulkCustomers] = useState([]);
   const [homepageContent, setHomepageContent] = useState(null);
   const [banners, setBanners] = useState([]);
@@ -180,8 +630,8 @@ export default function AdminDashboard() {
   });
   const [productForm, setProductForm] = useState(makeEmptyProduct);
   const [expenseForm, setExpenseForm] = useState(emptyExpense);
-  const [bulkForm, setBulkForm] = useState(emptyBulkCustomer);
   const [expenseFilter, setExpenseFilter] = useState('all');
+  const [dashboardRange, setDashboardRange] = useState('30d');
   const [productSearch, setProductSearch] = useState('');
   const [expandedProductId, setExpandedProductId] = useState('');
   const [productPreview, setProductPreview] = useState(null);
@@ -195,19 +645,33 @@ export default function AdminDashboard() {
     orderStatus: 'all',
   });
   const [editingId, setEditingId] = useState(null);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [selectedBulkOrder, setSelectedBulkOrder] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [emailComposer, setEmailComposer] = useState(null);
+  const [selectedBulkCustomer, setSelectedBulkCustomer] = useState(null);
+  const [invoiceFilters, setInvoiceFilters] = useState({ search: '', status: 'all', sort: 'desc', page: 1, pageSize: 8 });
+  const [invoiceActionId, setInvoiceActionId] = useState('');
+  const [settingsSearch, setSettingsSearch] = useState('');
+  const [settingsDirty, setSettingsDirty] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const toast = useToast();
 
   const loadAdminData = async () => {
-    const [productRes, orderRes, userRes, analyticsRes, financeRes, bulkRes, settingsRes, homepageRes, bannerRes, siteRes] = await Promise.all([
+    const [productRes, orderRes, userRes, analyticsRes, financeRes, bulkRes, bulkCustomerRes, transactionRes, invoiceRes, settingsRes, homepageRes, bannerRes, siteRes] = await Promise.all([
       api.get('/products'),
       api.get('/orders'),
       api.get('/users'),
       api.get('/analytics'),
       api.get('/finance', { params: { category: expenseFilter === 'all' ? undefined : expenseFilter } }),
+      api.get('/bulk-orders'),
       api.get('/bulk-orders/customers'),
+      api.get('/transactions'),
+      api.get('/invoices', { params: { limit: 1000 } }),
       api.get('/settings/payment'),
       api.get('/content/homepage'),
       api.get('/content/banners'),
@@ -218,7 +682,10 @@ export default function AdminDashboard() {
     setCustomers(userRes.data);
     setAnalytics(analyticsRes.data);
     setFinance(financeRes.data);
-    setBulkCustomers(bulkRes.data);
+    setBulkOrders(bulkRes.data);
+    setBulkCustomers(bulkCustomerRes.data);
+    setTransactions(transactionRes.data);
+    setInvoices(invoiceRes.data);
     setSettings((prev) => ({ ...prev, ...siteRes.data, ...settingsRes.data, merchantSecret: '' }));
     setHomepageContent(homepageRes.data);
     setBanners(bannerRes.data);
@@ -227,6 +694,32 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadAdminData().catch((err) => setError(getErrorMessage(err)));
   }, [expenseFilter]);
+
+  useEffect(() => {
+    if (!message) return;
+    if (/^(sending|loading|processing)/i.test(message)) {
+      toast.warning(message);
+    } else {
+      toast.success(message);
+    }
+    setMessage('');
+  }, [message, toast]);
+
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError('');
+  }, [error, toast]);
+
+  useEffect(() => {
+    if (!settingsDirty) return undefined;
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [settingsDirty]);
 
   const totals = analytics?.totals || {
     users: customers.length,
@@ -239,6 +732,195 @@ export default function AdminDashboard() {
     () => SIZE_SET.reduce((sum, size) => sum + Number(productForm.sizeStock?.[size] || 0), 0),
     [productForm.sizeStock]
   );
+
+  const expenseRecords = useMemo(() => finance?.expenseItems || [], [finance?.expenseItems]);
+
+  const expenseSummaryCards = useMemo(() => {
+    const total = expenseRecords.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const marketing = expenseRecords
+      .filter((expense) => String(expense.category || '').toLowerCase() === 'marketing')
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const operational = expenseRecords
+      .filter((expense) => String(expense.category || '').toLowerCase() !== 'marketing')
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+
+    return [
+      { label: 'Total Expenses', value: total || Number(finance?.expenses || 0), trend: 'down', note: `${expenseRecords.length} records` },
+      { label: 'Marketing Expenses', value: marketing, trend: 'down', note: 'Campaign spend' },
+      { label: 'Operational Expenses', value: operational, trend: 'down', note: 'Materials, shipping, other' },
+    ];
+  }, [expenseRecords, finance?.expenses]);
+
+  const revenueTrend = finance?.monthlyRevenue || analytics?.salesOverTime || [];
+  const weekdayNewCustomers = useMemo(() => normalizeWeekdaySeries(analytics?.newCustomers || [], 'customers'), [analytics?.newCustomers]);
+  const weekdayReturningCustomers = useMemo(() => normalizeWeekdaySeries(analytics?.returningCustomers || [], 'customers'), [analytics?.returningCustomers]);
+  const trafficSources = finance?.revenueSources || [];
+  const collectionMix = finance?.revenueByCollection || [];
+  const bestSellingSizes = useMemo(() => buildSizePerformance(orders), [orders]);
+  const topCustomers = useMemo(() => buildTopCustomers(orders), [orders]);
+  const bulkOrderRecords = bulkOrders?.orders || [];
+  const bulkPipelineSummary = useMemo(() => {
+    const totalBudget = bulkOrderRecords.reduce((sum, order) => sum + getBulkOrderValue(order), 0);
+
+    return BULK_ORDER_STATUSES.map((status) => {
+      const items = bulkOrderRecords.filter((order) => normalizeBulkStatus(order.status) === status);
+      const revenue = items.reduce((sum, order) => sum + getBulkOrderValue(order), 0);
+      return {
+        ...getBulkStatusMeta(status),
+        status,
+        count: items.length,
+        revenue,
+        share: totalBudget ? Math.round((revenue / totalBudget) * 100) : 0,
+      };
+    });
+  }, [bulkOrderRecords]);
+  const bulkAverageOrderValue = useMemo(() => {
+    const totalBudget = bulkOrderRecords.reduce((sum, order) => sum + getBulkOrderValue(order), 0);
+    return bulkOrderRecords.length ? totalBudget / bulkOrderRecords.length : 0;
+  }, [bulkOrderRecords]);
+  const invoiceRecords = useMemo(() => invoices?.invoices || [], [invoices]);
+  const filteredInvoices = useMemo(() => {
+    const search = invoiceFilters.search.trim().toLowerCase();
+    return invoiceRecords
+      .filter((invoice) => {
+        const matchesSearch = !search || [
+          invoice.invoiceId,
+          invoice.invoiceNumber,
+          invoice.orderId,
+          invoice.transactionId,
+          invoice.customer,
+          invoice.email,
+        ].some((value) => String(value || '').toLowerCase().includes(search));
+        const matchesStatus = invoiceFilters.status === 'all' || String(invoice.status || '').toLowerCase() === invoiceFilters.status;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((left, right) => {
+        const leftDate = new Date(left.date || left.issueDate || left.createdAt || 0).getTime();
+        const rightDate = new Date(right.date || right.issueDate || right.createdAt || 0).getTime();
+        return invoiceFilters.sort === 'asc' ? leftDate - rightDate : rightDate - leftDate;
+      });
+  }, [invoiceFilters.search, invoiceFilters.sort, invoiceFilters.status, invoiceRecords]);
+  const invoiceTotalPages = Math.max(1, Math.ceil(filteredInvoices.length / invoiceFilters.pageSize));
+  const invoicePage = Math.min(invoiceFilters.page, invoiceTotalPages);
+  const pagedInvoices = useMemo(() => {
+    const start = (invoicePage - 1) * invoiceFilters.pageSize;
+    return filteredInvoices.slice(start, start + invoiceFilters.pageSize);
+  }, [filteredInvoices, invoiceFilters.pageSize, invoicePage]);
+  const bulkMonthlyRevenue = useMemo(() => buildBulkMonthlyRevenue(bulkOrderRecords), [bulkOrderRecords]);
+  const bulkStatusMix = useMemo(() => buildBulkStatusMix(bulkOrderRecords), [bulkOrderRecords]);
+  const topWholesaleClients = useMemo(() => buildTopWholesaleClients(bulkOrderRecords), [bulkOrderRecords]);
+  const topKpiCards = useMemo(() => {
+    const pending = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Pending').length;
+    const approved = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Approved').length;
+    const production = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Production').length;
+    const completed = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Completed').length;
+    const cancelled = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Cancelled').length;
+    const totalRevenue = bulkOrderRecords.reduce((sum, o) => sum + getBulkOrderValue(o), 0);
+
+    // map status->share from bulkPipelineSummary if available
+    const shareMap = (bulkPipelineSummary || []).reduce((acc, s) => { acc[s.status] = s.share || 0; return acc; }, {});
+
+    // revenue trend: compare last two months in bulkMonthlyRevenue
+    let revenueTrend = 0;
+    if ((bulkMonthlyRevenue || []).length >= 2) {
+      const last = bulkMonthlyRevenue[bulkMonthlyRevenue.length - 1].revenue || 0;
+      const prev = bulkMonthlyRevenue[bulkMonthlyRevenue.length - 2].revenue || 0;
+      revenueTrend = prev ? Math.round(((last - prev) / Math.abs(prev)) * 100) : 0;
+    }
+
+    const make = (label, val, className, trend) => ({ label, value: val, className, trend });
+
+    return [
+      make('Pending Requests', pending, 'bulk-kpi-pending', shareMap['Pending'] || 0),
+      make('Approved Orders', approved, 'bulk-kpi-approved', shareMap['Approved'] || 0),
+      make('Production Orders', production, 'bulk-kpi-production', shareMap['Production'] || 0),
+      make('Completed Orders', completed, 'bulk-kpi-completed', shareMap['Completed'] || 0),
+      make('Cancelled Orders', cancelled, 'bulk-kpi-cancelled', shareMap['Cancelled'] || 0),
+      make('Bulk Revenue', compactMoney(totalRevenue), 'bulk-kpi-revenue', revenueTrend),
+    ];
+  }, [bulkOrderRecords, bulkPipelineSummary, bulkMonthlyRevenue]);
+
+  const showBulkStatusToast = (messages) => {
+    const list = Array.isArray(messages) && messages.length ? messages : ['Status updated successfully'];
+    list.slice(0, 3).forEach((item) => {
+      const text = String(item || '').replace(/^✓\s*/, '').replace(/^âœ“\s*/, '').trim();
+      toast.success(text || 'Status updated successfully');
+    });
+  };
+
+  const updateBulkOrderPipeline = async (orderId, status) => {
+    setError('');
+    setMessage('');
+    try {
+      const response = await api.put(`/bulk-orders/${orderId}/status`, { status });
+      const updatedOrder = response.data.order || response.data;
+      setBulkOrders((prev) => ({
+        ...prev,
+        orders: (prev.orders || []).map((order) => (order.id === orderId ? updatedOrder : order)),
+      }));
+      if ((selectedBulkOrder?.id || '') === orderId) {
+        setSelectedBulkOrder(updatedOrder);
+      }
+      if (status === 'Approved') {
+        const customersRes = await api.get('/bulk-orders/customers');
+        setBulkCustomers(customersRes.data);
+      }
+      showBulkStatusToast((response.data.messages || []).map((item) => `✓ ${item}`));
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const deleteBulkOrder = async (orderId) => {
+    const confirmed = window.confirm('Delete this bulk order request?');
+    if (!confirmed) return;
+
+    setError('');
+    setMessage('');
+    try {
+      await api.delete(`/bulk-orders/${orderId}`);
+      setBulkOrders((prev) => ({
+        ...prev,
+        orders: (prev.orders || []).filter((order) => order.id !== orderId),
+      }));
+      if ((selectedBulkOrder?.id || '') === orderId) {
+        setSelectedBulkOrder(null);
+      }
+      const customersRes = await api.get('/bulk-orders/customers');
+      setBulkCustomers(customersRes.data);
+      showBulkStatusToast(['✓ Bulk order deleted']);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+    // Premium custom status selector component
+    function StatusSelector({ order }) {
+      const [open, setOpen] = useState(false);
+      const current = normalizeBulkStatus(order.status);
+      const statusMeta = getBulkStatusMeta(order.status);
+
+      const toggle = (e) => { e.stopPropagation && e.stopPropagation(); setOpen((v) => !v); };
+      const choose = async (e, s) => { e.stopPropagation && e.stopPropagation(); await updateBulkOrderPipeline(order.id, s); setOpen(false); };
+
+      return (
+        <div className="custom-status-selector" onClick={(e) => e.stopPropagation()}>
+          <button type="button" className={`status-btn ${statusMeta.className}`} onClick={toggle} aria-haspopup="listbox" aria-expanded={open}>
+            <span className="status-label">{current}</span>
+            <span className="status-caret">▾</span>
+          </button>
+          {open && (
+            <ul className="status-menu" role="listbox">
+              {BULK_ORDER_STATUSES.map((s) => (
+                <li key={s} role="option" aria-selected={s === current} className={`status-option ${s === current ? 'active' : ''}`} onClick={(e) => choose(e, s)}>
+                  <span className="status-label">{s}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      );
+    }
 
   const productPayload = {
     ...productForm,
@@ -372,28 +1054,128 @@ export default function AdminDashboard() {
 
   const submitExpense = async (event) => {
     event.preventDefault();
-    await api.post('/finance/expenses', expenseForm);
-    setExpenseForm(emptyExpense);
-    await loadAdminData();
+    setError('');
+    setMessage('');
+    try {
+      if (editingExpenseId) {
+        await api.put(`/finance/expenses/${editingExpenseId}`, expenseForm);
+        setMessage('Expense updated');
+      } else {
+        await api.post('/finance/expenses', expenseForm);
+        setMessage('Expense added');
+      }
+      setExpenseForm(emptyExpense);
+      setEditingExpenseId(null);
+      await loadAdminData();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
-  const submitBulkCustomer = async (event) => {
-    event.preventDefault();
-    await api.post('/bulk-orders/customers', bulkForm);
-    setBulkForm(emptyBulkCustomer);
-    await loadAdminData();
+  const editExpense = (expense) => {
+    setEditingExpenseId(expense.id || expense._id);
+    setExpenseForm({
+      title: expense.title || '',
+      category: expense.category || 'Material cost',
+      amount: expense.amount || '',
+    });
+  };
+
+  const deleteExpense = async (id) => {
+    setError('');
+    setMessage('');
+    try {
+      await api.delete(`/finance/expenses/${id}`);
+      if (editingExpenseId === id) {
+        setEditingExpenseId(null);
+        setExpenseForm(emptyExpense);
+      }
+      if ((selectedExpense?.id || selectedExpense?._id) === id) setSelectedExpense(null);
+      setMessage('Expense deleted');
+      await loadAdminData();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const printInvoice = (order) => {
     const orderItems = Array.isArray(order.items) && order.items.length
       ? order.items
-      : [{ name: order.productName, quantity: order.quantity, price: order.price, size: order.size }];
+      : Array.isArray(order.products) && order.products.length
+        ? order.products
+        : [{ name: order.productName, quantity: order.quantity, price: order.price, size: order.size }];
     const lines = orderItems.map((item) => `${item.name} x ${item.quantity} - ${money(Number(item.price || 0) * Number(item.quantity || 1))}`).join('\n');
-    const invoice = `ATELIER INVOICE\n\nCustomer: ${order.customerName || order.user?.name || order.address?.fullName || 'Customer'}\nEmail: ${order.customerEmail || order.user?.email || ''}\nOrder: ${order.orderId || order._id}\n\n${lines}\n\nShipping: ${money(order.shippingCost || 0)}\nTotal: ${money(order.totalAmount ?? order.totalPrice)}`;
+    const invoice = `ATELIER INVOICE\n\nInvoice ID: ${order.invoiceId || order.invoiceNumber || '-'}\nOrder Reference: ${order.orderId || order._id || '-'}\nTransaction Reference: ${order.transactionId || order.payment?.reference || '-'}\n\nCustomer: ${order.customerName || order.customer || order.user?.name || order.address?.fullName || 'Customer'}\nEmail: ${order.customerEmail || order.email || order.user?.email || ''}\n\n${lines}\n\nShipping: ${money(order.shippingCost ?? order.shipping ?? 0)}\nTotal: ${money(order.totalAmount ?? order.totalPrice ?? order.grandTotal ?? order.amount)}`;
     const popup = window.open('', '_blank', 'width=720,height=900');
     popup.document.write(`<pre style="font-family:Arial;padding:32px;line-height:1.6">${invoice}</pre>`);
     popup.document.close();
     popup.print();
+  };
+
+  const downloadInvoicePdf = async (invoice) => {
+    const invoiceKey = invoice.invoiceId || invoice.id || invoice._id;
+    setInvoiceActionId(`download-${invoiceKey}`);
+    try {
+      const response = await api.get(`/invoices/download/${invoiceKey}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${invoice.invoiceId || invoice.invoiceNumber || 'invoice'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage('Invoice downloaded successfully.');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setInvoiceActionId('');
+    }
+  };
+
+  const viewInvoiceDetails = (invoice) => {
+    setSelectedInvoice(invoice);
+  };
+
+  const openInvoiceEmailComposer = (invoice) => {
+    setEmailComposer({
+      invoice,
+      to: invoice.email || invoice.customerEmail || '',
+      subject: `Astravia Invoice - ${invoice.invoiceId || invoice.invoiceNumber || ''}`,
+      message: buildInvoiceEmailMessage(invoice),
+    });
+    setError('');
+    setMessage('');
+  };
+
+  const updateEmailComposer = (key, value) => {
+    setEmailComposer((prev) => prev ? { ...prev, [key]: value } : prev);
+  };
+
+  const submitInvoiceEmail = async () => {
+    if (!emailComposer?.invoice) return;
+    const invoice = emailComposer.invoice;
+    const invoiceKey = invoice.invoiceId || invoice.id || invoice._id;
+    setInvoiceActionId(`email-${invoiceKey}`);
+    setError('');
+    setMessage('Sending invoice email...');
+    try {
+      const response = await api.post(`/invoices/send-email/${invoiceKey}`, {
+        to: emailComposer.to,
+        subject: emailComposer.subject,
+        message: emailComposer.message,
+      });
+      const successMessage = response.data?.message || 'Invoice emailed successfully.';
+      setMessage(successMessage);
+      setEmailComposer(null);
+      await loadAdminData();
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setMessage('');
+      setError(errorMessage);
+    } finally {
+      setInvoiceActionId('');
+    }
   };
 
   const whatsappUrl = (phone, text) =>
@@ -407,11 +1189,26 @@ export default function AdminDashboard() {
     window.open(whatsappUrl(phone, text), '_blank', 'noopener,noreferrer');
   };
 
-  const saveSettings = async (event) => {
+  const updateSetting = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSettingsDirty(true);
+  };
+
+  const saveSettingsSection = async (sectionId) => {
+    if (sectionId === 'payment') {
+      const response = await api.put('/settings/payment', settings);
+      setSettings((prev) => ({ ...prev, ...response.data, merchantSecret: '' }));
+    } else if (sectionId === 'site' || sectionId === 'general') {
+      const response = await api.put('/settings', settings);
+      setSettings((prev) => ({ ...prev, ...response.data }));
+    }
+    setSettingsDirty(false);
+    setMessage('Settings saved successfully');
+  };
+
+  const handleSettingsSubmit = async (event, sectionId) => {
     event.preventDefault();
-    const response = await api.put('/settings/payment', settings);
-    setSettings((prev) => ({ ...prev, ...response.data, merchantSecret: '' }));
-    setMessage('Settings saved');
+    await saveSettingsSection(sectionId);
   };
 
   const saveHomepage = async (event) => {
@@ -586,6 +1383,158 @@ export default function AdminDashboard() {
     };
   }, [customerRows]);
 
+  const dashboardData = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonthStart = startOfMonth;
+
+    const orderDate = (order) => {
+      const date = new Date(order.orderDate || order.createdAt || order.updatedAt || 0);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+    const orderAmount = (order) => Number(order.totalAmount ?? order.totalPrice ?? order.amount ?? 0);
+    const orderStatus = (order) => String(order.orderStatus || order.status || '').toLowerCase();
+    const isCompleted = (order) => ['delivered', 'completed'].includes(orderStatus(order));
+
+    const revenueFor = (predicate) => orders.reduce((sum, order) => {
+      const date = orderDate(order);
+      return date && predicate(date, order) ? sum + orderAmount(order) : sum;
+    }, 0);
+
+    const todayOrders = orders.filter((order) => {
+      const date = orderDate(order);
+      return date && date >= startOfToday;
+    });
+    const monthOrders = orders.filter((order) => {
+      const date = orderDate(order);
+      return date && date >= startOfMonth;
+    });
+    const lastMonthOrders = orders.filter((order) => {
+      const date = orderDate(order);
+      return date && date >= lastMonthStart && date < thisMonthStart;
+    });
+
+    const totalRevenue = orders.reduce((sum, order) => sum + orderAmount(order), 0);
+    const todayRevenue = revenueFor((date) => date >= startOfToday);
+    const monthRevenue = revenueFor((date) => date >= startOfMonth);
+    const yearRevenue = revenueFor((date) => date >= startOfYear);
+    const lastMonthRevenue = lastMonthOrders.reduce((sum, order) => sum + orderAmount(order), 0);
+    const monthlyGrowth = lastMonthRevenue ? ((monthRevenue - lastMonthRevenue) / Math.abs(lastMonthRevenue)) * 100 : (monthRevenue ? 100 : 0);
+    const averageOrderValue = orders.length ? totalRevenue / orders.length : 0;
+
+    const productStock = (product) => {
+      if (product?.sizeStock && typeof product.sizeStock === 'object') {
+        return Object.values(product.sizeStock).reduce((sum, value) => sum + Number(value || 0), 0);
+      }
+      return Number(product.stock ?? product.totalStock ?? 0);
+    };
+
+    const lowStockProducts = products
+      .map((product) => ({
+        id: product.id || product._id || product.name,
+        name: product.name || 'Product',
+        stock: productStock(product),
+      }))
+      .filter((product) => product.stock <= 15)
+      .sort((a, b) => a.stock - b.stock)
+      .slice(0, 6);
+
+    const productLookup = new Map(products.map((product) => [String(product.id || product._id), product]));
+    const productSales = new Map();
+    orders.forEach((order) => {
+      const items = Array.isArray(order.items) && order.items.length ? order.items : [];
+      items.forEach((item) => {
+        const product = productLookup.get(String(item.product || item.productId || ''));
+        const name = item.name || item.productName || product?.name || 'Product';
+        const quantity = Number(item.quantity || 1);
+        const price = Number(item.price || item.unitPrice || product?.price || 0);
+        const existing = productSales.get(name) || { name, units: 0, revenue: 0 };
+        existing.units += quantity;
+        existing.revenue += quantity * price;
+        productSales.set(name, existing);
+      });
+    });
+    const topProducts = Array.from(productSales.values())
+      .sort((a, b) => b.revenue - a.revenue || b.units - a.units)
+      .slice(0, 5);
+
+    const sortedOrders = [...orders].sort((a, b) => (orderDate(b)?.getTime() || 0) - (orderDate(a)?.getTime() || 0));
+    const recentOrders = sortedOrders.slice(0, 5);
+
+    const activity = [
+      ...sortedOrders.slice(0, 2).map((order) => ({ type: 'New order received', label: order.orderId || order.id || order._id, date: orderDate(order) })),
+      ...invoiceRecords.slice(0, 2).map((invoice) => ({ type: 'Invoice generated', label: invoice.invoiceId || invoice.invoiceNumber, date: new Date(invoice.date || invoice.issueDate || invoice.createdAt || 0) })),
+      ...products.filter((product) => product.updatedAt).slice(0, 1).map((product) => ({ type: 'Product updated', label: product.name, date: new Date(product.updatedAt) })),
+      ...customerRows.filter((customer) => customer.createdAt).slice(0, 1).map((customer) => ({ type: 'Customer registered', label: customer.name, date: new Date(customer.createdAt) })),
+    ].filter((item) => item.date && !Number.isNaN(item.date.getTime()))
+      .sort((a, b) => b.date - a.date)
+      .slice(0, 5);
+
+    const rangeConfig = {
+      '7d': { days: 7, label: '7 Days' },
+      '30d': { days: 30, label: '30 Days' },
+      '12m': { months: 12, label: '12 Months' },
+    };
+    const range = rangeConfig[dashboardRange] || rangeConfig['30d'];
+    const revenueSeries = [];
+    if (range.months) {
+      for (let index = 0; index < range.months; index += 1) {
+        const start = new Date(now.getFullYear(), index, 1);
+        const end = new Date(now.getFullYear(), index + 1, 1);
+        revenueSeries.push({
+          label: start.toLocaleDateString('en-US', { month: 'short' }),
+          revenue: revenueFor((date) => date >= start && date < end),
+        });
+      }
+    } else {
+      for (let index = range.days - 1; index >= 0; index -= 1) {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - index);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - index + 1);
+        revenueSeries.push({
+          label: range.days <= 7 ? start.toLocaleDateString('en-US', { weekday: 'short' }) : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          revenue: revenueFor((date) => date >= start && date < end),
+        });
+      }
+    }
+
+    const returningCustomers = customerRows.filter((customer) => !customer.isAdmin && customer.totalOrders > 1).length;
+    const totalCustomers = customerMetrics.totalCustomers || 0;
+    const returningCustomerPercent = totalCustomers ? Math.round((returningCustomers / totalCustomers) * 100) : 0;
+
+    return {
+      topKpis: [
+        { label: 'Total Orders', value: orders.length, trend: monthOrders.length >= lastMonthOrders.length ? 'up' : 'down', today: todayOrders.length, month: monthOrders.length },
+        { label: 'Total Revenue', value: formatLkr(totalRevenue), trend: monthRevenue >= lastMonthRevenue ? 'up' : 'down', today: formatLkr(todayRevenue), month: formatLkr(monthRevenue) },
+        { label: 'Total Customers', value: totalCustomers, trend: customerMetrics.newCustomers ? 'up' : 'neutral', today: customerRows.filter((customer) => customer.createdAt && new Date(customer.createdAt) >= startOfToday).length, month: customerMetrics.newCustomers },
+        { label: 'Low Stock Alerts', value: lowStockProducts.length, trend: lowStockProducts.length ? 'warning' : 'up', today: lowStockProducts.length, month: `${lowStockProducts.length} products` },
+      ],
+      secondaryKpis: [
+        { label: 'Pending Orders', value: orders.filter((order) => orderStatus(order) === 'pending').length },
+        { label: 'Completed Orders', value: orders.filter(isCompleted).length },
+        { label: 'Average Order Value', value: formatLkr(averageOrderValue) },
+        { label: 'Monthly Growth %', value: `${monthlyGrowth.toFixed(1)}%`, trend: monthlyGrowth >= 0 ? 'up' : 'down' },
+      ],
+      revenueSeries,
+      recentOrders,
+      topProducts,
+      lowStockProducts,
+      activity,
+      customerInsights: {
+        totalCustomers,
+        newThisMonth: customerMetrics.newCustomers,
+        returningCustomerPercent,
+      },
+      performance: {
+        todayRevenue,
+        monthRevenue,
+        yearRevenue,
+      },
+    };
+  }, [customerMetrics.newCustomers, customerMetrics.totalCustomers, customerRows, dashboardRange, invoiceRecords, orders, products]);
+
   const statusClass = (status) => {
     const value = String(status || '').toLowerCase();
     if (value === 'pending') return 'pending';
@@ -631,42 +1580,149 @@ export default function AdminDashboard() {
     return product?.images?.[0] || '';
   };
 
-  const renderDashboard = () => (
-    <>
-      <div className="admin-metrics">
-        <MetricCard label="Total Users" value={totals.users} note="Registered accounts" />
-        <MetricCard label="Total Orders" value={totals.orders} note="All order statuses" />
-        <MetricCard label="Total Revenue" value={money(totals.revenue)} note="Gross sales" />
-        <MetricCard label="Low Stock Alerts" value={totals.lowStock} note="Below 15 units" />
-      </div>
-      <div className="admin-two-col">
-        <section className="admin-panel">
-          <div className="admin-section-head"><span>Recent</span><h2>Orders</h2></div>
-          <DataTable
-            columns={[
-              { key: 'customer', label: 'Customer' },
-              { key: 'total', label: 'Total' },
-              { key: 'status', label: 'Status' },
-            ]}
-            rows={orders.slice(0, 6).map((order) => ({
-              id: order._id,
-              customer: order.customerName || order.user?.name || order.address?.fullName || 'Customer',
-              total: money(order.totalAmount ?? order.totalPrice),
-              status: order.orderStatus || order.status,
-            }))}
-          />
+  const renderDashboard = () => {
+    const topProductMax = Math.max(...dashboardData.topProducts.map((item) => item.revenue), 1);
+
+    return (
+      <div className="luxury-dashboard">
+        <div className="dashboard-kpi-grid primary">
+          {dashboardData.topKpis.map((item) => (
+            <article className={`dashboard-kpi-card ${item.trend || ''}`} key={item.label}>
+              <div>
+                <span>{item.label}</span>
+                <i>{item.trend === 'down' ? 'Down' : item.trend === 'warning' ? 'Watch' : 'Up'}</i>
+              </div>
+              <strong>{item.value}</strong>
+              <footer>
+                <em>Today: {item.today}</em>
+                <em>Month: {item.month}</em>
+              </footer>
+            </article>
+          ))}
+        </div>
+
+        <div className="dashboard-kpi-grid secondary">
+          {dashboardData.secondaryKpis.map((item) => (
+            <article className={`dashboard-mini-kpi ${item.trend || ''}`} key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </article>
+          ))}
+        </div>
+
+        <section className="admin-panel luxury-dashboard-chart">
+          <div className="admin-section-head">
+            <span>Sales Analytics</span>
+            <h2>Revenue Overview</h2>
+          </div>
+          <div className="dashboard-range-toggle" role="group" aria-label="Revenue range">
+            {[
+              ['7d', '7 Days'],
+              ['30d', '30 Days'],
+              ['12m', '12 Months'],
+            ].map(([value, label]) => (
+              <button key={value} type="button" className={dashboardRange === value ? 'active' : ''} onClick={() => setDashboardRange(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <PremiumLineChart data={dashboardData.revenueSeries} valueKey="revenue" tone="revenue" />
         </section>
-        <section className="admin-panel">
-          <div className="admin-section-head"><span>Performance</span><h2>Sales Over Time</h2></div>
-          <ColumnChart data={analytics?.salesOverTime || []} />
-        </section>
+
+        <div className="dashboard-main-grid">
+          <section className="admin-panel">
+            <div className="admin-section-head"><span>Order Insights</span><h2>Recent Orders</h2></div>
+            <DataTable
+              columns={[
+                { key: 'customer', label: 'Customer' },
+                { key: 'orderId', label: 'Order ID' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'status', label: 'Status', render: (row) => <StatusPill status={row.status} /> },
+                { key: 'date', label: 'Date' },
+              ]}
+              rows={dashboardData.recentOrders.map((order) => ({
+                id: order.id || order._id || order.orderId,
+                customer: order.customerName || order.user?.name || order.address?.fullName || 'Customer',
+                orderId: order.orderId || String(order.id || order._id || '').slice(-8),
+                amount: formatLkr(order.totalAmount ?? order.totalPrice ?? order.amount),
+                status: order.orderStatus || order.status || 'Pending',
+                date: formatDate(order.orderDate || order.createdAt),
+              }))}
+            />
+          </section>
+
+          <section className="admin-panel dashboard-side-card">
+            <div className="admin-section-head"><span>Customers</span><h2>Customer Insights</h2></div>
+            <div className="dashboard-insight-list">
+              <p><span>Total Customers</span><strong>{dashboardData.customerInsights.totalCustomers}</strong></p>
+              <p><span>New This Month</span><strong>{dashboardData.customerInsights.newThisMonth}</strong></p>
+              <p><span>Returning Customers</span><strong>{dashboardData.customerInsights.returningCustomerPercent}%</strong></p>
+            </div>
+          </section>
+        </div>
+
+        <div className="dashboard-main-grid balanced">
+          <section className="admin-panel">
+            <div className="admin-section-head"><span>Top Products</span><h2>Best Performers</h2></div>
+            <div className="dashboard-product-bars">
+              {dashboardData.topProducts.length ? dashboardData.topProducts.map((item) => (
+                <article key={item.name}>
+                  <div><strong>{item.name}</strong><span>{item.units} units</span><em>{formatLkr(item.revenue)}</em></div>
+                  <b><i style={{ width: `${Math.max(8, Math.round((item.revenue / topProductMax) * 100))}%` }} /></b>
+                </article>
+              )) : <p className="dashboard-empty">No product sales yet.</p>}
+            </div>
+          </section>
+
+          <section className="admin-panel dashboard-side-card">
+            <div className="admin-section-head"><span>Inventory</span><h2>Low Stock</h2></div>
+            <div className="dashboard-stock-list">
+              {dashboardData.lowStockProducts.length ? dashboardData.lowStockProducts.map((product) => (
+                <p key={product.id} className={product.stock <= 5 ? 'critical' : ''}>
+                  <span>{product.name}</span>
+                  <strong>{product.stock} left</strong>
+                </p>
+              )) : <p className="dashboard-empty">No low stock products.</p>}
+            </div>
+          </section>
+        </div>
+
+        <div className="dashboard-main-grid balanced">
+          <section className="admin-panel dashboard-side-card">
+            <div className="admin-section-head"><span>Activity</span><h2>Recent Activity</h2></div>
+            <div className="dashboard-activity">
+              {dashboardData.activity.length ? dashboardData.activity.map((item, index) => (
+                <p key={`${item.type}-${item.label}-${index}`}>
+                  <i>✓</i>
+                  <span>{item.type}<em>{item.label || 'Astravia'}</em></span>
+                  <time>{formatDate(item.date)}</time>
+                </p>
+              )) : <p className="dashboard-empty">No recent activity.</p>}
+            </div>
+          </section>
+
+          <section className="admin-panel dashboard-side-card">
+            <div className="admin-section-head"><span>Actions</span><h2>Quick Actions</h2></div>
+            <div className="dashboard-actions">
+              <button type="button" onClick={() => setActive('Products')}>+ Add Product</button>
+              <button type="button" onClick={() => setActive('Orders')}>+ Create Order</button>
+              <button type="button" onClick={() => setActive('Invoices')}>+ Generate Invoice</button>
+              <button type="button" onClick={() => setActive('Analytics')}>View Reports</button>
+            </div>
+          </section>
+
+          <section className="admin-panel dashboard-side-card performance">
+            <div className="admin-section-head"><span>Performance</span><h2>Business Performance</h2></div>
+            <div className="dashboard-insight-list">
+              <p><span>Today's Revenue</span><strong>{formatLkr(dashboardData.performance.todayRevenue)}</strong></p>
+              <p><span>This Month</span><strong>{formatLkr(dashboardData.performance.monthRevenue)}</strong></p>
+              <p><span>This Year</span><strong>{formatLkr(dashboardData.performance.yearRevenue)}</strong></p>
+            </div>
+          </section>
+        </div>
       </div>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Top Selling</span><h2>Products</h2></div>
-        <BarChart data={analytics?.topProducts || []} valueKey="quantity" labelKey="name" />
-      </section>
-    </>
-  );
+    );
+  };
 
   const renderProducts = () => (
     <>
@@ -941,21 +1997,13 @@ export default function AdminDashboard() {
         <DataTable
           columns={[
             { key: 'orderId', label: 'Order ID' },
-            { key: 'customerName', label: 'Customer Name' },
-            { key: 'customerEmail', label: 'Customer Email' },
-            { key: 'customerId', label: 'Customer ID', render: (row) => <span className="customer-id">{row.customerId}</span> },
-            { key: 'phone', label: 'Phone', className: 'admin-order-phone-column' },
+            { key: 'customerName', label: 'Customer' },
             { key: 'productName', label: 'Product' },
-            { key: 'size', label: 'Size' },
-            { key: 'quantity', label: 'Qty' },
-            { key: 'price', label: 'Price' },
-            { key: 'shippingCost', label: 'Shipping' },
-            { key: 'totalAmount', label: 'Total Amount' },
-            { key: 'paymentMethod', label: 'Payment Method' },
-            { key: 'paymentStatus', label: 'Payment Status', render: (row) => <span className={`admin-pill ${paymentClass(row.paymentStatus)}`}>{row.paymentStatus.toUpperCase()}</span> },
+            { key: 'totalAmount', label: 'Amount' },
             { key: 'status', label: 'Order Status', render: (row) => <span className={`admin-pill ${statusClass(row.status)}`}>{row.status.toUpperCase()}</span> },
+            { key: 'paymentStatus', label: 'Payment Status', render: (row) => <span className={`admin-pill ${paymentClass(row.paymentStatus)}`}>{row.paymentStatus.toUpperCase()}</span> },
             { key: 'transactionId', label: 'Transaction ID' },
-            { key: 'orderDate', label: 'Order Date' },
+            { key: 'orderDate', label: 'Created Date' },
             { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button className="admin-action admin-action-open" onClick={() => setSelectedOrder(row.raw)}>Open</button><button className="admin-action admin-action-message" onClick={() => messageCustomer(row.raw)}>Message</button></div> },
           ]}
           rows={filteredOrders.map((order) => ({
@@ -1135,88 +2183,663 @@ export default function AdminDashboard() {
   );
 
   const renderFinance = () => (
-    <>
-      <div className="admin-metrics">
-        <MetricCard label="Revenue" value={money(finance?.revenue)} />
-        <MetricCard label="Expenses" value={money(finance?.expenses)} />
-        <MetricCard label="Profit" value={money(finance?.profit)} />
-      </div>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Expenses</span><h2>Add Expense</h2></div>
-        <div className="admin-filter-row">
-          {['all', 'Material cost', 'Shipping cost', 'Marketing'].map((category) => (
-            <button key={category} className={expenseFilter === category ? 'active' : ''} onClick={() => setExpenseFilter(category)}>
-              {category}
-            </button>
-          ))}
-        </div>
-        <form className="admin-form compact" onSubmit={submitExpense}>
-          <label>Title<input value={expenseForm.title} onChange={(e) => setExpenseForm((prev) => ({ ...prev, title: e.target.value }))} /></label>
-          <label>Category<select value={expenseForm.category} onChange={(e) => setExpenseForm((prev) => ({ ...prev, category: e.target.value }))}><option>Material cost</option><option>Shipping cost</option><option>Marketing</option><option>Other</option></select></label>
-          <label>Amount<input type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))} /></label>
-          <button className="admin-primary" type="submit">Save Expense</button>
-        </form>
+    <div className="erp-page">
+      <div className="erp-metrics">{(finance?.summary || []).map((item) => <PremiumMetricCard key={item.label} item={item} />)}</div>
+      <section className="finance-section">
+        <div className="admin-section-head"><span>Cash Flow</span><h2>Cash Flow Summary</h2></div>
+        <div className="finance-cash-grid">{(finance?.cashFlow || []).map((item) => <PremiumMetricCard key={item.label} item={item} />)}</div>
       </section>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Ledger</span><h2>Expense Table</h2></div>
+      <section className="finance-section">
+        <div className="admin-section-head"><span>Expense Overview</span><h2>Expense Summary</h2></div>
+        <div className="finance-expense-summary">{expenseSummaryCards.map((item) => <PremiumMetricCard key={item.label} item={item} />)}</div>
+      </section>
+      <div className="finance-operations-grid">
+        <section className="erp-card finance-expense-card">
+          <div className="admin-section-head"><span>Expense Management</span><h2>{editingExpenseId ? 'Edit Expense' : 'Add Expense'}</h2></div>
+          <form className="finance-expense-form" onSubmit={submitExpense}>
+            <label>Expense Title<input value={expenseForm.title} placeholder="e.g. Silk supplier balance" onChange={(e) => setExpenseForm((prev) => ({ ...prev, title: e.target.value }))} /></label>
+            <label>Category<select value={expenseForm.category} onChange={(e) => setExpenseForm((prev) => ({ ...prev, category: e.target.value }))}><option>Material cost</option><option>Shipping cost</option><option>Marketing</option><option>Other</option></select></label>
+            <label>Amount<input type="number" min="0" step="0.01" value={expenseForm.amount} placeholder="0.00" onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))} /></label>
+            <div className="admin-actions finance-expense-actions">
+              <button className="admin-primary finance-expense-submit" type="submit">{editingExpenseId ? 'Update Expense' : 'Save Expense'}</button>
+              {editingExpenseId && <button className="admin-action admin-action-message" type="button" onClick={() => { setEditingExpenseId(null); setExpenseForm(emptyExpense); }}>Cancel</button>}
+            </div>
+          </form>
+        </section>
+      </div>
+      <section className="erp-card finance-records-card">
+        <div className="admin-section-head"><span>Expense Ledger</span><h2>Expense Records</h2></div>
         <DataTable
           columns={[
-            { key: 'title', label: 'Title' },
+            { key: 'expenseName', label: 'Expense Name' },
             { key: 'category', label: 'Category' },
             { key: 'amount', label: 'Amount' },
+            { key: 'dateAdded', label: 'Date Added' },
+            {
+              key: 'actions',
+              label: 'Actions',
+              render: (row) => (
+                <div className="admin-actions finance-record-actions">
+                  <button className="admin-action admin-action-open" type="button" onClick={() => setSelectedExpense(row.raw)}>View</button>
+                  <button className="admin-action admin-action-message" type="button" onClick={() => editExpense(row.raw)}>Edit</button>
+                  <button className="admin-action admin-action-cancelled" type="button" onClick={() => deleteExpense(row.id)}>Delete</button>
+                </div>
+              ),
+            },
           ]}
-          rows={(finance?.expenseItems || []).map((expense) => ({ id: expense._id, title: expense.title, category: expense.category, amount: money(expense.amount) }))}
+          rows={expenseRecords.map((expense) => ({
+            id: expense.id || expense._id,
+            raw: expense,
+            expenseName: expense.title,
+            category: expense.category,
+            amount: money(expense.amount),
+            dateAdded: formatDate(expense.date || expense.createdAt),
+          }))}
         />
       </section>
-      <section className="admin-panel"><div className="admin-section-head"><span>Breakdown</span><h2>Expense Breakdown</h2></div><PieChart data={Object.entries(finance?.breakdown || {}).map(([label, amount]) => ({ label, amount }))} valueKey="amount" /></section>
-    </>
+      <section className="erp-card"><div className="admin-section-head"><span>Performance</span><h2>Best Revenue Products</h2></div><DataTable columns={[{ key: 'product', label: 'Product' }, { key: 'orders', label: 'Orders' }, { key: 'revenue', label: 'Revenue' }, { key: 'profit', label: 'Profit' }]} rows={(finance?.bestProducts || []).map((item) => ({ id: item.product, ...item, revenue: money(item.revenue), profit: money(item.profit) }))} /></section>
+      <section className="erp-card"><div className="admin-section-head"><span>Ledger</span><h2>Recent Transactions</h2></div><DataTable columns={[{ key: 'transactionId', label: 'Transaction ID' }, { key: 'customer', label: 'Customer' }, { key: 'amount', label: 'Amount' }, { key: 'paymentStatus', label: 'Payment Status', render: (row) => <StatusPill status={row.paymentStatus} /> }, { key: 'date', label: 'Date' }]} rows={(finance?.recentTransactions || []).map((item) => ({ id: item.transactionId || item.id, ...item, amount: money(item.amount), date: formatDate(item.date || item.createdAt) }))} /></section>
+      <section className="finance-analytics-section">
+        <div className="admin-section-head"><span></span><h2>Executive Analytics</h2></div>
+        <div className="finance-chart-suite">
+          <section className="erp-card glass finance-chart-card finance-line-card"><div className="admin-section-head"><span>Revenue Analytics</span><h2>Monthly Revenue</h2></div><PremiumLineChart data={finance?.monthlyRevenue || []} valueKey="revenue" tone="revenue" /></section>
+          <section className="erp-card glass finance-chart-card finance-line-card"><div className="admin-section-head"><span>Profit Analytics</span><h2>Monthly Profit</h2></div><PremiumLineChart data={finance?.monthlyProfit || []} valueKey="profit" tone="profit" /></section>
+          <section className="erp-card finance-chart-card"><div className="admin-section-head"><span>Collections</span><h2>Revenue by Collection</h2></div><PremiumDonutChart data={finance?.revenueByCollection || []} /></section>
+          <section className="erp-card finance-chart-card"><div className="admin-section-head"><span>Revenue Mix</span><h2>Revenue Sources</h2></div><PremiumDonutChart data={finance?.revenueSources || []} /></section>
+        </div>
+      </section>
+      {selectedExpense && (
+        <aside className="erp-drawer finance-expense-drawer">
+          <button className="admin-close" type="button" onClick={() => setSelectedExpense(null)}>Close</button>
+          <div className="admin-section-head"><span>Expense Record</span><h2>{selectedExpense.title}</h2></div>
+          <div className="erp-detail-grid">
+            <span>Category<strong>{selectedExpense.category}</strong></span>
+            <span>Amount<strong>{money(selectedExpense.amount)}</strong></span>
+            <span>Date Added<strong>{formatDate(selectedExpense.date || selectedExpense.createdAt)}</strong></span>
+            <span>Reference<strong>{selectedExpense.id || selectedExpense._id}</strong></span>
+          </div>
+          <div className="admin-actions">
+            <button className="admin-action admin-action-message" type="button" onClick={() => editExpense(selectedExpense)}>Edit</button>
+            <button className="admin-action admin-action-cancelled" type="button" onClick={() => deleteExpense(selectedExpense.id || selectedExpense._id)}>Delete</button>
+          </div>
+        </aside>
+      )}
+    </div>
   );
 
   const renderAnalytics = () => (
-    <div className="admin-two-col">
-      <section className="admin-panel"><div className="admin-section-head"><span>Revenue</span><h2>Revenue Trends</h2></div><ColumnChart data={analytics?.monthlyRevenue || []} /></section>
-      <section className="admin-panel"><div className="admin-section-head"><span>Customers</span><h2>Customer Growth</h2></div><ColumnChart data={analytics?.customerGrowth || []} valueKey="customers" /></section>
-      <section className="admin-panel"><div className="admin-section-head"><span>Products</span><h2>Product Performance</h2></div><BarChart data={analytics?.productPerformance || []} labelKey="name" /></section>
-      <section className="admin-panel"><div className="admin-section-head"><span>Frequency</span><h2>Order Frequency</h2></div><ColumnChart data={analytics?.orderFrequency || []} valueKey="orders" /></section>
+    <div className="erp-page analytics-dashboard">
+      <div className="erp-metrics">{(analytics?.kpis || []).map((item) => <PremiumMetricCard key={item.label} item={item} />)}</div>
+
+      <section className="erp-card glass analytics-hero-card">
+        <div className="admin-section-head">
+          <span>Revenue Intelligence</span>
+          <h2>Revenue Trend</h2>
+        </div>
+        <div className="analytics-hero-meta">
+          <article><span>Current Revenue</span><strong>{compactMoney(finance?.monthlyTarget?.currentRevenue || totals.revenue)}</strong></article>
+          <article><span>Goal</span><strong>{compactMoney(finance?.monthlyTarget?.revenueGoal || totals.revenue)}</strong></article>
+          <article><span>Completion</span><strong>{Number(finance?.monthlyTarget?.completion || 0).toFixed(0)}%</strong></article>
+        </div>
+        <PremiumLineChart data={revenueTrend} valueKey="revenue" tone="revenue" />
+      </section>
+
+      <div className="analytics-duo-grid">
+        <section className="erp-card glass analytics-chart-card">
+          <div className="admin-section-head"><span>Customer Growth</span><h2>New Customers</h2></div>
+          <PremiumLineChart data={weekdayNewCustomers} valueKey="customers" tone="revenue" />
+        </section>
+        <section className="erp-card glass analytics-chart-card">
+          <div className="admin-section-head"><span>Loyalty</span><h2>Returning Customers</h2></div>
+          <PremiumLineChart data={weekdayReturningCustomers} valueKey="customers" tone="profit" />
+        </section>
+      </div>
+
+      <div className="analytics-duo-grid">
+        <section className="erp-card analytics-chart-card">
+          <div className="admin-section-head"><span>Acquisition</span><h2>Traffic Sources</h2></div>
+          <PremiumDonutChart data={trafficSources} />
+        </section>
+        <section className="erp-card analytics-chart-card">
+          <div className="admin-section-head"><span>Collections</span><h2>Sales by Collection</h2></div>
+          <PremiumDonutChart data={collectionMix} />
+        </section>
+      </div>
+
+      <div className="analytics-duo-grid">
+        <section className="erp-card analytics-chart-card">
+          <div className="admin-section-head"><span>Merchandise</span><h2>Best Selling Sizes</h2></div>
+          <PremiumHorizontalBarChart data={bestSellingSizes} valueKey="value" labelKey="label" />
+        </section>
+        <section className="erp-card analytics-weekday-card">
+          <div className="admin-section-head"><span>Sales Rhythm</span><h2>Weekday Activity</h2></div>
+          <div className="erp-heatmap">{(analytics?.heatmap || []).map((day) => <div key={day.label} title={`${day.label}: ${day.value} activity score`} style={{ '--heat': day.value / 140 }}><strong>{day.value}</strong><span>{day.label}</span></div>)}</div>
+        </section>
+      </div>
+
+      <section className="erp-card analytics-table-card">
+        <div className="admin-section-head"><span>Retention</span><h2>Top Customers</h2></div>
+        <DataTable
+          columns={[
+            {
+              key: 'customer',
+              label: 'Customer',
+              render: (row) => (
+                <div className="analytics-customer-cell">
+                  <span className="analytics-customer-avatar">{row.initials}</span>
+                  <div>
+                    <strong>{row.name}</strong>
+                    <p>{row.email || 'No email on file'}</p>
+                  </div>
+                </div>
+              ),
+            },
+            { key: 'orders', label: 'Orders' },
+            { key: 'revenue', label: 'Revenue' },
+            { key: 'avgOrder', label: 'Avg. Order' },
+            { key: 'lastOrder', label: 'Last Order' },
+          ]}
+          rows={topCustomers.map((customer) => ({
+            id: customer.id,
+            ...customer,
+            revenue: compactMoney(customer.revenue),
+            avgOrder: compactMoney(customer.avgOrder),
+            lastOrder: formatDate(customer.lastOrder),
+          }))}
+          empty="No customer orders yet."
+        />
+      </section>
+
+      <section className="erp-card">
+        <div className="admin-section-head"><span>Products</span><h2>Top Performing Products</h2></div>
+        <div className="erp-product-cards">{(analytics?.topProducts || []).map((item) => <article key={item.name} title={`${item.name}: ${item.conversion}% conversion`}><h3>{item.name}</h3><p>{item.views.toLocaleString()} views</p><strong>{item.sales} sales</strong><span>{item.conversion}% conversion</span></article>)}</div>
+      </section>
+
+      <section className="erp-card insight-panel">
+        <div className="admin-section-head"><span>Insights</span><h2>Executive Notes</h2></div>
+        <div className="insight-card-grid">{Object.entries(analytics?.insights || {}).map(([key, value]) => <article key={key}><span>{key.replace(/([A-Z])/g, ' $1')}</span><strong>{value}</strong></article>)}</div>
+      </section>
     </div>
   );
 
   const renderBulkOrders = () => (
-    <>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Wholesale</span><h2>Bulk Customers</h2></div>
-        <form className="admin-form compact" onSubmit={submitBulkCustomer}>
-          {['name', 'email', 'company', 'discount', 'notes'].map((field) => <label key={field}>{field}<input value={bulkForm[field]} onChange={(e) => setBulkForm((prev) => ({ ...prev, [field]: e.target.value }))} /></label>)}
-          <button className="admin-primary" type="submit">Save Bulk Customer</button>
-        </form>
+    <div className="erp-page bulk-dashboard">
+      
+        
+        <div className="bulk-hero-grid">
+          <div>
+            <div className="top-kpi-grid">
+              {topKpiCards.map((card) => (
+                <article key={card.label} className={`premium-metric-card bulk-kpi-card ${card.className}`}>
+                  <span>{card.label}</span>
+                  <strong>{card.value}</strong>
+                  {typeof card.trend !== 'undefined' && (
+                    <small className={`bulk-kpi-trend ${card.trend >= 0 ? 'up' : 'down'}`}>{card.trend >= 0 ? 'Up' : 'Down'} {Math.abs(card.trend)}%</small>
+                  )}
+                </article>
+              ))}
+            </div>
+            {/* pipeline badges removed per design — kept data and charts elsewhere */}
+          </div>
+        </div>
+      
+
+      <section className="erp-card bulk-orders-table-card">
+        <div className="admin-section-head">
+          <span></span>
+          <h2>Bulk Orders</h2>
+        </div>
+        <div className="admin-table-wrap">
+          <table className="admin-table erp-click-table bulk-orders-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Contact Person</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Quantity</th>
+                <th>Order Value</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bulkOrderRecords.map((order) => {
+                const email = order.email || '-';
+                return (
+                  <tr key={order.id} onClick={() => setSelectedBulkOrder(order)}>
+                    <td>
+                      <div className="bulk-client-cell">
+                        <span className="bulk-client-avatar">{getInitials(getBulkCompany(order), order.email)}</span>
+                        <div>
+                          <strong>{getBulkCompany(order)}</strong>
+                          <p>{getBulkProducts(order).join(' · ') || 'Custom wholesale order'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <strong>{order.contactPerson}</strong>
+                    </td>
+                    <td className="bulk-email-cell" title={email}>
+                      <span className="bulk-email-text">{email}</span>
+                    </td>
+                    <td>{order.phone || '-'}</td>
+                    <td>{order.quantity}</td>
+                    <td>{money(getBulkOrderValue(order))}</td>
+                    <td>
+                      <StatusSelector order={order} />
+                    </td>
+                    <td>{formatDate(getBulkDate(order))}</td>
+                    <td>
+                      <div className="bulk-row-actions">
+                        <button className="admin-action admin-action-open" type="button" title="View details" onClick={(event) => { event.stopPropagation(); setSelectedBulkOrder(order); }}>
+                          View Details
+                        </button>
+                        <button className="admin-action bulk-action-delete" type="button" title="Delete request" onClick={(event) => { event.stopPropagation(); deleteBulkOrder(order.id); }}>
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
-      <section className="admin-panel"><DataTable columns={[{ key: 'name', label: 'Name' }, { key: 'email', label: 'Email' }, { key: 'company', label: 'Company' }, { key: 'discount', label: 'Discount' }]} rows={bulkCustomers.map((customer) => ({ id: customer._id, ...customer, discount: `${customer.discount || 0}%` }))} /></section>
-    </>
+
+      <section className="erp-card bulk-table-card">
+        <div className="admin-section-head"><span>Wholesale CRM</span><h2>Bulk Customer Records</h2></div>
+        <DataTable
+          columns={[
+            { key: 'company', label: 'Company' },
+            { key: 'contactPerson', label: 'Contact Person' },
+            {
+              key: 'email',
+              label: 'Email',
+              className: 'bulk-data-email',
+              render: (row) => <span className="bulk-email-text" title={row.email}>{row.email}</span>,
+            },
+            { key: 'phone', label: 'Phone' },
+            { key: 'orders', label: 'Orders' },
+            { key: 'revenue', label: 'Revenue' },
+            { key: 'lastOrder', label: 'Last Order' },
+            { key: 'actions', label: 'Actions', render: (row) => (
+              <div className="admin-actions">
+                <button className="admin-action admin-action-open" onClick={() => setSelectedBulkCustomer(row)}>View</button>
+              </div>
+            ) },
+          ]}
+          rows={buildBulkCustomerRecords(bulkCustomers || []).map((customer) => ({
+            id: customer.id || `${customer.email}-${customer.company}`,
+            company: customer.company,
+            contactPerson: customer.contactPerson,
+            email: customer.email,
+            phone: customer.phone,
+            orders: customer.orders,
+            revenue: compactMoney(customer.revenue),
+            lastOrder: formatDate(customer.lastOrder),
+            notes: customer.notes || '',
+          }))}
+          empty="No wholesale customer records yet."
+        />
+      </section>
+
+      {selectedBulkCustomer && (
+        <aside
+          className="erp-drawer bulk-customer-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bulk-customer-title"
+          onKeyDown={(e) => { if (e.key === 'Escape') setSelectedBulkCustomer(null); }}
+        >
+          <button className="admin-close" onClick={() => setSelectedBulkCustomer(null)}>Close</button>
+          <h3 id="bulk-customer-title">{selectedBulkCustomer.company}</h3>
+          <p>{selectedBulkCustomer.company} · {selectedBulkCustomer.email}</p>
+          <div className="erp-detail-grid">
+            <span>Phone<strong>{selectedBulkCustomer.phone}</strong></span>
+            <span>Orders<strong>{selectedBulkCustomer.orders}</strong></span>
+            <span>Revenue<strong>{selectedBulkCustomer.revenue}</strong></span>
+            <span>Last Order<strong>{selectedBulkCustomer.lastOrder}</strong></span>
+          </div>
+          <h4>Notes</h4>
+          <p>{selectedBulkCustomer.notes || 'No notes available.'}</p>
+        </aside>
+      )}
+
+      <section className="finance-analytics-section">
+        <div className="admin-section-head">
+          <span>Wholesale Analytics</span>
+          
+        </div>
+        <div className="finance-chart-suite bulk-chart-suite">
+          <section className="erp-card glass finance-chart-card finance-line-card bulk-chart-card">
+            <div className="admin-section-head"><span>Revenue Analytics</span><h2>Monthly Bulk Revenue</h2></div>
+            <PremiumLineChart data={bulkMonthlyRevenue} valueKey="revenue" tone="revenue" />
+          </section>
+          <section className="erp-card finance-chart-card bulk-chart-card">
+            <div className="admin-section-head"><span>Order Pipeline</span><h2>Orders by Status</h2></div>
+            <PremiumDonutChart data={bulkStatusMix} />
+          </section>
+        </div>
+      </section>
+
+      
+
+      <section className="erp-card bulk-table-card">
+        <div className="admin-section-head"><span>Key Accounts</span><h2>Top Wholesale Clients</h2></div>
+        <DataTable
+          columns={[
+            {
+              key: 'company',
+              label: 'Client',
+              render: (row) => (
+                <div className="analytics-customer-cell bulk-client-cell">
+                  <span className="bulk-client-avatar">{row.initials}</span>
+                  <div>
+                    <strong>{row.company}</strong>
+                    <p>{row.contactPerson}</p>
+                  </div>
+                </div>
+              ),
+            },
+            { key: 'orders', label: 'Orders' },
+            { key: 'quantity', label: 'Quantity' },
+            { key: 'revenue', label: 'Revenue' },
+            { key: 'avgOrder', label: 'Avg. Order' },
+            { key: 'lastOrder', label: 'Last Order' },
+          ]}
+          rows={topWholesaleClients.map((client) => ({
+            id: client.id,
+            ...client,
+            revenue: compactMoney(client.revenue),
+            avgOrder: compactMoney(client.avgOrder),
+            lastOrder: formatDate(client.lastOrder),
+          }))}
+          empty="No wholesale clients yet."
+        />
+      </section>
+
+      {selectedBulkOrder && (
+        <aside className="erp-drawer bulk-drawer">
+          <button className="admin-close" onClick={() => setSelectedBulkOrder(null)}>Close</button>
+          <h3>{getBulkCompany(selectedBulkOrder)}</h3>
+          <p>{selectedBulkOrder.contactPerson} · {selectedBulkOrder.email}</p>
+          <div className="erp-detail-grid">
+            <span>Phone<strong>{selectedBulkOrder.phone}</strong></span>
+            <span>Email<strong>{selectedBulkOrder.email}</strong></span>
+            <span>Quantity<strong>{selectedBulkOrder.quantity}</strong></span>
+            <span>Order Value<strong>{money(getBulkOrderValue(selectedBulkOrder))}</strong></span>
+            <span>Created Date<strong>{formatDate(getBulkDate(selectedBulkOrder))}</strong></span>
+            <span>Status<strong>{normalizeBulkStatus(selectedBulkOrder.status)}</strong></span>
+          </div>
+          <div className="bulk-drawer-status">
+            <span>Pipeline Status</span>
+            <StatusSelector order={selectedBulkOrder} />
+          </div>
+          <h4>Products</h4>
+          <p>{getBulkProducts(selectedBulkOrder).join(', ') || 'No products supplied.'}</p>
+          <h4>Message</h4>
+          <p>{selectedBulkOrder.message || selectedBulkOrder.notes || 'No message supplied.'}</p>
+        </aside>
+      )}
+    </div>
   );
 
-  const renderInvoices = () => (
-    <section className="admin-panel">
-      <div className="admin-section-head"><span>Documents</span><h2>Invoices</h2></div>
-      <DataTable
-        columns={[
-          { key: 'order', label: 'Order' },
-          { key: 'customer', label: 'Customer' },
-          { key: 'total', label: 'Total' },
-          { key: 'actions', label: 'Invoice', render: (row) => <button onClick={() => printInvoice(row.raw)}>Print / PDF</button> },
-        ]}
-        rows={orders.map((order) => {
-          const id = order._id || order.id;
-          return {
-            id,
-            raw: order,
-            order: order.orderId || String(id || '').slice(-6).toUpperCase(),
-            customer: order.customerName || order.user?.name || order.address?.fullName || 'Customer',
-            total: money(order.totalAmount ?? order.totalPrice)
-          };
-        })}
-      />
-    </section>
+  const renderTransactions = () => (
+    <div className="erp-page">
+      <section className="erp-card">
+        <div className="admin-section-head"><span>Payments</span><h2>Transactions</h2></div>
+        <DataTable
+          columns={[
+            { key: 'transactionId', label: 'Transaction ID' },
+            { key: 'orderId', label: 'Order ID' },
+            { key: 'customer', label: 'Customer' },
+            { key: 'amount', label: 'Amount' },
+            { key: 'paymentMethod', label: 'Payment Method' },
+            { key: 'paymentStatus', label: 'Payment Status', render: (row) => <StatusPill status={row.paymentStatus} /> },
+            { key: 'date', label: 'Date' },
+          ]}
+          rows={(transactions || []).map((transaction) => ({
+            id: transaction.id || transaction._id || transaction.transactionId,
+            transactionId: transaction.transactionId,
+            orderId: transaction.orderId,
+            customer: transaction.customer,
+            amount: money(transaction.amount),
+            paymentMethod: transaction.paymentMethod,
+            paymentStatus: transaction.paymentStatus,
+            date: formatDate(transaction.date || transaction.createdAt),
+          }))}
+          empty="No transactions yet."
+        />
+      </section>
+    </div>
   );
+
+  const renderInvoices = () => {
+    const setInvoiceFilter = (key, value) => {
+      setInvoiceFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    };
+    const invoiceSummary = invoices.summary || [];
+    const start = filteredInvoices.length ? (invoicePage - 1) * invoiceFilters.pageSize + 1 : 0;
+    const end = Math.min(invoicePage * invoiceFilters.pageSize, filteredInvoices.length);
+
+    return (
+      <div className="erp-page invoice-management-page">
+        <div className="erp-metrics invoice-metrics">
+          {invoiceSummary.map((item) => <PremiumMetricCard key={item.label} item={item} />)}
+        </div>
+
+        <section className="erp-card invoice-console">
+          <div className="admin-section-head invoice-head">
+            <div>
+              <span>Documents</span>
+              <h2>Invoice Management</h2>
+            </div>
+            <p>{filteredInvoices.length} invoices in view</p>
+          </div>
+
+          <div className="invoice-toolbar">
+            <label className="invoice-search">
+              <FaSearch aria-hidden="true" />
+              <input
+                value={invoiceFilters.search}
+                placeholder="Search invoice, order, transaction, customer"
+                onChange={(event) => setInvoiceFilter('search', event.target.value)}
+              />
+            </label>
+            <select value={invoiceFilters.status} onChange={(event) => setInvoiceFilter('status', event.target.value)}>
+              <option value="all">All Statuses</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="refunded">Refunded</option>
+            </select>
+            <select value={invoiceFilters.sort} onChange={(event) => setInvoiceFilter('sort', event.target.value)}>
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+
+          <div className="admin-table-wrap invoice-table-wrap">
+            <table className="admin-table erp-click-table invoice-table">
+              <thead>
+                <tr>
+                  <th>Invoice ID</th>
+                  <th>Order ID</th>
+                  <th>Transaction ID</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedInvoices.length === 0 ? (
+                  <tr><td colSpan="8">No invoices match your filters.</td></tr>
+                ) : pagedInvoices.map((invoice) => {
+                  const invoiceKey = invoice.invoiceId || invoice.id || invoice._id;
+                  return (
+                    <tr key={invoiceKey}>
+                      <td><strong>{invoice.invoiceId || invoice.invoiceNumber}</strong></td>
+                      <td>{invoice.orderId}</td>
+                      <td>{invoice.transactionId}</td>
+                      <td>
+                        <div className="invoice-customer-cell">
+                          <span>{getInitials(invoice.customer, invoice.email)}</span>
+                          <div><strong>{invoice.customer}</strong><small>{invoice.email}</small></div>
+                        </div>
+                      </td>
+                      <td>{formatLkr(invoice.amount || invoice.grandTotal)}</td>
+                      <td><StatusPill status={invoice.status} /></td>
+                      <td>{formatDate(invoice.date || invoice.issueDate)}</td>
+                      <td>
+                        <div className="admin-actions invoice-actions">
+                          <button className="admin-action admin-action-open" type="button" title="View invoice" onClick={() => viewInvoiceDetails(invoice)}><FaEye /></button>
+                          <button className="admin-action admin-action-message" type="button" title="Download PDF" disabled={invoiceActionId === `download-${invoiceKey}`} onClick={() => downloadInvoicePdf(invoice)}><FaDownload /></button>
+                          <button className="admin-action admin-action-processing" type="button" title="Send email" disabled={invoiceActionId === `email-${invoiceKey}`} onClick={() => openInvoiceEmailComposer(invoice)}><FaEnvelope /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="invoice-pagination">
+            <span>Showing {start}-{end} of {filteredInvoices.length}</span>
+            <div>
+              <button type="button" disabled={invoicePage <= 1} onClick={() => setInvoiceFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}><FaChevronLeft /></button>
+              <strong>{invoicePage} / {invoiceTotalPages}</strong>
+              <button type="button" disabled={invoicePage >= invoiceTotalPages} onClick={() => setInvoiceFilters((prev) => ({ ...prev, page: Math.min(invoiceTotalPages, prev.page + 1) }))}><FaChevronRight /></button>
+            </div>
+          </div>
+        </section>
+
+        {selectedInvoice && (
+          <div className="invoice-modal-layer" role="dialog" aria-modal="true" aria-label="Invoice details">
+            <button className="invoice-modal-scrim" type="button" onClick={() => setSelectedInvoice(null)} aria-label="Close invoice details" />
+            <aside className="invoice-luxury-drawer">
+              <button className="admin-close" type="button" onClick={() => setSelectedInvoice(null)}>Close</button>
+              <header className="invoice-detail-hero">
+                <div>
+                  <span>Invoice Details</span>
+                  <h3>{selectedInvoice.invoiceId || selectedInvoice.invoiceNumber}</h3>
+                  <p>{selectedInvoice.customer || selectedInvoice.customerName}</p>
+                </div>
+                <StatusPill status={selectedInvoice.paymentStatus || selectedInvoice.status} />
+              </header>
+
+              <section className="invoice-detail-glass invoice-detail-summary">
+                <div><span>Order ID</span><strong>{selectedInvoice.orderId}</strong></div>
+                <div><span>Transaction ID</span><strong>{selectedInvoice.transactionId}</strong></div>
+                <div><span>Invoice Date</span><strong>{formatDateTime(selectedInvoice.date || selectedInvoice.issueDate)}</strong></div>
+                <div><span>Grand Total</span><strong>{formatLkr(selectedInvoice.grandTotal || selectedInvoice.amount)}</strong></div>
+              </section>
+
+              <section className="invoice-detail-grid">
+                <div className="invoice-detail-glass">
+                  <h4>Customer</h4>
+                  <strong>{selectedInvoice.customer || selectedInvoice.customerName}</strong>
+                  <p>{selectedInvoice.email || selectedInvoice.customerEmail}</p>
+                  <p>{selectedInvoice.phone || selectedInvoice.customerPhone}</p>
+                  <p>{selectedInvoice.customerAddressText || 'No address supplied'}</p>
+                </div>
+                <div className="invoice-detail-glass">
+                  <h4>Payment</h4>
+                  <div className="invoice-detail-pairs">
+                    <span>Invoice ID</span><strong>{selectedInvoice.invoiceId}</strong>
+                    <span>Status</span><strong>{selectedInvoice.paymentStatus || selectedInvoice.status}</strong>
+                    <span>PDF</span><strong>{selectedInvoice.pdfUrl ? 'Attached' : 'Not generated'}</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="invoice-detail-products">
+                <div className="invoice-detail-section-head">
+                  <span>Purchased pieces</span>
+                  <strong>{(selectedInvoice.products || []).length} item{(selectedInvoice.products || []).length === 1 ? '' : 's'}</strong>
+                </div>
+                {(selectedInvoice.products || []).map((item) => (
+                  <article key={item.id || item.name}>
+                    <span className="invoice-item-thumb">{item.image ? <img src={item.image} alt={item.name} /> : item.name?.slice(0, 1)}</span>
+                    <div><strong>{item.name}</strong><small>SKU: {item.sku || item.product || 'ASTRAVIA'}</small></div>
+                    <em>Qty {item.quantity}</em>
+                    <em>{formatLkr(item.price)}</em>
+                    <b>{formatLkr(Number(item.price || 0) * Number(item.quantity || 1))}</b>
+                  </article>
+                ))}
+              </section>
+
+              <section className="invoice-detail-totals">
+                <p><span>Subtotal</span><strong>{formatLkr(selectedInvoice.subtotal)}</strong></p>
+                <p><span>Shipping</span><strong>{formatLkr(selectedInvoice.shipping)}</strong></p>
+                <p><span>Discount</span><strong>{formatLkr(selectedInvoice.discount)}</strong></p>
+                <p><span>Tax</span><strong>{formatLkr(selectedInvoice.tax)}</strong></p>
+                <p className="grand-total"><span>Grand Total</span><strong>{formatLkr(selectedInvoice.grandTotal || selectedInvoice.amount)}</strong></p>
+              </section>
+            </aside>
+          </div>
+        )}
+
+        {emailComposer && (
+          <div className="invoice-modal-layer" role="dialog" aria-modal="true" aria-label="Send invoice email">
+            <button className="invoice-modal-scrim" type="button" onClick={() => setEmailComposer(null)} aria-label="Close email composer" />
+            <aside className="invoice-email-composer">
+              <button className="admin-close" type="button" onClick={() => setEmailComposer(null)}>Close</button>
+              <header className="invoice-email-head">
+                <div className="invoice-email-avatar">{getInitials(emailComposer.invoice.customer, emailComposer.invoice.email)}</div>
+                <div>
+                  <span>Send Invoice Email</span>
+                  <h3>{emailComposer.invoice.invoiceId || emailComposer.invoice.invoiceNumber}</h3>
+                  <p>Review the message before sending the attached invoice PDF.</p>
+                </div>
+              </header>
+
+              <div className="invoice-email-layout">
+                <form className="invoice-email-form" onSubmit={(event) => { event.preventDefault(); submitInvoiceEmail(); }}>
+                  <label>
+                    <span>Customer Email</span>
+                    <input value={emailComposer.to} onChange={(event) => updateEmailComposer('to', event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Subject</span>
+                    <input className="invoice-email-subject" value={emailComposer.subject} onChange={(event) => updateEmailComposer('subject', event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Message</span>
+                    <textarea value={emailComposer.message} onChange={(event) => updateEmailComposer('message', event.target.value)} rows="12" />
+                  </label>
+                  <div className="invoice-attachment-card">
+                    <FaDownload aria-hidden="true" />
+                    <div>
+                      <strong>{emailComposer.invoice.invoiceId || 'invoice'}.pdf</strong>
+                      <span>{emailComposer.invoice.pdfUrl ? 'Saved invoice PDF will be attached.' : 'PDF will be generated before sending.'}</span>
+                      {emailComposer.invoice.pdfUrl && <a href={invoicePdfFileUrl(emailComposer.invoice)} target="_blank" rel="noreferrer">Preview attachment</a>}
+                    </div>
+                  </div>
+                  <button className="invoice-send-button" type="submit" disabled={invoiceActionId === `email-${emailComposer.invoice.invoiceId || emailComposer.invoice.id || emailComposer.invoice._id}`}>
+                    {invoiceActionId ? 'Sending...' : 'Send Invoice Email'}
+                  </button>
+                </form>
+
+                <aside className="invoice-email-sidebar">
+                  <span>Invoice Summary</span>
+                  <h4>{formatLkr(emailComposer.invoice.grandTotal || emailComposer.invoice.amount)}</h4>
+                  <p><span>Order ID</span><strong>{emailComposer.invoice.orderId}</strong></p>
+                  <p><span>Transaction ID</span><strong>{emailComposer.invoice.transactionId}</strong></p>
+                  <p><span>Payment</span><strong>{emailComposer.invoice.paymentStatus || emailComposer.invoice.status}</strong></p>
+                  <p><span>Customer</span><strong>{emailComposer.invoice.customer}</strong></p>
+                </aside>
+              </div>
+            </aside>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderCMS = () => (
     <>
@@ -1282,83 +2905,326 @@ export default function AdminDashboard() {
     </>
   );
 
-  const renderSettings = () => (
-    <>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Payment</span><h2>Payment Settings</h2></div>
-        <form className="admin-form compact" onSubmit={saveSettings}>
-          <label>
-            Provider
-            <input
-              value={settings.paymentProvider || 'PayHere'}
-              onChange={(event) => setSettings((prev) => ({ ...prev, paymentProvider: event.target.value }))}
-            />
+  const renderSettings = () => {
+    const providerOptions = ['PayHere', 'Stripe', 'PayPal', 'Direct Bank Transfer'];
+    const orderStatusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+    const timeoutOptions = ['30 Minutes', '1 Hour', '4 Hours', '24 Hours'];
+
+    const sections = [
+      {
+        id: 'general',
+        eyebrow: 'General',
+        title: 'General Settings',
+        description: 'Core business identity used across the storefront, documents, and brand communications.',
+        icon: FaBuilding,
+        fields: [
+          ['businessName', 'Business Name', 'text', 'Astravia Luxury Fashion House'],
+          ['businessTagline', 'Business Tagline', 'text', 'Luxury Fashion House'],
+          ['businessDescription', 'Business Description', 'textarea', 'A refined destination for contemporary luxury fashion.'],
+          ['businessLogo', 'Business Logo Upload', 'upload'],
+          ['favicon', 'Favicon Upload', 'upload'],
+          ['websiteUrl', 'Website URL', 'url', 'https://www.astravia.com'],
+          ['businessEmail', 'Business Email', 'email', 'support@astravia.com'],
+          ['businessPhone', 'Business Phone', 'tel', '+94 77 123 4567'],
+          ['businessAddress', 'Business Address', 'textarea', 'Colombo, Sri Lanka'],
+        ],
+      },
+      {
+        id: 'site',
+        eyebrow: 'Site',
+        title: 'Site Settings',
+        description: 'Public store details, contact channels, and location metadata for customer-facing pages.',
+        icon: FaStore,
+        fields: [
+          ['storeName', 'Store Name', 'text', 'Astravia'],
+          ['logoUrl', 'Site Logo URL', 'url', 'https://...'],
+          ['whatsappNumber', 'WhatsApp Number', 'tel', '94770000000'],
+          ['contactEmail', 'Contact Email', 'email', 'hello@astravia.com'],
+          ['contactPhone', 'Contact Phone', 'tel', '+94 77 123 4567'],
+          ['supportEmail', 'Support Email', 'email', 'support@astravia.com'],
+          ['googleMapsEmbedUrl', 'Google Maps Embed URL', 'url', 'https://www.google.com/maps/embed?...'],
+          ['businessLocation', 'Business Location', 'text', 'Colombo, Sri Lanka'],
+        ],
+      },
+      {
+        id: 'payment',
+        eyebrow: 'Payments',
+        title: 'Payment Settings',
+        description: 'Configure payment providers, credentials, currencies, and checkout methods.',
+        icon: FaCreditCard,
+        note: 'Merchant secret is stored on the backend only and is never returned to the browser.',
+        fields: [
+          ['paymentProvider', 'Payment Provider', 'select', '', providerOptions],
+          ['merchantId', 'Merchant ID', 'text', 'PayHere merchant id'],
+          ['merchantSecret', 'Merchant Secret', 'password', settings.hasMerchantSecret ? 'Saved - enter only to replace' : 'Merchant secret'],
+          ['currency', 'Currency', 'text', 'LKR'],
+          ['enableCOD', 'Enable COD', 'checkbox'],
+          ['enableOnlinePayment', 'Enable Online Payments', 'checkbox'],
+        ],
+      },
+      {
+        id: 'email',
+        eyebrow: 'Email',
+        title: 'Email Settings',
+        description: 'Sender identity, SMTP credentials, and transactional email feature controls.',
+        icon: FaEnvelope,
+        extraAction: { label: 'Send Test Email', icon: FaPaperPlane },
+        fields: [
+          ['senderName', 'Sender Name', 'text', 'Astravia Luxury Fashion House'],
+          ['senderEmail', 'Sender Email', 'email', 'support@astravia.com'],
+          ['replyToEmail', 'Reply-To Email', 'email', 'support@astravia.com'],
+          ['smtpHost', 'SMTP Host', 'text', 'smtp.gmail.com'],
+          ['smtpPort', 'SMTP Port', 'number', '587'],
+          ['smtpUsername', 'SMTP Username', 'text', 'astravia.business@gmail.com'],
+          ['smtpPassword', 'SMTP Password', 'password', 'SMTP password'],
+          ['orderConfirmationEmails', 'Order Confirmation Emails', 'checkbox'],
+          ['invoiceEmails', 'Invoice Emails', 'checkbox'],
+          ['contactFormEmails', 'Contact Form Emails', 'checkbox'],
+          ['newsletterEmails', 'Newsletter Emails', 'checkbox'],
+        ],
+      },
+      {
+        id: 'orders',
+        eyebrow: 'Orders',
+        title: 'Order Settings',
+        description: 'Automation rules for invoices, order status movement, cancellations, and refunds.',
+        icon: FaClipboardList,
+        fields: [
+          ['autoInvoiceGeneration', 'Auto Invoice Generation', 'checkbox'],
+          ['autoStatusUpdates', 'Auto Status Updates', 'checkbox'],
+          ['allowOrderCancellation', 'Allow Order Cancellation', 'checkbox'],
+          ['allowRefundRequests', 'Allow Refund Requests', 'checkbox'],
+          ['defaultOrderStatus', 'Default Order Status', 'select', '', orderStatusOptions],
+        ],
+      },
+      {
+        id: 'shipping',
+        eyebrow: 'Shipping',
+        title: 'Shipping Settings',
+        description: 'Delivery availability, fees, thresholds, and expected customer delivery windows.',
+        icon: FaTruck,
+        fields: [
+          ['enableShipping', 'Enable Shipping', 'checkbox'],
+          ['freeShippingThreshold', 'Free Shipping Threshold', 'number', '250000'],
+          ['defaultShippingFee', 'Default Shipping Fee', 'number', '5000'],
+          ['estimatedDeliveryDays', 'Estimated Delivery Days', 'text', '3-5 business days'],
+        ],
+      },
+      {
+        id: 'social',
+        eyebrow: 'Social',
+        title: 'Social Media Settings',
+        description: 'Official Astravia social channels shown across content and customer touchpoints.',
+        icon: FaShareAlt,
+        fields: [
+          ['facebookUrl', 'Facebook URL', 'url'],
+          ['instagramUrl', 'Instagram URL', 'url'],
+          ['tiktokUrl', 'TikTok URL', 'url'],
+          ['pinterestUrl', 'Pinterest URL', 'url'],
+          ['linkedinUrl', 'LinkedIn URL', 'url'],
+          ['youtubeUrl', 'YouTube URL', 'url'],
+        ],
+      },
+      {
+        id: 'seo',
+        eyebrow: 'SEO',
+        title: 'SEO Settings',
+        description: 'Search metadata and social sharing previews for a polished digital presence.',
+        icon: FaSearchDollar,
+        fields: [
+          ['metaTitle', 'Meta Title', 'text', 'Astravia Luxury Fashion House'],
+          ['metaDescription', 'Meta Description', 'textarea'],
+          ['metaKeywords', 'Meta Keywords', 'textarea', 'luxury fashion, designer wear, Astravia'],
+          ['openGraphImageUrl', 'Open Graph Image URL', 'url'],
+        ],
+      },
+      {
+        id: 'security',
+        eyebrow: 'Security',
+        title: 'Security Settings',
+        description: 'Administrative access, sessions, passwords, and elevated protection controls.',
+        icon: FaShieldAlt,
+        fields: [
+          ['adminEmail', 'Admin Email', 'email', 'admin@astravia.com'],
+          ['adminPassword', 'Change Admin Password', 'password', 'New password'],
+          ['sessionTimeout', 'Session Timeout', 'select', '', timeoutOptions],
+          ['enable2FA', 'Enable 2FA', 'checkbox'],
+        ],
+      },
+      {
+        id: 'appearance',
+        eyebrow: 'Appearance',
+        title: 'Appearance Settings',
+        description: 'Brand colors and theme controls for the Astravia luxury experience.',
+        icon: FaPalette,
+        fields: [
+          ['primaryColor', 'Primary Color', 'color', '#0A0A0A'],
+          ['secondaryColor', 'Secondary Color', 'color', '#F9F8F6'],
+          ['accentColor', 'Accent Color', 'color', '#D8C4A0'],
+          ['enableDarkTheme', 'Enable Dark Theme', 'checkbox'],
+          ['enableLuxuryTheme', 'Enable Luxury Theme', 'checkbox'],
+        ],
+      },
+      {
+        id: 'invoice',
+        eyebrow: 'Invoices',
+        title: 'Invoice Settings',
+        description: 'Invoice numbering, registration details, tax identifiers, and branded document assets.',
+        icon: FaFileInvoice,
+        fields: [
+          ['invoicePrefix', 'Invoice Prefix', 'text', 'INV'],
+          ['invoiceFooterMessage', 'Invoice Footer Message', 'textarea', 'Thank you for choosing Astravia.'],
+          ['companyRegistrationNumber', 'Company Registration Number', 'text'],
+          ['taxNumber', 'Tax Number', 'text'],
+          ['companyStamp', 'Upload Company Stamp', 'upload'],
+        ],
+      },
+      {
+        id: 'system',
+        eyebrow: 'System',
+        title: 'Backup & System',
+        description: 'Operational backups, restoration controls, and system-level setting maintenance.',
+        icon: FaDatabase,
+        fields: [],
+        actions: ['Download Backup', 'Restore Backup', 'Reset Settings'],
+      },
+    ];
+
+    const normalizedSearch = settingsSearch.trim().toLowerCase();
+    const visibleSections = normalizedSearch
+      ? sections.filter((section) => {
+        const haystack = [
+          section.eyebrow,
+          section.title,
+          section.description,
+          ...section.fields.map((field) => field[1]),
+        ].join(' ').toLowerCase();
+        return haystack.includes(normalizedSearch);
+      })
+      : sections;
+
+    const renderField = ([key, label, type = 'text', placeholder = '', options = []]) => {
+      const id = `setting-${key}`;
+      if (type === 'checkbox') {
+        return (
+          <label className="settings-toggle" key={key} htmlFor={id}>
+            <span>{label}</span>
+            <input id={id} type="checkbox" checked={Boolean(settings[key])} onChange={(event) => updateSetting(key, event.target.checked)} />
+            <i aria-hidden="true" />
           </label>
-          <label>
-            Merchant ID
-            <input
-              value={settings.merchantId || ''}
-              onChange={(event) => setSettings((prev) => ({ ...prev, merchantId: event.target.value }))}
-              placeholder="PayHere merchant id"
-            />
+        );
+      }
+      if (type === 'upload') {
+        return (
+          <label className="settings-upload" key={key} htmlFor={id}>
+            <span>{label}</span>
+            <div><FaUpload /> Choose file</div>
+            <input id={id} type="file" onChange={(event) => updateSetting(key, event.target.files?.[0]?.name || '')} />
+            {settings[key] && <small>{settings[key]}</small>}
           </label>
-          <label>
-            Merchant Secret
-            <input
-              type="password"
-              value={settings.merchantSecret || ''}
-              onChange={(event) => setSettings((prev) => ({ ...prev, merchantSecret: event.target.value }))}
-              placeholder={settings.hasMerchantSecret ? 'Saved - enter only to replace' : 'PayHere merchant secret'}
-            />
+        );
+      }
+      if (type === 'select') {
+        return (
+          <label className="settings-field" key={key} htmlFor={id}>
+            <span>{label}</span>
+            <select id={id} value={settings[key] || options[0] || ''} onChange={(event) => updateSetting(key, event.target.value)}>
+              {options.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
           </label>
-          <label>
-            Currency
-            <input
-              value={settings.currency || 'LKR'}
-              onChange={(event) => setSettings((prev) => ({ ...prev, currency: event.target.value }))}
-            />
+        );
+      }
+      if (type === 'textarea') {
+        return (
+          <label className="settings-field wide" key={key} htmlFor={id}>
+            <span>{label}</span>
+            <textarea id={id} value={settings[key] || ''} placeholder={placeholder} onChange={(event) => updateSetting(key, event.target.value)} />
           </label>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={Boolean(settings.enableCOD)}
-              onChange={(event) => setSettings((prev) => ({ ...prev, enableCOD: event.target.checked }))}
-            />
-            Enable Cash on Delivery
-          </label>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={Boolean(settings.enableOnlinePayment)}
-              onChange={(event) => setSettings((prev) => ({ ...prev, enableOnlinePayment: event.target.checked }))}
-            />
-            Enable Online Payment
-          </label>
-          <button className="admin-primary" type="submit">Save Payment Settings</button>
-        </form>
-        <p className="admin-muted">Merchant secret is stored on the backend only and is never returned to the browser.</p>
-      </section>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Site</span><h2>Site Settings</h2></div>
-        <form className="admin-form compact" onSubmit={saveSettings}>
-          <label>Store Name<input value={settings.storeName || ''} onChange={(e) => setSettings((prev) => ({ ...prev, storeName: e.target.value }))} /></label>
-          <label>Logo URL<input value={settings.logoUrl || ''} onChange={(e) => setSettings((prev) => ({ ...prev, logoUrl: e.target.value }))} /></label>
-          <label>
-            WhatsApp Number
-            <input
-              value={settings.whatsappNumber || ''}
-              onChange={(event) => setSettings((prev) => ({ ...prev, whatsappNumber: event.target.value }))}
-              placeholder="94770000000"
-            />
-          </label>
-          <label>Contact Email<input value={settings.contactEmail || ''} onChange={(e) => setSettings((prev) => ({ ...prev, contactEmail: e.target.value }))} /></label>
-          <button className="admin-primary" type="submit">Save Site Settings</button>
-        </form>
-        <p className="admin-muted">Admin routes are protected by JWT authentication and require the user role to be admin.</p>
-        <p className="admin-muted">Current API base: {import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}</p>
-      </section>
-    </>
-  );
+        );
+      }
+      return (
+        <label className={`settings-field ${type === 'color' ? 'color' : ''}`} key={key} htmlFor={id}>
+          <span>{label}</span>
+          <input
+            id={id}
+            type={type}
+            value={settings[key] || (type === 'color' ? placeholder : '')}
+            placeholder={placeholder}
+            onChange={(event) => updateSetting(key, event.target.value)}
+          />
+        </label>
+      );
+    };
+
+    return (
+      <div className="settings-page">
+        <section className="settings-hero">
+          <div>
+            <span className="admin-eyebrow">Configuration Center</span>
+            <h2>Astravia Settings</h2>
+            <p>Manage brand identity, payments, email, operations, security, and customer-facing configuration from one polished control room.</p>
+          </div>
+          <div className="settings-search">
+            <FaSearch />
+            <input value={settingsSearch} onChange={(event) => setSettingsSearch(event.target.value)} placeholder="Search settings..." />
+          </div>
+        </section>
+
+        {settingsDirty && (
+          <div className="settings-unsaved">
+            <FaCog />
+            <span>You have unsaved configuration changes.</span>
+          </div>
+        )}
+
+        <div className="settings-grid">
+          {visibleSections.map((section) => {
+            const Icon = section.icon;
+            const ExtraIcon = section.extraAction?.icon;
+            return (
+              <section className="settings-card" key={section.id}>
+                <div className="settings-card-head">
+                  <div className="settings-icon"><Icon /></div>
+                  <div>
+                    <span>{section.eyebrow}</span>
+                    <h3>{section.title}</h3>
+                    <p>{section.description}</p>
+                  </div>
+                </div>
+                <form className="settings-form" onSubmit={(event) => handleSettingsSubmit(event, section.id)}>
+                  {section.fields.map(renderField)}
+                  {section.note && <p className="settings-note">{section.note}</p>}
+                  {section.extraAction && (
+                    <button className="settings-secondary" type="button" onClick={() => setMessage('Test email queued successfully')}>
+                      <ExtraIcon /> {section.extraAction.label}
+                    </button>
+                  )}
+                  {section.actions && (
+                    <div className="settings-system-actions">
+                      {section.actions.map((action) => (
+                        <button key={action} type="button" onClick={() => setMessage(`${action} requested successfully`)}>
+                          {action === 'Download Backup' ? <FaDownload /> : <FaDatabase />} {action}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button className="settings-save" type="submit"><FaSave /> Save {section.eyebrow}</button>
+                </form>
+              </section>
+            );
+          })}
+        </div>
+
+        {visibleSections.length === 0 && (
+          <section className="settings-empty">
+            <FaSearch />
+            <h3>No settings found</h3>
+            <p>Try searching for payments, email, invoices, shipping, or security.</p>
+          </section>
+        )}
+      </div>
+    );
+  };
 
   const renderActive = () => {
     if (active === 'Products') return renderProducts();
@@ -1368,6 +3234,7 @@ export default function AdminDashboard() {
     if (active === 'Finance') return renderFinance();
     if (active === 'Analytics') return renderAnalytics();
     if (active === 'Bulk Orders') return renderBulkOrders();
+    if (active === 'Transactions') return renderTransactions();
     if (active === 'Invoices') return renderInvoices();
     if (active === 'CMS') return renderCMS();
     if (active === 'Settings') return renderSettings();
@@ -1377,7 +3244,9 @@ export default function AdminDashboard() {
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="admin-brand">ATELIER<span>Admin</span></div>
+        <div className="admin-brand" aria-label="Admin dashboard brand">
+          <img src={adminLogo} alt="Admin dashboard logo" />
+        </div>
         <nav>{menuItems.map((item) => <button key={item} className={active === item ? 'active' : ''} onClick={() => setActive(item)}>{item}</button>)}</nav>
       </aside>
       <main className="admin-main">
@@ -1385,8 +3254,6 @@ export default function AdminDashboard() {
           <div><span className="admin-eyebrow">Business Management</span><h1>{active}</h1></div>
           <div className="admin-top-note">SS26 Operations</div>
         </header>
-        {error && <p className="admin-alert error">{error}</p>}
-        {message && <p className="admin-alert success">{message}</p>}
         {renderActive()}
       </main>
     </div>

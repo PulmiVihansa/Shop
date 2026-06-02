@@ -1,6 +1,6 @@
 const prisma = require('../config/prisma');
 const { store, seedBusinessData } = require('../data/memoryStore');
-const { ensureCustomerIds, backfillOrderCustomerIds } = require('../utils/customerId');
+const { ensureCustomerIds } = require('../utils/customerId');
 const { withoutPassword, normalizeOrder } = require('../utils/dbFormat');
 
 const customerSummary = (user, orders) => {
@@ -31,11 +31,13 @@ const getUsers = async (req, res) => {
     }
 
     await ensureCustomerIds(prisma);
-    await backfillOrderCustomerIds(prisma);
 
     const [users, orders] = await Promise.all([
       prisma.user.findMany({ orderBy: { createdAt: 'desc' } }),
-      prisma.order.findMany({ orderBy: { createdAt: 'desc' } })
+      prisma.order.findMany({
+        include: { customer: true, transaction: true, transactionRecord: true, invoice: true },
+        orderBy: { createdAt: 'desc' }
+      })
     ]);
     res.json(users.map((user) => customerSummary(withoutPassword(user), orders.map(normalizeOrder))));
   } catch (error) {

@@ -24,8 +24,26 @@ model User {
   avatar      String?
   role        String   @default("user")
   orders      Order[]
+  customer    Customer?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  customerId   String        @unique
+  userId       String?       @unique
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name         String
+  email        String
+  phone        String        @default("")
+  orders       Order[]
+  transactions Transaction[]
+  invoices     Invoice[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([email])
 }
 
 model Product {
@@ -46,30 +64,78 @@ model Product {
 }
 
 model Order {
-  id            String   @id @default(cuid())
-  orderId       String   @unique
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String       @id @default(cuid())
+  orderId           String       @unique
+  customerId        String
+  customer          Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  userId            String?
+  user              User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  transactionId     String?      @unique
+  transaction       Transaction? @relation("OrderTransactionFk", fields: [transactionId], references: [id], onDelete: SetNull)
+  transactionRecord Transaction? @relation("TransactionOrderFk")
+  invoice           Invoice?
+  productName       String
+  size              String       @default("One Size")
+  quantity          Int          @default(1)
+  price             Float
+  shippingCost      Float        @default(0)
+  totalAmount       Float
+  status            String       @default("pending")
+  address           Json         @default("{}")
+  items             Json         @default("[]")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([customerId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Transaction {
+  id             String    @id @default(cuid())
+  transactionId  String    @unique
+  orderId        String    @unique
+  order          Order     @relation("TransactionOrderFk", fields: [orderId], references: [id], onDelete: Cascade)
+  orderReference Order?    @relation("OrderTransactionFk")
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  amount         Float
+  paymentMethod  String
+  paymentStatus  String    @default("PENDING")
+  invoice        Invoice?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([paymentStatus])
+}
+
+model Invoice {
+  id            String      @id @default(cuid())
+  invoiceId     String      @unique
+  orderId       String      @unique
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   customerId    String
-  customerName  String
-  customerEmail String
-  phone         String   @default("")
-  address       Json
-  productName   String
-  size          String   @default("One Size")
-  quantity      Int      @default(1)
-  price         Float
-  shippingCost  Float    @default(0)
-  totalAmount   Float
-  paymentMethod String   @default("ONLINE")
-  paymentStatus String   @default("PENDING")
-  transactionId String   @default("")
-  orderStatus   String   @default("pending")
-  orderDate     DateTime @default(now())
-  items         Json     @default("[]")
-  payment       Json     @default("{}")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customerName  String      @default("")
+  customerEmail String      @default("")
+  customerPhone String      @default("")
+  customerAddress Json      @default("{}")
+  subtotal      Float
+  shipping      Float       @default(0)
+  discount      Float       @default(0)
+  tax           Float       @default(0)
+  grandTotal    Float
+  status        String      @default("Paid")
+  pdfUrl        String      @default("")
+  emailSent     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([status])
 }
 
 model Expense {
@@ -148,12 +214,36 @@ model PageContent {
 }
 
 model BulkCustomer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  company   String?
-  discount  Float    @default(0)
-  notes     String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String             @id @default(cuid())
+  companyName   String
+  contactPerson String
+  email         String
+  phone         String             @default("")
+  discount      Float              @default(0)
+  notes         String             @default("")
+  orders        BulkOrderRequest[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @default(now()) @updatedAt
+
+  @@index([companyName])
+}
+
+model BulkOrderRequest {
+  id             String           @id @default(cuid())
+  companyName    String
+  contactPerson  String
+  email          String
+  phone          String           @default("")
+  products       String[]         @default([])
+  quantity       Int              @default(0)
+  orderValue     Float            @default(0)
+  message        String           @default("")
+  status         String           @default("Pending")
+  bulkCustomerId String?
+  bulkCustomer   BulkCustomer?    @relation(fields: [bulkCustomerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([bulkCustomerId])
+  @@index([status])
 }

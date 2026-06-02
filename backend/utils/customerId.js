@@ -70,31 +70,48 @@ const ensureCustomerIds = async (prisma) => {
 };
 
 const backfillOrderCustomerIds = async (prisma) => {
-  const orders = await prisma.order.findMany({
-    select: { id: true, userId: true, customerId: true }
-  });
-  const missing = orders.filter((order) => !order.customerId);
-  if (!missing.length) return;
+  if (!prisma.customer) return;
 
   const users = await prisma.user.findMany({
-    select: { id: true, customerId: true }
+    select: { id: true, name: true, email: true, customerId: true, createdAt: true, updatedAt: true }
   });
-  const userMap = new Map(users.map((user) => [String(user.id), user.customerId]));
 
-  const updates = missing
-    .map((order) => {
-      const customerId = userMap.get(String(order.userId));
-      if (!customerId) return null;
-      return prisma.order.update({
-        where: { id: order.id },
-        data: { customerId }
-      });
-    })
-    .filter(Boolean);
+  await Promise.all(
+    users
+      .filter((user) => user.customerId)
+      .map(async (user) => {
+        const existing = await prisma.customer.findFirst({
+          where: { OR: [{ userId: user.id }, { customerId: user.customerId }] }
+        });
+        if (existing) return existing;
+        return prisma.customer.create({
+          data: {
+            customerId: user.customerId,
+            userId: user.id,
+            name: user.name,
+            email: user.email,
+            phone: '',
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+          }
+        });
+      })
+  );
 
-  if (updates.length) {
-    await Promise.all(updates);
-  }
+  const orders = await prisma.order.findMany({
+    where: { userId: { not: null } },
+    include: { customer: true }
+  });
+
+  await Promise.all(
+    orders
+      .filter((order) => order.userId && order.customer?.userId !== order.userId)
+      .map(async (order) => {
+        const customer = await prisma.customer.findUnique({ where: { userId: order.userId } });
+        if (!customer) return null;
+        return prisma.order.update({ where: { id: order.id }, data: { customerId: customer.id } });
+      })
+  );
 };
 
 module.exports = {

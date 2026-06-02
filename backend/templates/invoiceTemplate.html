@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Poppins:wght@300;400;500;600&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <main class="invoice">
+    <section class="hero">
+      <div class="brand">
+        <img class="brand-logo" src="{{LOGO_SRC}}" alt="Astravia" />
+        <p>Luxury Fashion House</p>
+      </div>
+      <div class="invoice-meta">
+        <h1>INVOICE</h1>
+        <div class="meta-grid">
+          <span>Invoice No.</span><strong>{{INVOICE_ID}}</strong>
+          <span>Issue Date</span><strong>{{ISSUE_DATE}}</strong>
+          <span>Due Date</span><strong>{{DUE_DATE}}</strong>
+        </div>
+        <div class="paid-badge"><span class="check"></span><span>{{PAYMENT_STATUS}}</span></div>
+      </div>
+    </section>
+
+    <section class="body">
+      <div class="reference-row">
+        <section class="info-card bill-card">
+          <div class="card-title">Bill To</div>
+          <h2>{{CUSTOMER_NAME}}</h2>
+          <p class="client-type">Astravia Premium Client</p>
+          <p class="contact-row"><span class="ico ico-mail"></span><span>{{CUSTOMER_EMAIL}}</span></p>
+          <p class="contact-row"><span class="ico ico-phone"></span><span>{{CUSTOMER_PHONE}}</span></p>
+          <p class="contact-row"><span class="ico ico-pin"></span><span>{{CUSTOMER_ADDRESS}}</span></p>
+        </section>
+
+        <section class="info-card order-card">
+          <div class="card-title">Order Reference</div>
+          <div class="order-grid">
+            <span>Order ID</span><strong>{{ORDER_ID}}</strong>
+            <span>Transaction ID</span><strong>{{TRANSACTION_ID}}</strong>
+            <span>Invoice ID</span><strong>{{INVOICE_ID}}</strong>
+            <span class="red-label">Payment Status</span><strong class="red-value">{{PAYMENT_STATUS}}</strong>
+          </div>
+        </section>
+      </div>
+
+      <section class="items-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+{{PRODUCT_ROWS}}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="totals-area">
+        <div class="wordmark-watermark">Astravia</div>
+        <div class="totals">
+          <div class="total-row"><span>SUBTOTAL</span><strong>{{SUBTOTAL}}</strong></div>
+          <div class="total-row"><span>DISCOUNT</span><strong>{{DISCOUNT}}</strong></div>
+          <div class="total-row"><span>SHIPPING</span><strong>{{SHIPPING}}</strong></div>
+          <div class="total-row"><span>TAX</span><strong>{{TAX}}</strong></div>
+          <div class="grand-row"><span>GRAND TOTAL</span><strong>{{GRAND_TOTAL}}</strong></div>
+        </div>
+      </section>
+
+      <section class="lower-area">
+        <div class="terms">
+          <h3>Terms &amp; Conditions</h3>
+          <ul>
+            <li>Payment received in full.</li>
+            <li>All purchases are subject to Astravia policies.</li>
+            <li>Please retain this document as proof of purchase.</li>
+            <li>We appreciate your business and continued trust.</li>
+          </ul>
+        </div>
+        <div class="notes">
+          <h3>Notes</h3>
+          <p>Thank you for choosing Astravia.</p>
+          <p>We appreciate your business.</p>
+          <div class="signature">
+            <div class="script">Astravia</div>
+            <div class="signature-line"></div>
+            <strong>Astravia Management</strong>
+            <span>Authorized Signature</span>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <footer class="footer-bar">
+      <span><i class="red-ico red-mail"></i>support@astravia.com</span>
+      <span><i class="red-ico red-phone"></i>+94 77 123 4567</span>
+      <span><i class="red-ico red-pin"></i>Colombo, Sri Lanka</span>
+    </footer>
+  </main>
+</body>
+</html>

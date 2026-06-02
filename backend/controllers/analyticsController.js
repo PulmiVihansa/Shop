@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { store, seedBusinessData } = require('../data/memoryStore');
 const { withId, withoutPassword, normalizeOrder } = require('../utils/dbFormat');
+const { getAnalyticsDashboard } = require('../services/analyticsService');
 
 const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
 const getOrderTotal = (order) => Number(order.totalAmount ?? order.totalPrice ?? 0);
@@ -69,7 +70,8 @@ const buildAnalytics = (products, orders, users, expenses = []) => {
     salesOverTime: monthlyRevenue,
     productPerformance: Object.values(productSales).sort((a, b) => b.revenue - a.revenue).slice(0, 8),
     customerGrowth,
-    orderFrequency: monthlyRevenue.map((entry) => ({ label: entry.label, orders: entry.orders }))
+    orderFrequency: monthlyRevenue.map((entry) => ({ label: entry.label, orders: entry.orders })),
+    ...getAnalyticsDashboard()
   };
 };
 
