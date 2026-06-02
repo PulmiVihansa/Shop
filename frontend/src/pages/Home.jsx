@@ -97,6 +97,42 @@ const tryOnProducts = [
   { id: 'chaos-tee', name: 'Rebel Tee', price: '4,990', image: '/models/Tshirt8.png', vibe: 'statement' },
 ];
 
+const lockerItems = [
+  {
+    id: 'break-rules-tee',
+    slot: '01',
+    name: 'Break Rules Tee',
+    price: '5,290',
+    image: '/models/Tshirt5.png',
+    score: '92%',
+    community: '4.8 / 5',
+    stock: 'LOW',
+    priority: '#1',
+  },
+  {
+    id: 'shadow-tee',
+    slot: '02',
+    name: 'Shadow Tee',
+    price: '4,690',
+    image: '/models/Tshirt7.png',
+    score: '88%',
+    community: '4.7 / 5',
+    stock: 'MEDIUM',
+    priority: '#2',
+  },
+  {
+    id: 'void-tee',
+    slot: '03',
+    name: 'Void Tee',
+    price: '4,490',
+    image: '/models/Tshirt6.png',
+    score: '84%',
+    community: '4.6 / 5',
+    stock: 'LIMITED',
+    priority: '#3',
+  },
+];
+
 const aiResponses = {
   default: [
     "Based on your vibe, I'd go with the Break Rules Tee - black, bold graphic, oversized. That's the one.",
@@ -150,7 +186,7 @@ export default function Home() {
   const [tryOnGlow, setTryOnGlow] = useState(false);
   const [tryOnProductIndex, setTryOnProductIndex] = useState(5);
   const [tryOnCompare, setTryOnCompare] = useState(50);
-  const [dropFinder, setDropFinder] = useState({ chest: '', height: '', fit: 'oversized', vibe: 'statement' });
+  const [activeLockerIndex, setActiveLockerIndex] = useState(0);
   const tryOnInputRef = useRef(null);
 
   const visibleProducts = useMemo(() => {
@@ -174,38 +210,7 @@ export default function Home() {
   const stackRef = useRef(null);
   const panelRef = useRef(null);
   const selectedTryOnProduct = tryOnProducts[tryOnProductIndex] || tryOnProducts[0];
-  const dropFinderResult = useMemo(() => {
-    const chest = Number(dropFinder.chest);
-    const baseSize = chest && chest < 88 ? 'S' : chest && chest < 98 ? 'M' : chest && chest < 108 ? 'L' : chest && chest < 118 ? 'XL' : 'XXL';
-    const sizeOrder = ['S', 'M', 'L', 'XL', 'XXL'];
-    const baseIndex = sizeOrder.indexOf(baseSize);
-    const fitOffset = dropFinder.fit === 'clean' ? -1 : dropFinder.fit === 'boxy' ? 1 : 0;
-    const recommendedSize = sizeOrder[Math.max(0, Math.min(sizeOrder.length - 1, baseIndex + fitOffset))] || 'M';
-    const selectedProduct = tryOnProducts[tryOnProductIndex];
-    const product =
-      selectedProduct?.vibe === dropFinder.vibe
-        ? selectedProduct
-        : tryOnProducts.find((item) => item.vibe === dropFinder.vibe) || selectedProduct || tryOnProducts[0];
-
-    const fitCopy = {
-      clean: 'Cleaner shoulder line with less drape.',
-      oversized: 'Astravia signature oversized streetwear fit.',
-      boxy: 'More volume through chest and sleeve.',
-    };
-
-    return {
-      product,
-      size: recommendedSize,
-      fitNote: fitCopy[dropFinder.fit],
-      styling: dropFinder.vibe === 'statement'
-        ? 'Pair with black cargos, silver accessories, and heavy sneakers.'
-        : dropFinder.vibe === 'night'
-          ? 'Style with washed denim, black boots, and a cropped outer layer.'
-          : dropFinder.vibe === 'daily'
-            ? 'Wear with relaxed trousers and clean white or black sneakers.'
-            : 'Keep it sharp with monochrome pants and minimal accessories.',
-    };
-  }, [dropFinder, tryOnProductIndex]);
+  const activeLockerItem = lockerItems[activeLockerIndex] || lockerItems[0];
 
   useEffect(() => {
     try {
@@ -280,6 +285,27 @@ export default function Home() {
           },
         },
       );
+    });
+
+    return () => context.revert();
+  }, []);
+
+  useEffect(() => {
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: '.astravia-locker-section',
+          start: 'top 64%',
+          once: true,
+        },
+      });
+
+      timeline
+        .to('.locker-cabinet', { x: 5, duration: 0.08, repeat: 5, yoyo: true, ease: 'power1.inOut' })
+        .to('.locker-led, .locker-interior-light', { opacity: 1, duration: 0.35, ease: 'power2.out' }, '-=0.05')
+        .to('.locker-door-left', { rotateY: -82, x: -22, z: 18, duration: 1.05, ease: 'power3.inOut' }, '+=0.05')
+        .to('.locker-door-right', { rotateY: 82, x: 22, z: 18, duration: 1.05, ease: 'power3.inOut' }, '<')
+        .to('.locker-shirt', { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12, ease: 'back.out(1.3)' }, '-=0.35');
     });
 
     return () => context.revert();
@@ -630,96 +656,87 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="virtual-tryon-section drop-finder-section" id="fit-finder">
+      <section className="virtual-tryon-section astravia-locker-section" id="astravia-locker">
         <div className="tryon-copy tryon-animate">
-          <p className="tryon-kicker">Fit & Drop Finder</p>
-          <h2 className="tryon-title">FIND YOUR<br /><span>ASTRAVIA FIT.</span></h2>
+          <p className="tryon-kicker">Personal Collection</p>
+          <h2 className="tryon-title">YOUR<br />ASTRAVIA<br /><span>LOCKER.</span></h2>
           <p className="tryon-description">
-            Get a fast size recommendation, match your style mood, and jump straight into the tee that fits your drop energy.
+            Save up to 3 favorite Astravia tees. We'll analyze your picks and recommend which drop deserves your money first.
           </p>
           <ul className="tryon-features">
-            {['Size recommendation', 'Drop matching', 'Styling notes', 'Direct product link'].map((item) => (
+            {['Save 3 tees', 'AI recommendation', 'Community ranking', 'Limited stock alerts'].map((item) => (
               <li key={item}><FiCheck aria-hidden="true" />{item}</li>
             ))}
           </ul>
         </div>
 
-        <div className="drop-finder-panel tryon-animate">
-          <div className="tryon-card-label">Your Fit Profile</div>
-          <div className="drop-finder-form">
-            <label>
-              Chest
-              <input
-                type="number"
-                value={dropFinder.chest}
-                onChange={(event) => setDropFinder((current) => ({ ...current, chest: event.target.value }))}
-                placeholder="cm"
-              />
-            </label>
-            <label>
-              Height
-              <input
-                type="number"
-                value={dropFinder.height}
-                onChange={(event) => setDropFinder((current) => ({ ...current, height: event.target.value }))}
-                placeholder="cm"
-              />
-            </label>
-            <label>
-              Fit
-              <select value={dropFinder.fit} onChange={(event) => setDropFinder((current) => ({ ...current, fit: event.target.value }))}>
-                <option value="clean">Clean</option>
-                <option value="oversized">Oversized</option>
-                <option value="boxy">Extra Boxy</option>
-              </select>
-            </label>
-            <label>
-              Vibe
-              <select value={dropFinder.vibe} onChange={(event) => setDropFinder((current) => ({ ...current, vibe: event.target.value }))}>
-                <option value="statement">Statement</option>
-                <option value="night">Night Out</option>
-                <option value="daily">Daily Wear</option>
-                <option value="minimal">Minimal</option>
-              </select>
-            </label>
+        <div className="locker-stage tryon-animate">
+          <div className="locker-cabinet">
+            <span className="locker-led" aria-hidden="true" />
+            <span className="locker-interior-light" aria-hidden="true" />
+            <span className="locker-top-lip" aria-hidden="true" />
+            <span className="locker-bottom-shadow" aria-hidden="true" />
+            <div className="locker-interior">
+              <span className="locker-divider locker-divider-one" aria-hidden="true" />
+              <span className="locker-divider locker-divider-two" aria-hidden="true" />
+              <div className="locker-rail" aria-hidden="true" />
+              {lockerItems.map((item, index) => (
+                <button
+                  type="button"
+                  className={`locker-shirt locker-shirt-${index + 1} ${activeLockerIndex === index ? 'active' : ''}`}
+                  key={item.id}
+                  onClick={() => setActiveLockerIndex(index)}
+                >
+                  <span className="locker-hanger" aria-hidden="true" />
+                  <span className="locker-slot">#{item.slot} Tee</span>
+                  <img src={item.image} alt={item.name} />
+                </button>
+              ))}
+            </div>
+            <div className="locker-door locker-door-left" aria-hidden="true">
+              <span className="locker-hinges"><i /><i /><i /></span>
+              <span className="locker-vent locker-vent-top" />
+              <span className="locker-handle" />
+              <span className="locker-vent locker-vent-bottom" />
+            </div>
+            <div className="locker-door locker-door-right" aria-hidden="true">
+              <span className="locker-hinges"><i /><i /><i /></span>
+              <span className="locker-vent locker-vent-top" />
+              <span className="locker-handle" />
+              <span className="locker-vent locker-vent-bottom" />
+            </div>
           </div>
         </div>
 
-        <aside className="tryon-product-panel drop-finder-result tryon-animate">
-          <div className="tryon-product-image">
-            <img src={dropFinderResult.product.image} alt={dropFinderResult.product.name} />
+        <aside className="locker-recommendation tryon-animate">
+          <p className="drop-finder-label">Best Pick Today</p>
+          <div className="locker-preview">
+            <img src={activeLockerItem.image} alt={activeLockerItem.name} />
           </div>
-          <p className="drop-finder-label">Recommended Drop</p>
-          <h3>{dropFinderResult.product.name}</h3>
-          <div className="drop-finder-size">Size {dropFinderResult.size}</div>
-          <p>{dropFinderResult.fitNote}</p>
-          <p>{dropFinderResult.styling}</p>
-          <div className="tryon-product-price">Rs. {dropFinderResult.product.price}.00</div>
-          <Link className="tryon-cart-btn drop-finder-link" to={`/products/${dropFinderResult.product.id}`}>
-            View Product
-          </Link>
-        </aside>
-
-        <div className="tryon-carousel tryon-animate">
-          <h3>Pick A Different Drop</h3>
-          <div className="tryon-product-grid">
-            {tryOnProducts.map((product, index) => (
-              <button
-                type="button"
-                className={`tryon-product-card ${dropFinderResult.product.id === product.id ? 'active' : ''}`}
-                key={product.name}
-                onClick={() => {
-                  setTryOnProductIndex(index);
-                  setDropFinder((current) => ({ ...current, vibe: product.vibe }));
-                }}
-              >
-                <img src={product.image} alt={product.name} />
-                <span>{product.name}</span>
-                <strong>Rs. {product.price}.00</strong>
-              </button>
+          <h3>{activeLockerItem.name}</h3>
+          <div className="tryon-product-price">Rs. {activeLockerItem.price}.00</div>
+          <div className="locker-metrics">
+            <div><span>Style Match</span><strong>{activeLockerItem.score}</strong></div>
+            <div><span>Community Score</span><strong>{activeLockerItem.community}</strong></div>
+            <div><span>Stock Level</span><strong>{activeLockerItem.stock}</strong></div>
+            <div><span>Buy Priority</span><strong>{activeLockerItem.priority}</strong></div>
+          </div>
+          <div className="locker-progress-list">
+            {[
+              ['Style Match', 92],
+              ['Community Popularity', 88],
+              ['Limited Stock Score', 81],
+            ].map(([label, value]) => (
+              <div className="locker-progress" key={label}>
+                <div><span>{label}</span><strong>{value}%</strong></div>
+                <i style={{ '--value': `${value}%` }} />
+              </div>
             ))}
           </div>
-        </div>
+          <Link className="tryon-cart-btn drop-finder-link" to={`/products/${activeLockerItem.id}`}>
+            View Product →
+          </Link>
+        </aside>
       </section>
 
       <section className="newsletter reveal">
