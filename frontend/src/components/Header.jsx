@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
 
@@ -6,68 +6,26 @@ export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
   const navigate = useNavigate();
   const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
-  const location = useLocation();
-  const isNewArrivals = location.pathname === '/new-arrivals';
-  const isWomen = location.pathname.startsWith('/women') || isNewArrivals;
-  const isMen = location.pathname.startsWith('/men');
 
   return (
     <>
       <nav className="atelier-nav">
         <div className="nw">
-          <Link to="/" className="logo">
-            ATELIER
+          <Link to="/" state={{ skipIntro: true }} className="logo">
+            <img src="/models/logo.png" alt="Astravia" />
           </Link>
           <div className="nm">
-            <div className="nd">
-              <button type="button" className={`nl ${isWomen ? 'act' : ''}`}>
-                WOMEN
-                <svg viewBox="0 0 10 6" aria-hidden="true">
-                  <path d="M1 1l4 4 4-4" />
-                </svg>
-              </button>
-              <div className="drop">
-                <Link to="/new-arrivals" className={`dl ${isNewArrivals ? 'active' : ''}`}>
-                  New Arrivals
-                </Link>
-                <Link to="/women" className="dl">
-                  Dresses
-                </Link>
-                <Link to="/tops" className="dl">
-                  Tops
-                </Link>
-              </div>
-            </div>
-            <div className="nd">
-              <button type="button" className={`nl ${isMen ? 'act' : ''}`}>
-                MEN
-                <svg viewBox="0 0 10 6" aria-hidden="true">
-                  <path d="M1 1l4 4 4-4" />
-                </svg>
-              </button>
-              <div className="drop">
-                <Link to="/men-new-arrivals" className="dl">
-                  New Arrivals
-                </Link>
-                <Link to="/men-shirts" className="dl">
-                  Shirts
-                </Link>
-                <Link to="/men-trousers" className="dl">
-                  Trousers
-                </Link>
-              </div>
-            </div>
-            <Link to="/accessories" className="nl">
-              Accessories
+            <Link to="/collection" className="nl">
+              Collection
             </Link>
             <Link to="/giftvoucher" className="nl">
-              GIFT VOUCHERS
+              Gift Vouchers
             </Link>
             <Link to="/sales" className="nl">
-              SALES
+              Sale
             </Link>
             <Link to="/contact" className="nl">
-              CONTACT US
+              Contact Us
             </Link>
           </div>
           <div className="nr" aria-label="Utility navigation">
@@ -109,7 +67,7 @@ export default function Header() {
         <div className="cart-drawer-header">
           <div>
             <p className="cart-kicker">Your Bag</p>
-            <h3>Atelier Cart</h3>
+            <h3>astravia Cart</h3>
           </div>
           <button type="button" className="cart-close" onClick={closeCart} aria-label="Close cart">
             {'\u00D7'}

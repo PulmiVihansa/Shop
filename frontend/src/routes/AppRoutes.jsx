@@ -9,9 +9,12 @@ import SearchResults from '../pages/SearchResults.jsx';
 import Wishlist from '../pages/Wishlist.jsx';
 import Sales from '../pages/Sales.jsx';
 import GiftVoucher from '../pages/GiftVoucher.jsx';
+import Collection from '../pages/Collection.jsx';
 import Contact from '../pages/Contact.jsx';
 import SizeGuide from '../pages/SizeGuide.jsx';
 import Returns from '../pages/Returns.jsx';
+import FAQ from '../pages/FAQ.jsx';
+import Support from '../pages/Support.jsx';
 import About from '../pages/About.jsx';
 import NewArrivals from '../pages/NewArrivals.jsx';
 import Tops from '../pages/Tops.jsx';
@@ -20,6 +23,7 @@ import MenShirts from '../pages/MenShirts.jsx';
 import MenTrousers from '../pages/MenTrousers.jsx';
 import ProductDetails from '../pages/ProductDetails.jsx';
 import Checkout from '../pages/Checkout.jsx';
+import Payment from '../pages/Payment.jsx';
 import OrderSuccess from '../pages/OrderSuccess.jsx';
 import OrderTracking from '../pages/OrderTracking.jsx';
 import AdminDashboard from '../pages/AdminDashboard.jsx';
@@ -42,9 +46,12 @@ export default function AppRoutes() {
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/sales" element={<Sales />} />
       <Route path="/giftvoucher" element={<GiftVoucher />} />
+      <Route path="/collection" element={<Collection />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/sizeguide" element={<SizeGuide />} />
       <Route path="/returns" element={<Returns />} />
+      <Route path="/faq" element={<FAQ />} />
+      <Route path="/support" element={<Support />} />
       <Route path="/about" element={<About />} />
       <Route path="/new-arrivals" element={<NewArrivals />} />
       <Route path="/men-new-arrivals" element={<MenNewArrivals />} />
@@ -60,9 +67,25 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/payment"
+        element={
+          <ProtectedRoute>
+            <Payment />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/order-success" element={<OrderSuccess />} />
       <Route
         path="/orders/track"
+        element={
+          <ProtectedRoute>
+            <OrderTracking />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/order-tracking"
         element={
           <ProtectedRoute>
             <OrderTracking />

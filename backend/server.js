@@ -16,6 +16,7 @@ const bulkOrderRoutes = require('./routes/bulkOrderRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const contentRoutes = require('./routes/contentRoutes');
+const virtualTryOnRoutes = require('./routes/virtualTryOnRoutes');
 
 // Load environment variables.
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -38,7 +39,7 @@ configurePassport();
 
 // Global middleware.
 app.use(cors());
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use(passport.initialize());
 
 // API routes.
@@ -52,6 +53,7 @@ app.use('/api/bulk-orders', bulkOrderRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/virtual-tryon', virtualTryOnRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {

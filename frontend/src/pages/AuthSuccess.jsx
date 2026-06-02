@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AuthSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { authenticateWithToken } = useAuth();
 
   useEffect(() => {
     async function completeLogin() {
@@ -22,9 +23,7 @@ export default function AuthSuccess() {
       }
 
       try {
-        localStorage.setItem('token', token);
-        localStorage.setItem('atelier_token', token);
-        api.defaults.headers.common.Authorization = `Bearer ${token}`;
+        await authenticateWithToken(token);
         navigate('/', { replace: true });
       } catch (err) {
         console.error(err);
@@ -33,7 +32,7 @@ export default function AuthSuccess() {
     }
 
     completeLogin();
-  }, [navigate, searchParams]);
+  }, [authenticateWithToken, navigate, searchParams]);
 
   return (
     <div>Signing you in...</div>

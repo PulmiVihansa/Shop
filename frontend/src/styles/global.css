@@ -1,7 +1,7 @@
 :root {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: #1d1d1f;
-  background-color: #f5f5f7;
+  color: #f5f5f7;
+  background-color: #000;
 }
 
 * {
@@ -12,12 +12,63 @@
 
 body {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: #000;
+  cursor: none;
 }
 
 a {
   text-decoration: none;
   color: inherit;
+}
+
+.cursor {
+  width: 12px;
+  height: 12px;
+  background: #ff1e3c;
+  border-radius: 50%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.1s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+  mix-blend-mode: difference;
+  will-change: transform;
+}
+
+.cursor-ring {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 30, 60, 0.5);
+  border-radius: 50%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9998;
+  transition: transform 0.15s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+  will-change: transform;
+}
+
+.cursor.expand {
+  width: 8px;
+  height: 8px;
+}
+
+.cursor-ring.expand {
+  width: 48px;
+  height: 48px;
+}
+
+@media (pointer: coarse) {
+  body {
+    cursor: auto;
+  }
+
+  .cursor,
+  .cursor-ring {
+    display: none;
+  }
 }
 
 .app-shell {
@@ -31,8 +82,8 @@ a {
   align-items: center;
   gap: 1.5rem;
   padding: 1rem 2rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e6e6e6;
+  background: #000;
+  border-bottom: 1px solid #1a1a1a;
 }
 
 .logo a {
@@ -48,7 +99,7 @@ a {
 }
 
 .category-menu a.active {
-  border-bottom: 2px solid #111;
+  border-bottom: 2px solid #f5f5f7;
   padding-bottom: 0.25rem;
 }
 
@@ -62,14 +113,16 @@ a {
 .search-bar input {
   flex: 1;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d0d0d0;
+  border: 1px solid #4b4b4b;
   border-radius: 6px;
+  background: #000;
+  color: inherit;
 }
 
 .search-bar button {
   padding: 0.5rem 0.9rem;
   border: none;
-  background: #111;
+  background: #1a1a1a;
   color: #fff;
   border-radius: 6px;
   cursor: pointer;
@@ -90,7 +143,7 @@ a {
   font-size: 20px;
   cursor: pointer;
   text-decoration: none;
-  color: #111;
+  color: inherit;
 }
 
 .cart {
@@ -120,14 +173,14 @@ a {
 }
 
 .btn-primary {
-  background: #111;
+  background: #1a1a1a;
   color: #fff;
 }
 
 .btn-ghost {
-  background: #fff;
-  border-color: #d0d0d0;
-  color: #111;
+  background: transparent;
+  border-color: #4b4b4b;
+  color: inherit;
 }
 
 .main-content {
@@ -163,11 +216,11 @@ a {
 
 .category-tile {
   padding: 1.5rem;
-  background: #fff;
+  background: #000;
   border-radius: 16px;
   text-align: center;
   font-weight: 600;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #1a1a1a;
 }
 
 .product-grid {
@@ -178,7 +231,8 @@ a {
 }
 
 .product-card {
-  background: #fff;
+  background: #d0d0d0;
+  color: #111;
   border-radius: 18px;
   padding: 1rem;
   display: flex;
@@ -218,7 +272,7 @@ a {
   margin-top: 0.45rem;
   padding-bottom: 0.15rem;
   border-bottom: 1px solid currentColor;
-  color: #1a1a1a;
+  color: #111;
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -246,8 +300,8 @@ a {
 .site-footer {
   padding: 1.5rem 2rem;
   text-align: center;
-  border-top: 1px solid #e6e6e6;
-  background: #fff;
+  border-top: 1px solid #1a1a1a;
+  background: #000;
 }
 
 @media (max-width: 900px) {

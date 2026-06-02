@@ -1,88 +1,134 @@
 import { Link, useLocation } from 'react-router-dom';
+import { FiArrowRight, FiCheck, FiClipboard, FiHome, FiPackage, FiShield, FiTruck } from 'react-icons/fi';
 import '../styles/order-success.css';
 
-const formatCurrency = (value) => `LKR${Number(value || 0).toLocaleString()}`;
+const fallbackOrder = {
+  orderNumber: 'AST-202600',
+  totalAmount: 7317,
+  payment: { method: 'Credit / Debit Card', status: 'Paid' },
+  shipping: 'standard',
+  items: [
+    { productId: 'chaos-tee', name: 'Chaos Tee', image: '/models/Tshirt8.png', color: 'Black', size: 'M', quantity: 1, price: 2490 },
+    { productId: 'rebuild-tee', name: 'Rebuild Tee', image: '/models/Tshirt5.png', color: 'Stone', size: 'M', quantity: 1, price: 2145 },
+    { productId: 'phantom-tee', name: 'Phantom Tee', image: '/models/Tshirt11.png', color: 'Black', size: 'L', quantity: 1, price: 3056 },
+  ],
+};
+
+const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function OrderSuccess() {
   const { state } = useLocation();
-  const order = state?.order;
-  const shortId = order?.orderId || (order?._id ? String(order._id).slice(-8).toUpperCase() : 'PENDING');
+  const order = state?.order || fallbackOrder;
+  const orderNumber = order.orderNumber || order.orderId || (order._id ? `AST-${String(order._id).slice(-6).toUpperCase()}` : fallbackOrder.orderNumber);
+  const items = order.items?.length ? order.items : fallbackOrder.items;
+  const total = order.totalAmount ?? order.totalPrice ?? items.reduce((sum, item) => sum + Number(item.price || 0) * (item.quantity || 1), 0);
 
   return (
-    <section className="order-success-page">
-      <div className="success-shell">
-        <div className="success-panel">
-          <div className="success-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
+    <section className="astravia-confirmation-page">
+      <div className="confirmation-steps" aria-label="Checkout progress">
+        {[
+          ['01.', 'Cart'],
+          ['02.', 'Checkout'],
+          ['03.', 'Payment'],
+          ['04.', 'Confirmation'],
+        ].map(([number, label], index) => (
+          <div className={label === 'Confirmation' ? 'active' : ''} key={label}>
+            <span>{number}</span>
+            {label}
+            {index < 3 && <i aria-hidden="true" />}
           </div>
-          <span className="success-eyebrow">Order Confirmed</span>
-          <h1>Thank you for your order.</h1>
+        ))}
+      </div>
+
+      <div className="confirmation-shell">
+        <main className="confirmation-hero confirmation-animate">
+          <div className="confirmation-mark" aria-hidden="true">
+            <FiCheck />
+          </div>
+          <span className="confirmation-kicker">Order Confirmed</span>
+          <h1>Drop Secured.</h1>
           <p>
-            Your ATELIER order has been received. We will prepare your pieces and contact you if we need any delivery
-            details confirmed.
+            Your Astravia order is locked in. We are preparing your pieces and will send delivery updates as the order moves.
           </p>
 
-          <div className="success-meta">
+          <div className="confirmation-meta">
             <div>
-              <span>Order ID</span>
-              <strong>#{shortId}</strong>
+              <span>Order No.</span>
+              <strong>{orderNumber}</strong>
             </div>
             <div>
               <span>Payment</span>
-              <strong>{order?.payment?.status || 'Confirmed'}</strong>
+              <strong>{order.payment?.status || 'Paid'}</strong>
             </div>
             <div>
-              <span>Status</span>
-              <strong>{order?.orderStatus || order?.status || 'Pending'}</strong>
+              <span>Total</span>
+              <strong>{formatPrice(total)}</strong>
             </div>
           </div>
 
-          <div className="success-actions">
-            <Link to="/orders/track" className="success-primary">Track Order</Link>
-            <Link to="/men-new-arrivals" className="success-primary">Continue Shopping</Link>
-            <Link to="/" className="success-secondary">Back Home</Link>
+          <div className="confirmation-actions">
+            <Link to="/orders/track" className="confirmation-primary">
+              Track Order
+              <FiArrowRight aria-hidden="true" />
+            </Link>
+            <Link to="/collection" className="confirmation-secondary">
+              Continue Shopping
+            </Link>
+            <Link to="/" className="confirmation-ghost">
+              <FiHome aria-hidden="true" />
+              Back Home
+            </Link>
           </div>
-        </div>
+        </main>
 
-        <aside className="success-summary">
-          <div className="summary-head">
-            <span>Receipt</span>
+        <aside className="confirmation-receipt confirmation-animate">
+          <div className="receipt-head">
+            <span>Digital Receipt</span>
             <h2>Order Summary</h2>
           </div>
 
-          {order?.items?.length ? (
-            <div className="success-items">
-              {order.items.map((item) => (
-                <div className="success-item" key={`${item.product || item.productId || item.name}-${item.size}`}>
-                  <div className="success-item-image">
-                    {item.image ? <img src={item.image} alt={item.name} /> : null}
-                  </div>
-                  <div>
-                    <strong>{item.name}</strong>
-                    <span>{item.size || 'One Size'} · Qty {item.quantity || 1}</span>
-                  </div>
-                  <p>{formatCurrency(item.price * (item.quantity || 1))}</p>
+          <div className="receipt-items">
+            {items.map((item) => (
+              <div className="receipt-item" key={`${item.productId || item.name}-${item.size || 'M'}`}>
+                <img src={item.image} alt={item.name} />
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.color || 'Black'} / {item.size || 'M'} / Qty {item.quantity || 1}</span>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="success-muted">Your order details will appear here after checkout.</p>
-          )}
-
-          <div className="success-total">
-            <span>Total Paid</span>
-            <strong>{formatCurrency(order?.totalAmount ?? order?.totalPrice)}</strong>
+                <p>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</p>
+              </div>
+            ))}
           </div>
 
-          <div className="success-next">
-            <h3>What happens next?</h3>
-            <p>1. Order review and stock confirmation</p>
-            <p>2. Packing by the ATELIER team</p>
-            <p>3. Delivery update by phone or WhatsApp</p>
+          <div className="receipt-total">
+            <span>Total Paid</span>
+            <strong>{formatPrice(total)}</strong>
+          </div>
+
+          <div className="confirmation-delivery-card">
+            <FiTruck aria-hidden="true" />
+            <div>
+              <h3>Delivery Window</h3>
+              <p>{order.shipping === 'express' ? '1-2 business days' : '3-5 business days'} after order processing.</p>
+            </div>
           </div>
         </aside>
+
+        <section className="confirmation-timeline confirmation-animate">
+          {[
+            [FiShield, 'Payment Verified', 'Your payment status has been confirmed and secured.'],
+            [FiClipboard, 'Order Review', 'Astravia checks stock, sizing, and delivery details.'],
+            [FiPackage, 'Packing Drop', 'Your pieces are packed in the Astravia dispatch flow.'],
+            [FiTruck, 'Delivery Update', 'You will receive tracking or delivery contact soon.'],
+          ].map(([Icon, title, text], index) => (
+            <article key={title}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <Icon aria-hidden="true" />
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </section>
       </div>
     </section>
   );

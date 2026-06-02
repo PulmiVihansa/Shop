@@ -1,276 +1,271 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { FiArrowLeft, FiArrowRight, FiCreditCard, FiLock, FiMail, FiMapPin, FiTag, FiTruck } from 'react-icons/fi';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
-import api, { getErrorMessage } from '../services/api.js';
 import '../styles/checkout.css';
 
-const formatCurrency = (value) => `LKR${Number(value || 0).toLocaleString()}`;
+const fallbackItems = [
+  {
+    productId: 'chaos-tee',
+    name: 'Chaos Tee',
+    image: '/models/Tshirt8.png',
+    color: 'Black',
+    size: 'M',
+    quantity: 1,
+    price: 2490,
+    oldPrice: 4990,
+  },
+  {
+    productId: 'rebuild-tee',
+    name: 'Rebuild Tee',
+    image: '/models/Tshirt5.png',
+    color: 'Stone',
+    size: 'M',
+    quantity: 1,
+    price: 2145,
+    oldPrice: 4290,
+  },
+  {
+    productId: 'phantom-tee',
+    name: 'Phantom Tee',
+    image: '/models/Tshirt11.png',
+    color: 'Black',
+    size: 'L',
+    quantity: 1,
+    price: 3056,
+    oldPrice: 4690,
+  },
+];
+
+const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function Checkout() {
-  const { items, summary, clearCart } = useCart();
+  const { items } = useCart();
   const navigate = useNavigate();
-  const [step, setStep] = useState('shipping');
-  const [shipping, setShipping] = useState({
-    fullName: '',
-    line1: '',
-    line2: '',
-    city: '',
-    postalCode: '',
-    country: 'Sri Lanka',
-    phone: '',
-  });
-  const [payment, setPayment] = useState({
-    method: 'ONLINE',
-    cardName: '',
-    cardNumber: '',
-    expiry: '',
-    cvc: '',
-    saveCard: true,
-  });
-  const [paymentSettings, setPaymentSettings] = useState({
-    enableCOD: true,
-    enableOnlinePayment: true,
-    currency: 'LKR',
-    paymentProvider: 'PayHere',
-  });
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const location = useLocation();
+  const checkoutState = location.state || {};
+  const [shippingMethod, setShippingMethod] = useState('standard');
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [coupon, setCoupon] = useState('');
+  const [toast, setToast] = useState('');
 
-  const delivery = summary.subtotal > 25000 || summary.subtotal === 0 ? 0 : 650;
-  useEffect(() => {
-    let active = true;
+  const checkoutItems = useMemo(() => {
+    if (checkoutState.items?.length) return checkoutState.items;
+    if (!items.length) return fallbackItems;
+    return items.map((item) => ({
+      ...item,
+      color: item.color || 'Black',
+      oldPrice: item.oldPrice || Math.round(Number(item.price || 0) * 1.35),
+    }));
+  }, [checkoutState.items, items]);
 
-    async function loadPaymentSettings() {
-      try {
-        const response = await api.get('/settings/payment');
-        if (!active) return;
-        setPaymentSettings(response.data);
-        if (!response.data.enableOnlinePayment && response.data.enableCOD) {
-          setPayment((prev) => ({ ...prev, method: 'COD' }));
-        }
-        if (response.data.enableOnlinePayment && !response.data.enableCOD) {
-          setPayment((prev) => ({ ...prev, method: 'ONLINE' }));
-        }
-      } catch (err) {
-        if (active) setError(getErrorMessage(err));
-      }
-    }
+  const subtotal = checkoutItems.reduce((total, item) => total + Number(item.price || 0) * (item.quantity || 1), 0);
+  const shipping = shippingMethod === 'standard' ? 250 : 550;
+  const discount = Math.round(subtotal * 0.2);
+  const total = subtotal + shipping - discount;
 
-    loadPaymentSettings();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const serviceFee = payment.method === 'COD' ? 250 : 0;
-  const total = summary.subtotal + delivery + serviceFee;
-
-  const maskedCard = useMemo(() => {
-    const digits = payment.cardNumber.replace(/\D/g, '');
-    return digits ? `•••• ${digits.slice(-4).padStart(4, '•')}` : '•••• 4242';
-  }, [payment.cardNumber]);
-
-  const handleShippingChange = (event) => {
-    setShipping((prev) => ({ ...prev, [event.target.name]: event.target.value }));
+  const showToast = (message) => {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 2600);
   };
 
-  const handlePaymentChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setPayment((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  const applyCoupon = () => {
+    showToast(coupon.trim() ? 'Coupon applied to your Astravia order.' : 'Enter a coupon or gift card code first.');
   };
 
-  const validateShipping = () => {
-    if (!shipping.fullName || !shipping.line1 || !shipping.city || !shipping.postalCode || !shipping.phone) {
-      setError('Please complete all required shipping details.');
-      return false;
-    }
-    return true;
-  };
-
-  const validatePayment = () => {
-    if (payment.method !== 'ONLINE') return true;
-    const digits = payment.cardNumber.replace(/\D/g, '');
-    if (!payment.cardName || digits.length < 12 || !payment.expiry || !payment.cvc) {
-      setError('Please complete your card details.');
-      return false;
-    }
-    return true;
-  };
-
-  const continueToPayment = (event) => {
-    event.preventDefault();
-    setError('');
-    if (validateShipping()) setStep('payment');
-  };
-
-  const submitOrder = async (event) => {
-    event.preventDefault();
-    setError('');
-    if (!validatePayment()) return;
-    setSubmitting(true);
-
-    try {
-      const response = await api.post('/orders', {
-        items,
-        address: shipping,
-        customerName: shipping.fullName,
-        phone: shipping.phone,
-        shippingCost: delivery + serviceFee,
-        totalAmount: total,
-        payment: {
-          method: payment.method,
-          reference: `ATL-PAY-${Date.now().toString(36).toUpperCase()}`,
-          transactionId: payment.method === 'ONLINE' ? `SIM-${Date.now().toString(36).toUpperCase()}` : '',
+  const proceedToPayment = () => {
+    showToast('Checkout validated. Proceeding to secure payment.');
+    window.setTimeout(() => {
+      navigate('/payment', {
+        state: {
+          items: checkoutItems,
+          subtotal,
+          shipping,
+          discount,
+          total,
+          shippingMethod,
+          paymentMethod,
         },
       });
-      clearCart();
-      navigate('/order-success', { state: { order: response.data } });
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setSubmitting(false);
-    }
+    }, 450);
   };
 
-  if (!items.length) {
-    return (
-      <section className="checkout-page empty">
-        <div>
-          <span className="checkout-eyebrow">Secure Checkout</span>
-          <h1>Your bag is empty</h1>
-          <p>Add pieces to your bag before opening the payment portal.</p>
-          <Link to="/men-new-arrivals" className="checkout-primary">Continue Shopping</Link>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="checkout-page">
-      <header className="checkout-hero">
-        <div>
-          <span className="checkout-eyebrow">ATELIER Payment Portal</span>
-          <h1>Secure Checkout</h1>
-          <p>Complete delivery and payment details for your order.</p>
-        </div>
-        <div className="checkout-progress" aria-label="Checkout progress">
-          <span className={step === 'shipping' ? 'active' : ''}>Shipping</span>
-          <i />
-          <span className={step === 'payment' ? 'active' : ''}>Payment</span>
-        </div>
-      </header>
+    <section className="astravia-checkout-page">
+      <div className="checkout-steps" aria-label="Checkout progress">
+        {[
+          ['01.', 'Cart'],
+          ['02.', 'Checkout'],
+          ['03.', 'Payment'],
+          ['04.', 'Confirmation'],
+        ].map(([number, label], index) => (
+          <div className={label === 'Checkout' ? 'active' : ''} key={label}>
+            <span>{number}</span>
+            {label}
+            {index < 3 && <i aria-hidden="true" />}
+          </div>
+        ))}
+      </div>
 
-      {error && <div className="checkout-alert">{error}</div>}
+      <div className="checkout-container">
+        <div className="checkout-left">
+          <div className="checkout-title-row checkout-fade-card">
+            <h1>Checkout</h1>
+            <div>
+              <FiLock aria-hidden="true" />
+              <span>Secure Checkout</span>
+              <p>Your information is 100% protected</p>
+            </div>
+          </div>
 
-      <div className="checkout-layout">
-        <main className="checkout-panel">
-          {step === 'shipping' ? (
-            <form className="checkout-form" onSubmit={continueToPayment}>
-              <div className="checkout-section-head">
-                <span>01</span>
-                <h2>Delivery Details</h2>
+          <div className="checkout-info-panel checkout-fade-card">
+            <section className="checkout-block">
+              <div className="checkout-block-title">
+                <FiMail aria-hidden="true" />
+                <h2>Contact Information</h2>
               </div>
-              <div className="checkout-fields">
-                <label>Full name<input name="fullName" value={shipping.fullName} onChange={handleShippingChange} /></label>
-                <label>Phone<input name="phone" value={shipping.phone} onChange={handleShippingChange} placeholder="+94 77 000 0000" /></label>
-                <label className="wide">Address line 1<input name="line1" value={shipping.line1} onChange={handleShippingChange} /></label>
-                <label className="wide">Address line 2<input name="line2" value={shipping.line2} onChange={handleShippingChange} /></label>
-                <label>City<input name="city" value={shipping.city} onChange={handleShippingChange} /></label>
-                <label>Postal code<input name="postalCode" value={shipping.postalCode} onChange={handleShippingChange} /></label>
-                <label className="wide">Country<input name="country" value={shipping.country} onChange={handleShippingChange} /></label>
+              <div className="checkout-display-row">
+                <FiMail aria-hidden="true" />
+                <span>yourmail@gmail.com</span>
+                <button type="button">Edit</button>
               </div>
-              <button className="checkout-primary" type="submit">Continue to Payment</button>
-            </form>
-          ) : (
-            <form className="checkout-form" onSubmit={submitOrder}>
-              <div className="checkout-section-head">
-                <span>02</span>
-                <h2>Payment Method</h2>
-              </div>
+            </section>
 
-              <div className="payment-methods">
+            <section className="checkout-block">
+              <div className="checkout-block-title">
+                <FiMapPin aria-hidden="true" />
+                <h2>Shipping Address</h2>
+              </div>
+              <div className="checkout-address-box">
+                <div>
+                  <p>Ravindu Perera</p>
+                  <p>123, Galle Road</p>
+                  <p>Colombo 04, Western Province</p>
+                  <p>Sri Lanka</p>
+                  <p>+94 77 123 4567</p>
+                </div>
+                <button type="button">Edit</button>
+              </div>
+            </section>
+
+            <section className="checkout-block">
+              <div className="checkout-block-title">
+                <FiTruck aria-hidden="true" />
+                <h2>Shipping Method</h2>
+              </div>
+              <div className="checkout-option-list">
                 {[
-                  paymentSettings.enableOnlinePayment ? ['ONLINE', `${paymentSettings.paymentProvider || 'Online'} Payment`, 'Secure online payment'] : null,
-                  paymentSettings.enableCOD ? ['COD', 'Cash on Delivery', 'Pay at delivery'] : null,
-                ].filter(Boolean).map(([key, title, note]) => (
+                  ['standard', 'Standard Shipping', '3-5 Business Days', 250],
+                  ['express', 'Express Shipping', '1-2 Business Days', 550],
+                ].map(([key, title, note, price]) => (
                   <button
-                    key={key}
                     type="button"
-                    className={payment.method === key ? 'selected' : ''}
-                    onClick={() => setPayment((prev) => ({ ...prev, method: key }))}
+                    className={shippingMethod === key ? 'selected' : ''}
+                    key={key}
+                    onClick={() => setShippingMethod(key)}
                   >
-                    <strong>{title}</strong>
-                    <span>{note}</span>
+                    <span className="checkout-radio" />
+                    <span>
+                      <strong>{title}</strong>
+                      <em>{note}</em>
+                    </span>
+                    <b>{formatPrice(price)}</b>
                   </button>
                 ))}
               </div>
+            </section>
 
-              {payment.method === 'ONLINE' && (
-                <div className="payment-card-area">
-                  <div className="checkout-card-preview">
-                    <span>ATELIER</span>
-                    <strong>{maskedCard}</strong>
-                    <small>{payment.cardName || 'CARD HOLDER'}</small>
-                  </div>
-                  <div className="checkout-fields">
-                    <label className="wide">Name on card<input name="cardName" value={payment.cardName} onChange={handlePaymentChange} /></label>
-                    <label className="wide">Card number<input name="cardNumber" value={payment.cardNumber} onChange={handlePaymentChange} placeholder="4242 4242 4242 4242" /></label>
-                    <label>Expiry<input name="expiry" value={payment.expiry} onChange={handlePaymentChange} placeholder="MM/YY" /></label>
-                    <label>CVC<input name="cvc" value={payment.cvc} onChange={handlePaymentChange} placeholder="123" /></label>
-                    <label className="checkout-check"><input type="checkbox" name="saveCard" checked={payment.saveCard} onChange={handlePaymentChange} /> Save card for future orders</label>
-                  </div>
-                </div>
-              )}
-
-              {payment.method === 'COD' && (
-                <div className="checkout-note">
-                  <strong>Cash on Delivery</strong>
-                  <p>A small handling fee is added. Please keep the exact amount ready at delivery.</p>
-                </div>
-              )}
-
-              <div className="checkout-actions">
-                <button className="checkout-secondary" type="button" onClick={() => setStep('shipping')}>Back</button>
-                <button className="checkout-primary" type="submit" disabled={submitting}>
-                  {submitting ? 'Processing...' : `Pay ${formatCurrency(total)}`}
-                </button>
+            <section className="checkout-block">
+              <div className="checkout-block-title">
+                <FiCreditCard aria-hidden="true" />
+                <h2>Payment Method</h2>
               </div>
-            </form>
-          )}
-        </main>
-
-        <aside className="checkout-summary">
-          <div className="checkout-section-head">
-            <span>Bag</span>
-            <h2>Order Summary</h2>
+              <div className="checkout-payment-grid">
+                {[
+                  ['card', 'Credit / Debit Card', <FiCreditCard aria-hidden="true" />],
+                  ['cod', 'Cash on Delivery', <FiTag aria-hidden="true" />],
+                ].map(([key, label, icon]) => (
+                  <button
+                    type="button"
+                    className={paymentMethod === key ? 'selected' : ''}
+                    key={key}
+                    onClick={() => setPaymentMethod(key)}
+                  >
+                    <span className="checkout-radio" />
+                    {icon}
+                    <strong>{label}</strong>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
-          <div className="checkout-items">
-            {items.map((item) => (
-              <div className="checkout-item" key={`${item.productId}-${item.size || 'One Size'}`}>
-                <div className="checkout-item-img">
+        </div>
+
+        <aside className="checkout-summary-card checkout-fade-card">
+          <div className="checkout-summary-head">
+            <h2>Order Summary</h2>
+            <Link to="/collection">
+              <FiArrowLeft aria-hidden="true" />
+              Return to Cart
+            </Link>
+          </div>
+
+          <div className="checkout-products">
+            {checkoutItems.map((item) => (
+              <div className="checkout-product-row" key={`${item.productId}-${item.size || 'M'}`}>
+                <div className="checkout-product-thumb">
                   {item.image ? <img src={item.image} alt={item.name} /> : <span>{item.name}</span>}
                 </div>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.size || 'One Size'} · Qty {item.quantity || 1}</span>
+                <div className="checkout-product-meta">
+                  <h3>{item.name}</h3>
+                  <p>{item.color || 'Black'} / Oversized / {item.size || 'M'}</p>
+                  <span>Qty: {item.quantity || 1}</span>
                 </div>
-                <p>{formatCurrency(item.price * (item.quantity || 1))}</p>
+                <div className="checkout-product-price">
+                  <strong>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</strong>
+                  <del>{formatPrice(Number(item.oldPrice || 0) * (item.quantity || 1))}</del>
+                </div>
               </div>
             ))}
           </div>
-          <div className="checkout-totals">
-            <p><span>Subtotal</span><strong>{formatCurrency(summary.subtotal)}</strong></p>
-            <p><span>Delivery</span><strong>{delivery ? formatCurrency(delivery) : 'Free'}</strong></p>
-            <p><span>Service fee</span><strong>{serviceFee ? formatCurrency(serviceFee) : 'LKR0'}</strong></p>
-            <p className="total"><span>Total</span><strong>{formatCurrency(total)}</strong></p>
+
+          <div className="checkout-summary-lines">
+            <p><span>Subtotal</span><strong>{formatPrice(subtotal)}</strong></p>
+            <p><span>Shipping</span><strong>{formatPrice(shipping)}</strong></p>
+            <p><span>Discount</span><strong className="discount">- {formatPrice(discount)}</strong></p>
           </div>
-          <div className="checkout-secure">
-            <strong>Secure payment</strong>
-            <span>Payment details are never stored as raw card data.</span>
+
+          <div className="checkout-total-line">
+            <span>Total</span>
+            <strong>{formatPrice(total)}</strong>
+          </div>
+
+          <div className="checkout-coupon-row">
+            <label>
+              <FiTag aria-hidden="true" />
+              <input
+                type="text"
+                value={coupon}
+                onChange={(event) => setCoupon(event.target.value)}
+                placeholder="Enter coupon or gift card"
+              />
+            </label>
+            <button type="button" onClick={applyCoupon}>Apply</button>
+          </div>
+
+          <button type="button" className="checkout-pay-button" onClick={proceedToPayment}>
+            Proceed To Payment
+            <FiArrowRight aria-hidden="true" />
+          </button>
+
+          <div className="checkout-security-note">
+            <FiLock aria-hidden="true" />
+            Secure 256-bit SSL encrypted payment
           </div>
         </aside>
       </div>
+
+      {toast && <div className="checkout-toast">{toast}</div>}
     </section>
   );
 }
