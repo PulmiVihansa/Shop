@@ -57,6 +57,9 @@ app.use('/api/bulk-orders', bulkOrderRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/virtual-tryon', virtualTryOnRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {
