@@ -1,10 +1,16 @@
-
 import { useMemo, useState } from 'react';
-import { FiArrowRight, FiClock, FiInstagram, FiMail, FiMapPin, FiMessageCircle, FiPackage, FiPhone, FiShield, FiTruck } from 'react-icons/fi';
-import api from '../services/api.js';
-
-
-
+import {
+  FiArrowRight,
+  FiClock,
+  FiInstagram,
+  FiMail,
+  FiMapPin,
+  FiMessageCircle,
+  FiPackage,
+  FiPhone,
+  FiShield,
+  FiTruck,
+} from 'react-icons/fi';
 import '../styles/contact.css';
 
 const departments = ['General', 'Orders', 'Returns', 'Sizing', 'Collabs'];
@@ -36,13 +42,6 @@ export default function Contact() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    phone: '',
-    companyName: '',
-    products: '',
-    quantity: '',
-    orderValue: '',
-    orderRef: '',
-    subject: '',
     order: '',
     subject: departmentSubjects.General,
     message: '',
@@ -63,81 +62,10 @@ export default function Contact() {
     setError('');
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
     setError('');
 
-    if (activeDept === 'Wholesale' && !formValues.companyName.trim()) {
-      triggerShake('companyName');
-      return;
-    }
-
-    if (!formValues.email.trim()) {
-      triggerShake('email');
-      return;
-    }
-
-    if (!formValues.message.trim()) {
-      triggerShake('message');
-      return;
-    }
-
-    if (!consented) {
-      setConsentError(true);
-      const timeoutId = setTimeout(() => setConsentError(false), 1500);
-      timeoutsRef.current.push(timeoutId);
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      if (activeDept === 'Wholesale') {
-        const response = await api.post('/bulk-orders/requests', {
-          companyName: formValues.companyName,
-          contactPerson: `${formValues.firstName} ${formValues.lastName}`.trim() || formValues.email,
-          email: formValues.email,
-          phone: formValues.phone,
-          products: formValues.products,
-          quantity: formValues.quantity,
-          orderValue: formValues.orderValue,
-          message: formValues.message,
-        });
-        setSuccessRef(`REF: ${response.data.id || response.data._id || generateRef()}`);
-      } else {
-        setSuccessRef(`REF: ${generateRef()}`);
-      }
-      setShowSuccess(true);
-    } catch (error) {
-      setSuccessRef('REF: Unable to send');
-      setShowSuccess(true);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setShowSuccess(false);
-    setFormValues({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      companyName: '',
-      products: '',
-      quantity: '',
-      orderValue: '',
-      orderRef: '',
-      subject: '',
-      message: '',
-    });
-    setActiveDept('General');
-    setFileLabel('Attach a photo or document');
-    setConsented(false);
-    setConsentError(false);
-    setOrderRefOn(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
     if (!form.email.trim() || !form.message.trim()) {
       setError('Add your email and message so the Astravia team can reply.');
       return;
@@ -171,7 +99,6 @@ export default function Contact() {
             <a href="#contact-form">Send Message</a>
           </div>
         </div>
-
       </div>
 
       <div className="contact-method-grid">
@@ -264,124 +191,6 @@ export default function Contact() {
               </label>
             </div>
 
-            {activeDept === 'Wholesale' && (
-              <>
-                <div className={`float-field ${shakeFields.companyName ? 'shake' : ''}`}>
-                  <input
-                    type="text"
-                    id="companyName"
-                    name="companyName"
-                    placeholder=" "
-                    value={formValues.companyName}
-                    onChange={setField('companyName')}
-                  />
-                  <label className="float-label" htmlFor="companyName">
-                    Company Name
-                  </label>
-                  <span className="field-line" />
-                </div>
-
-                <div className="field-row">
-                  <div className="float-field">
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      placeholder=" "
-                      value={formValues.phone}
-                      onChange={setField('phone')}
-                    />
-                    <label className="float-label" htmlFor="phone">
-                      Phone
-                    </label>
-                    <span className="field-line" />
-                  </div>
-                  <div className="float-field">
-                    <input
-                      type="number"
-                      min="0"
-                      id="quantity"
-                      name="quantity"
-                      placeholder=" "
-                      value={formValues.quantity}
-                      onChange={setField('quantity')}
-                    />
-                    <label className="float-label" htmlFor="quantity">
-                      Quantity
-                    </label>
-                    <span className="field-line" />
-                  </div>
-                </div>
-
-                <div className="field-row">
-                  <div className="float-field">
-                    <input
-                      type="text"
-                      id="products"
-                      name="products"
-                      placeholder=" "
-                      value={formValues.products}
-                      onChange={setField('products')}
-                    />
-                    <label className="float-label" htmlFor="products">
-                      Products
-                    </label>
-                    <span className="field-line" />
-                  </div>
-                  <div className="float-field">
-                    <input
-                      type="number"
-                      min="0"
-                      id="orderValue"
-                      name="orderValue"
-                      placeholder=" "
-                      value={formValues.orderValue}
-                      onChange={setField('orderValue')}
-                    />
-                    <label className="float-label" htmlFor="orderValue">
-                      Order Value
-                    </label>
-                    <span className="field-line" />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div>
-              <button type="button" className="order-ref-toggle" onClick={() => setOrderRefOn((prev) => !prev)}>
-                <span className={`toggle-switch ${orderRefOn ? 'on' : ''}`} />
-                <span className="toggle-label">Include an order reference</span>
-              </button>
-              {orderRefOn && (
-                <div style={{ marginTop: '1rem' }}>
-                  <div className="float-field">
-                    <input
-                      type="text"
-                      id="orderRef"
-                      name="orderRef"
-                      placeholder=" "
-                      value={formValues.orderRef}
-                      onChange={setField('orderRef')}
-                    />
-                    <label className="float-label" htmlFor="orderRef">
-                      Order Reference
-                    </label>
-                    <span className="field-line" />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className={`float-field ${formValues.subject ? 'filled' : ''}`}>
-              <select id="subject" name="subject" value={formValues.subject} onChange={setField('subject')}>
-                <option value="" disabled hidden />
-                {subjectOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <label className="float-label" htmlFor="subject">
             <div className="contact-field-row">
               <label>
                 Order ID
