@@ -20,8 +20,8 @@ const getFinanceDashboard = () => ({
   },
   financialInsights: [
     { label: 'Best Month', value: 'May 2026' },
-    { label: 'Top Category', value: 'Women' },
-    { label: 'Top Product', value: 'Silk Wrap Maxi' },
+    { label: 'Top Category', value: 'Graphic Tees' },
+    { label: 'Top Product', value: 'Astravia Noir Graphic Tee' },
     { label: 'Growth', value: '+18.4%' }
   ],
   revenueSources: [
@@ -32,15 +32,15 @@ const getFinanceDashboard = () => ({
   monthlyRevenue: months.map((label, index) => ({ label, revenue: [2100000, 2600000, 2950000, 3400000, 3650000, 4175000][index] })),
   monthlyProfit: months.map((label, index) => ({ label, profit: [720000, 960000, 1040000, 1210000, 1325000, 1470000][index] })),
   revenueByCollection: [
-    { label: 'Women', value: 9800000 },
-    { label: 'Men', value: 5450000 },
-    { label: 'Accessories', value: 3225000 }
+    { label: 'Graphic Tees', value: 9800000 },
+    { label: 'Oversized Tees', value: 5450000 },
+    { label: 'Hoodies', value: 3225000 }
   ],
   bestProducts: [
-    { product: 'Silk Wrap Maxi', orders: 82, revenue: 3977000, profit: 1511000 },
+    { product: 'Astravia Noir Graphic Tee', orders: 82, revenue: 3977000, profit: 1511000 },
     { product: 'Linen Oxford Shirt', orders: 74, revenue: 1554000, profit: 642000 },
-    { product: 'Raffia Structured Tote', orders: 68, revenue: 1190000, profit: 514000 },
-    { product: 'Velvet Column Gown', orders: 31, revenue: 1844500, profit: 703000 }
+    { product: 'Gold Mark Hoodie', orders: 68, revenue: 1190000, profit: 514000 },
+    { product: 'Noir Technical Jacket', orders: 31, revenue: 1844500, profit: 703000 }
   ],
   recentTransactions: [
     { transactionId: 'TXN-1001', customer: 'Maya Perera', amount: 485000, paymentStatus: 'PAID', date: '2026-05-28' },

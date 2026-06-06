@@ -259,22 +259,23 @@
   display: inline-flex;
 }
 
+.inv-status.in,
 .inv-status.healthy {
-  color: #4f624c;
-  background: #eef1ec;
-  border: 1px solid #d6ddd1;
+  color: #2e8b57;
+  background: rgba(46, 139, 87, 0.1);
+  border: 1px solid rgba(46, 139, 87, 0.28);
 }
 
 .inv-status.low {
-  color: #7a674c;
-  background: #f6efe3;
-  border: 1px solid #ead9bb;
+  color: #d4a24c;
+  background: rgba(212, 162, 76, 0.12);
+  border: 1px solid rgba(212, 162, 76, 0.34);
 }
 
 .inv-status.out {
-  color: #8a5f53;
-  background: #f2e8e4;
-  border: 1px solid #e3cfc8;
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.1);
+  border: 1px solid rgba(192, 57, 43, 0.28);
 }
 
 .inv-expand-btn {

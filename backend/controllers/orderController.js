@@ -10,7 +10,7 @@ const {
 const { generateInvoiceForOrder } = require('../services/invoiceService');
 
 const ORDER_STATUS_ALLOWED = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-const PAYMENT_STATUS_ALLOWED = ['PENDING', 'PAID', 'REFUNDED'];
+const PAYMENT_STATUS_ALLOWED = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -32,6 +32,14 @@ const buildSummaryProductName = (items) => {
 const buildSummarySize = (items) => {
   const unique = Array.from(new Set(items.map((item) => item.size || 'One Size')));
   return unique.length === 1 ? unique[0] : 'Mixed';
+};
+
+const createMemoryTransactionId = () => {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const transactionId = `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
+    if (!(store.transactions || []).some((transaction) => transaction.transactionId === transactionId)) return transactionId;
+  }
+  return `TXN-${Date.now().toString().slice(-6)}`;
 };
 
 const reduceStock = async (items) => {
@@ -136,7 +144,7 @@ const createOrder = async (req, res) => {
       paidAt: paymentStatus === 'PAID' ? new Date() : undefined
     };
 
-    const orderStatus = toText(req.body.orderStatus, 'pending').toLowerCase();
+    const orderStatus = toText(req.body.orderStatus, paymentSucceeded ? 'processing' : 'pending').toLowerCase();
     const safeOrderStatus = ORDER_STATUS_ALLOWED.includes(orderStatus) ? orderStatus : 'pending';
 
     await reduceStock(items);
@@ -155,6 +163,8 @@ const createOrder = async (req, res) => {
       shippingCost,
       totalAmount,
       status: safeOrderStatus,
+      orderStatus: safeOrderStatus.toUpperCase(),
+      paymentStatus,
       items,
     };
 
@@ -173,7 +183,7 @@ const createOrder = async (req, res) => {
         : null;
 
     if (global.useMemoryStore) {
-      const transactionId = paymentSucceeded ? `TXN-${1001 + (store.transactions?.length || 0)}` : '';
+      const transactionId = paymentSucceeded ? createMemoryTransactionId() : '';
       const order = {
         _id: createId(),
         user: userId,
@@ -184,7 +194,7 @@ const createOrder = async (req, res) => {
         paymentMethod,
         paymentStatus,
         transactionId,
-        orderStatus: safeOrderStatus,
+        orderStatus: safeOrderStatus.toUpperCase(),
         orderDate: new Date(),
         ...orderPayload,
         orderId,
@@ -397,13 +407,30 @@ const updateOrderPaymentStatus = async (req, res) => {
 
     const order = await prisma.$transaction(async (tx) => {
       if (paymentStatus === 'PAID' || paymentStatus === 'REFUNDED') {
+        await tx.order.update({
+          where: { id: existing.id },
+          data: {
+            paymentStatus,
+            orderStatus: paymentStatus === 'PAID' ? 'PROCESSING' : String(existing.orderStatus || existing.status || 'PENDING').toUpperCase(),
+            status: paymentStatus === 'PAID' ? 'processing' : existing.status
+          }
+        });
         await createTransactionAndInvoice(tx, existing, {
           paymentMethod: req.body.paymentMethod || existing.transaction?.paymentMethod || existing.transactionRecord?.paymentMethod || 'COD',
           paymentStatus
         });
       } else if (existing.transaction || existing.transactionRecord) {
+        await tx.order.update({
+          where: { id: existing.id },
+          data: { paymentStatus }
+        });
         await tx.transaction.update({
           where: { id: (existing.transaction || existing.transactionRecord).id },
+          data: { paymentStatus }
+        });
+      } else {
+        await tx.order.update({
+          where: { id: existing.id },
           data: { paymentStatus }
         });
       }

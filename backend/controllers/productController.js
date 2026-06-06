@@ -3,13 +3,11 @@ const { store, createId, seedProducts } = require('../data/memoryStore');
 const {
   normalizeCollection,
   normalizeCategory,
-  normalizeSubcategory,
   getDefaultCollectionCategory,
-  getDefaultCollectionSubcategory
 } = require('../utils/productStructure');
 
 const INVENTORY_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const DEFAULT_REORDER_THRESHOLD = 15;
+const LOW_STOCK_LIMIT = 10;
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -29,6 +27,23 @@ const sanitizeStringArray = (value, fallback = []) => {
 
 const normalizeSizeCode = (value) => sanitizeText(value).toUpperCase();
 
+const slugify = (value) =>
+  sanitizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 90);
+
+const sanitizeRating = (value, fallback = 0) => {
+  const number = toNumber(value, fallback);
+  return Math.min(5, Math.max(0, number));
+};
+
+const sanitizeJsonArray = (value, fallback = []) => {
+  if (!Array.isArray(value)) return fallback;
+  return value;
+};
+
 const getAllSizeKeys = (sizes = [], sizeStock = {}) => {
   const dynamicSizes = sanitizeStringArray(sizes).map(normalizeSizeCode);
   const stockKeys = Object.keys(sizeStock || {}).map(normalizeSizeCode);
@@ -46,11 +61,11 @@ const normalizeSizeStock = (sizeStock = {}, sizes = []) => {
 const getTotalStock = (sizeStock = {}) =>
   Object.values(sizeStock).reduce((sum, value) => sum + Math.max(0, Math.trunc(toNumber(value, 0))), 0);
 
-const getReorderThreshold = () => DEFAULT_REORDER_THRESHOLD;
+const getReorderThreshold = () => LOW_STOCK_LIMIT;
 
-const getStatus = (totalStock, reorderThreshold) => {
+const getStatus = (totalStock) => {
   if (totalStock <= 0) return 'out';
-  if (totalStock < reorderThreshold) return 'low';
+  if (totalStock <= LOW_STOCK_LIMIT) return 'low';
   return 'healthy';
 };
 
@@ -62,7 +77,7 @@ const toInventoryRecord = (product) => {
   const totalStock = getTotalStock(sizeStock);
   const reorderThreshold = getReorderThreshold(normalized);
   const inventoryValue = totalStock * toNumber(normalized.price, 0);
-  const status = getStatus(totalStock, reorderThreshold);
+  const status = getStatus(totalStock);
 
   return {
     ...normalized,
@@ -106,39 +121,47 @@ const applyInventoryFilters = (records, filter = {}) =>
       const skuMatch = String(product.sku || '').toLowerCase().includes(query);
       if (!idMatch && !skuMatch) return false;
     }
-    if (filter.collection && product.collection !== filter.collection) return false;
-    if (filter.category && product.category !== filter.category) return false;
-    if (filter.subcategory && product.subcategory !== filter.subcategory) return false;
+    if (filter.collection && normalizeCollection(product.collection, 'men') !== filter.collection) return false;
+    if (filter.category && normalizeCategory('men', product.category, getDefaultCollectionCategory('men')) !== filter.category) return false;
     if (filter.lowStockOnly && !product.lowStock) return false;
     if (filter.outOfStockOnly && !product.outOfStock) return false;
     return true;
   });
 
 const sanitizeProductPayload = (payload = {}, existing = null) => {
-  const collection = normalizeCollection(payload.collection, existing?.collection || 'female');
+  const collection = normalizeCollection(payload.collection, existing?.collection || 'men');
   const category = normalizeCategory(collection, payload.category, getDefaultCollectionCategory(collection));
-  const subcategory = normalizeSubcategory(collection, category, payload.subcategory, getDefaultCollectionSubcategory(collection, category));
   const colors = sanitizeStringArray(payload.colors, existing?.colors || []);
+  const name = sanitizeText(payload.name, existing?.name || '');
+  const slug = slugify(payload.slug || existing?.slug || name);
 
   const next = {
-    name: sanitizeText(payload.name, existing?.name || ''),
+    name,
+    slug: slug || null,
     price: toNumber(payload.price, toNumber(existing?.price, 0)),
     description: sanitizeText(payload.description, existing?.description || ''),
     collection,
     category,
-    subcategory,
     colors,
     images: sanitizeStringArray(payload.images, existing?.images || []),
     sizes: sanitizeStringArray(payload.sizes, existing?.sizes || []),
+    badges: sanitizeStringArray(payload.badges, existing?.badges || []),
+    material: sanitizeText(payload.material, existing?.material || ''),
+    fabric: sanitizeText(payload.fabric, existing?.fabric || ''),
+    fit: sanitizeText(payload.fit, existing?.fit || ''),
+    careInstructions: sanitizeText(payload.careInstructions, existing?.careInstructions || ''),
+    countryOfOrigin: sanitizeText(payload.countryOfOrigin, existing?.countryOfOrigin || ''),
+    metaTitle: sanitizeText(payload.metaTitle, existing?.metaTitle || ''),
+    metaDescription: sanitizeText(payload.metaDescription, existing?.metaDescription || ''),
+    metaKeywords: sanitizeStringArray(payload.metaKeywords, existing?.metaKeywords || []),
+    rating: sanitizeRating(payload.rating, existing?.rating || 0),
+    reviewCount: Math.max(0, Math.trunc(toNumber(payload.reviewCount, existing?.reviewCount || 0))),
+    reviews: sanitizeJsonArray(payload.reviews, existing?.reviews || []),
   };
 
   const mergedSizeStock = normalizeSizeStock(payload.sizeStock || existing?.sizeStock || {}, next.sizes);
-  const providedStock = toNumber(payload.stock, NaN);
   next.sizeStock = mergedSizeStock;
-  next.stock = Number.isFinite(providedStock) ? Math.max(0, Math.trunc(providedStock)) : getTotalStock(mergedSizeStock);
-  if (payload.sizeStock) {
-    next.stock = getTotalStock(mergedSizeStock);
-  }
+  next.stock = getTotalStock(mergedSizeStock);
 
   return next;
 };
@@ -218,59 +241,122 @@ const getInventorySummary = (records) => {
   return { totalProducts, totalInventoryValue, lowStockProducts, outOfStockProducts, totalUnits };
 };
 
-const normalizeProduct = (product) => ({
-  id: product._id || product.id,
-  _id: product._id || product.id,
-  name: product.name,
-  title: product.name,
-  price: product.price,
-  description: product.description,
-  collection: normalizeCollection(product.collection, 'female'),
-  category: product.category,
-  categoryLabel: product.category,
-  subcategory: product.subcategory || '',
-  colors: product.colors || [],
-  images: product.images || [],
-  sizes: product.sizes || [],
-  stock: product.stock,
-  sizeStock: product.sizeStock || {},
-  createdAt: product.createdAt,
-  updatedAt: product.updatedAt
-});
+const normalizeProduct = (product) => {
+  const collection = normalizeCollection(product.collection, 'men');
+  const category = normalizeCategory(collection, product.category, getDefaultCollectionCategory(collection));
+  const sizeStock = normalizeSizeStock(product.sizeStock || {}, product.sizes || []);
+  const stock = getTotalStock(sizeStock);
+
+  return {
+    id: product._id || product.id,
+    _id: product._id || product.id,
+    name: product.name,
+    title: product.name,
+    slug: product.slug || slugify(product.name),
+    price: product.price,
+    description: product.description,
+    collection,
+    category,
+    categoryLabel: category,
+    colors: product.colors || [],
+    images: product.images || [],
+    image: product.images?.[0] || '',
+    sizes: getAllSizeKeys(product.sizes || [], sizeStock),
+    stock,
+    totalStock: stock,
+    sizeStock,
+    badges: product.badges || [],
+    material: product.material || '',
+    fabric: product.fabric || '',
+    fit: product.fit || '',
+    careInstructions: product.careInstructions || '',
+    countryOfOrigin: product.countryOfOrigin || '',
+    metaTitle: product.metaTitle || '',
+    metaDescription: product.metaDescription || '',
+    metaKeywords: product.metaKeywords || [],
+    rating: toNumber(product.rating, 0),
+    reviewCount: Math.max(0, Math.trunc(toNumber(product.reviewCount, 0))),
+    reviews: Array.isArray(product.reviews) ? product.reviews : [],
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt
+  };
+};
+
+const collectionProductSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  price: true,
+  collection: true,
+  category: true,
+  colors: true,
+  images: true,
+  sizes: true,
+  sizeStock: true,
+  stock: true,
+  badges: true,
+  createdAt: true,
+  updatedAt: true
+};
+
+const toCollectionListProduct = (product) => {
+  const normalized = normalizeProduct(product);
+  return {
+    id: normalized.id,
+    _id: normalized._id,
+    name: normalized.name,
+    slug: normalized.slug,
+    price: normalized.price,
+    collection: normalized.collection,
+    category: normalized.category,
+    categoryLabel: normalized.categoryLabel,
+    colors: normalized.colors,
+    images: normalized.images,
+    image: normalized.image,
+    sizes: normalized.sizes,
+    sizeStock: normalized.sizeStock,
+    stock: normalized.stock,
+    totalStock: normalized.totalStock,
+    badges: normalized.badges
+  };
+};
 
 const productSearchText = (product) =>
   [
     product.name,
+    product.slug,
     product.collection,
     product.category,
-    product.subcategory,
-    product.description
+    product.description,
+    ...(product.badges || []),
+    product.material,
+    product.fabric,
+    product.fit
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 
-const buildProductFilter = ({ collection, category, subcategory, q } = {}) => {
-  const normalizedCollection = collection ? normalizeCollection(collection, '') : '';
-  const normalizedCategory =
-    category && normalizedCollection ? normalizeCategory(normalizedCollection, category, '') : sanitizeText(category);
-  const normalizedSubcategory =
-    subcategory && normalizedCollection && normalizedCategory
-      ? normalizeSubcategory(normalizedCollection, normalizedCategory, subcategory, '')
-      : sanitizeText(subcategory);
+const buildProductFilter = ({ collection, category, q } = {}) => {
+  const normalizedCollection = normalizeCollection(collection, 'men');
+  const normalizedCategory = category ? normalizeCategory(normalizedCollection, category, '') : '';
 
   return {
     collection: normalizedCollection,
     category: normalizedCategory,
-    subcategory: normalizedSubcategory,
     q: sanitizeText(q)
   };
 };
 
+const getQueryLimit = (value) => {
+  const limit = Math.trunc(toNumber(value, 0));
+  if (limit <= 0) return null;
+  return Math.min(limit, 50);
+};
+
 const productMatches = (product, filter) => {
-  if (filter.collection && product.collection !== filter.collection) return false;
-  if (filter.category && product.category !== filter.category) return false;
-  if (filter.subcategory && product.subcategory !== filter.subcategory) return false;
+  if (filter.collection && normalizeCollection(product.collection, 'men') !== filter.collection) return false;
+  if (filter.category && normalizeCategory('men', product.category, getDefaultCollectionCategory('men')) !== filter.category) return false;
   if (filter.q && !productSearchText(product).includes(filter.q.toLowerCase())) return false;
   return true;
 };
@@ -285,8 +371,7 @@ const logProductQuery = (source, filter, count, sample = null) => {
       ? {
           id: sample.id || sample._id,
           collection: sample.collection,
-          category: sample.category,
-          subcategory: sample.subcategory
+          category: sample.category
         }
       : null
   });
@@ -295,32 +380,49 @@ const logProductQuery = (source, filter, count, sample = null) => {
 const getProducts = async (req, res) => {
   try {
     const filter = buildProductFilter(req.query);
+    const collectionView = req.query.view === 'collection';
 
     if (global.useMemoryStore) {
       seedProducts();
       const products = store.products.filter((product) => productMatches(product, filter));
-      logProductQuery('memory', filter, products.length, products[0]);
-      return res.json(products.map(normalizeProduct));
+      const limitedProducts = getQueryLimit(req.query.limit || req.query.take) ? products.slice(0, getQueryLimit(req.query.limit || req.query.take)) : products;
+      logProductQuery('memory', filter, limitedProducts.length, limitedProducts[0]);
+      return res.json(limitedProducts.map(collectionView ? toCollectionListProduct : normalizeProduct));
     }
 
     const where = {};
 
-    if (filter.collection) where.collection = filter.collection;
-    if (filter.category) where.category = filter.category;
-    if (filter.subcategory) where.subcategory = filter.subcategory;
+    if (filter.collection) {
+      where.collection = filter.collection;
+    }
+
+    if (filter.category) {
+      where.category = filter.category;
+    }
+
     if (filter.q) {
       where.OR = [
         { name: { contains: filter.q, mode: 'insensitive' } },
+        { slug: { contains: filter.q, mode: 'insensitive' } },
         { collection: { contains: filter.q, mode: 'insensitive' } },
         { category: { contains: filter.q, mode: 'insensitive' } },
-        { subcategory: { contains: filter.q, mode: 'insensitive' } },
-        { description: { contains: filter.q, mode: 'insensitive' } }
+        ...(collectionView ? [] : [{ description: { contains: filter.q, mode: 'insensitive' } }])
       ];
     }
 
-    const products = await prisma.product.findMany({ where, orderBy: { createdAt: 'desc' } });
-    logProductQuery('prisma', filter, products.length, products[0]);
-    res.json(products.map(normalizeProduct));
+    const query = { where, orderBy: { createdAt: 'desc' } };
+    const limit = getQueryLimit(req.query.limit || req.query.take);
+    if (limit) {
+      query.take = limit;
+    }
+    if (collectionView) {
+      query.select = collectionProductSelect;
+    }
+
+    const products = await prisma.product.findMany(query);
+    const filteredProducts = products.filter((product) => productMatches(product, filter));
+    logProductQuery('prisma', filter, filteredProducts.length, filteredProducts[0]);
+    res.json(filteredProducts.map(collectionView ? toCollectionListProduct : normalizeProduct));
   } catch (error) {
      console.error(error);
      res.status(500).json({ message: error.message });
@@ -331,14 +433,30 @@ const getProductById = async (req, res) => {
   try {
     if (global.useMemoryStore) {
       seedProducts();
-      const product = store.products.find((entry) => entry._id === req.params.id);
+      const product = store.products.find((entry) => (
+        entry._id === req.params.id ||
+        entry.id === req.params.id ||
+        entry.slug === req.params.id ||
+        slugify(entry.name) === req.params.id
+      ));
       if (!product) {
         return res.status(404).json({ message: 'Product not found' });
       }
       return res.json(normalizeProduct(product));
     }
 
-    const product = await prisma.product.findUnique({ where: { id: req.params.id } });
+    let product = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { id: req.params.id },
+          { slug: req.params.id }
+        ]
+      }
+    });
+    if (!product) {
+      const products = await prisma.product.findMany();
+      product = products.find((entry) => slugify(entry.name) === req.params.id);
+    }
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -353,6 +471,9 @@ const createProduct = async (req, res) => {
   try {
     const payload = sanitizeProductPayload(req.body);
     if (global.useMemoryStore) {
+      if (payload.slug && store.products.some((entry) => entry.slug === payload.slug)) {
+        payload.slug = `${payload.slug}-${Date.now().toString(36)}`;
+      }
       const product = {
         _id: createId(),
         ...payload,
@@ -363,6 +484,12 @@ const createProduct = async (req, res) => {
       return res.status(201).json(normalizeProduct(product));
     }
 
+    if (payload.slug) {
+      const existingSlug = await prisma.product.findUnique({ where: { slug: payload.slug } });
+      if (existingSlug) {
+        payload.slug = `${payload.slug}-${Date.now().toString(36)}`;
+      }
+    }
     const product = await prisma.product.create({ data: payload });
     res.status(201).json(normalizeProduct(product));
   } catch (error) {
@@ -379,6 +506,9 @@ const updateProduct = async (req, res) => {
         return res.status(404).json({ message: 'Product not found' });
       }
       const payload = sanitizeProductPayload(req.body, store.products[index]);
+      if (payload.slug && store.products.some((entry, entryIndex) => entryIndex !== index && entry.slug === payload.slug)) {
+        payload.slug = `${payload.slug}-${Date.now().toString(36)}`;
+      }
       store.products[index] = { ...store.products[index], ...payload, updatedAt: new Date() };
       return res.json(normalizeProduct(store.products[index]));
     }
@@ -389,6 +519,12 @@ const updateProduct = async (req, res) => {
     }
 
     const payload = sanitizeProductPayload(req.body, existing);
+    if (payload.slug) {
+      const existingSlug = await prisma.product.findUnique({ where: { slug: payload.slug } });
+      if (existingSlug && existingSlug.id !== req.params.id) {
+        payload.slug = `${payload.slug}-${Date.now().toString(36)}`;
+      }
+    }
     const product = await prisma.product.update({ where: { id: req.params.id }, data: payload });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
@@ -475,7 +611,7 @@ const restockProduct = async (req, res) => {
 
 const getInventoryDashboard = async (req, res) => {
   try {
-    const { name, sku, collection, category, subcategory, lowStockOnly, outOfStockOnly, sortBy } = req.query;
+    const { name, sku, collection, category, lowStockOnly, outOfStockOnly, sortBy } = req.query;
     let products = [];
 
     if (global.useMemoryStore) {
@@ -491,7 +627,6 @@ const getInventoryDashboard = async (req, res) => {
       sku,
       collection,
       category,
-      subcategory,
       lowStockOnly: String(lowStockOnly) === 'true',
       outOfStockOnly: String(outOfStockOnly) === 'true'
     });
@@ -512,7 +647,7 @@ const getInventoryDashboard = async (req, res) => {
 
     res.json({
       summary,
-      filters: { name: name || '', sku: sku || '', collection: collection || '', category: category || '', subcategory: subcategory || '', lowStockOnly: String(lowStockOnly) === 'true', outOfStockOnly: String(outOfStockOnly) === 'true', sortBy: sortBy || 'recent' },
+      filters: { name: name || '', sku: sku || '', collection: collection || '', category: category || '', lowStockOnly: String(lowStockOnly) === 'true', outOfStockOnly: String(outOfStockOnly) === 'true', sortBy: sortBy || 'recent' },
       items: sorted,
       count: sorted.length,
       lowStockList,

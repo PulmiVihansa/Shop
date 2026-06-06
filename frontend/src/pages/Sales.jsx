@@ -1,23 +1,85 @@
-import { useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { FiArrowRight, FiClock, FiHeart, FiPackage, FiShield, FiShoppingBag, FiTruck, FiZap } from 'react-icons/fi';
 import { useCart } from '../context/CartContext.jsx';
-import { astraviaProducts, formatAstraviaPrice } from '../data/astraviaProducts.js';
+import { salesProductsQuery } from '../services/salesQueries.js';
 import '../styles/sales.css';
 
-const saleProducts = astraviaProducts.map((product, index) => {
-  const discounts = [35, 45, 30, 25, 40, 50, 20, 38, 42, 28];
-  const discount = discounts[index % discounts.length];
-  const salePrice = Math.round((product.price * (100 - discount)) / 100 / 10) * 10;
-  return {
-    ...product,
-    discount,
-    salePrice,
-    sizes: ['S', 'M', 'L', 'XL'],
-  };
-});
-
 const filters = ['All', 'Under 3K', 'Final Drop', 'Black Tees', 'Cream Tees'];
+const formatAstraviaPrice = (value) => `Rs. ${Number(value || 0).toLocaleString()}.00`;
+
+const SaleProductCard = memo(function SaleProductCard({
+  product,
+  index,
+  isWishlisted,
+  selectedSize,
+  onWishlistToggle,
+  onSizeSelect,
+  onAdd,
+}) {
+  const eagerImage = index < 8;
+
+  return (
+    <article className="sale-product-card">
+      <div className="sale-card-top">
+        <span>{product.discount}% OFF</span>
+        <button
+          type="button"
+          className={isWishlisted ? 'active' : ''}
+          aria-label={`Save ${product.name}`}
+          onClick={() => onWishlistToggle(product)}
+        >
+          <FiHeart aria-hidden="true" />
+        </button>
+      </div>
+
+      <Link className="sale-card-image" to={`/products/${product.id}`}>
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            loading={eagerImage ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchPriority={eagerImage ? 'high' : 'auto'}
+          />
+        ) : <span>No image</span>}
+      </Link>
+
+      <div className="sale-card-info">
+        <p>{product.badge} / {product.category}</p>
+        <h3>{product.name}</h3>
+        <div className="sale-price-row">
+          <strong>{formatAstraviaPrice(product.salePrice)}</strong>
+          <span>{formatAstraviaPrice(product.price)}</span>
+        </div>
+      </div>
+
+      <div className="sale-size-row">
+        {(product.sizes.length ? product.sizes : ['S', 'M', 'L', 'XL']).map((size) => (
+          <button
+            type="button"
+            className={selectedSize === size ? 'selected' : ''}
+            key={size}
+            onClick={() => onSizeSelect(product.id, size)}
+          >
+            {size}
+          </button>
+        ))}
+      </div>
+
+      <div className="sale-card-actions">
+        <button type="button" onClick={() => onAdd(product)}>
+          <FiShoppingBag aria-hidden="true" />
+          Add
+        </button>
+        <Link to={`/products/${product.id}`}>
+          View <FiArrowRight aria-hidden="true" />
+        </Link>
+      </div>
+    </article>
+  );
+});
 
 export default function Sales() {
   const { addItem, openCart } = useCart();
@@ -25,21 +87,51 @@ export default function Sales() {
   const [wishlist, setWishlist] = useState(() => new Set());
   const [selectedSizes, setSelectedSizes] = useState({});
   const [toast, setToast] = useState('');
+  const salesQuery = useQuery({
+    ...salesProductsQuery,
+    placeholderData: keepPreviousData,
+  });
+  const saleProducts = salesQuery.data || [];
+  const loading = salesQuery.isLoading && !saleProducts.length;
 
   const visibleProducts = useMemo(() => {
     if (activeFilter === 'Under 3K') return saleProducts.filter((item) => item.salePrice < 3000);
     if (activeFilter === 'Final Drop') return saleProducts.filter((item) => item.discount >= 40);
-    if (activeFilter === 'Black Tees') return saleProducts.filter((item) => item.color === 'Black');
-    if (activeFilter === 'Cream Tees') return saleProducts.filter((item) => item.color === 'Cream');
+    if (activeFilter === 'Black Tees') return saleProducts.filter((item) => item.colors.some((color) => String(color).toLowerCase().includes('black')));
+    if (activeFilter === 'Cream Tees') return saleProducts.filter((item) => item.colors.some((color) => String(color).toLowerCase().includes('cream')));
     return saleProducts;
-  }, [activeFilter]);
+  }, [activeFilter, saleProducts]);
 
-  const showToast = (message) => {
+  const heroProduct = saleProducts[0] || null;
+
+  useEffect(() => {
+    const images = Array.from(new Set(saleProducts.slice(0, 8).map((product) => product.image).filter(Boolean)));
+    images.forEach((image) => {
+      const alreadyPreloaded = Array
+        .from(document.querySelectorAll('link[data-astravia-sale-preload="true"]'))
+        .some((link) => link.getAttribute('href') === image);
+      if (alreadyPreloaded) return;
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = image;
+      link.setAttribute('data-astravia-sale-preload', 'true');
+      document.head.appendChild(link);
+    });
+
+    return () => {
+      document
+        .querySelectorAll('link[data-astravia-sale-preload="true"]')
+        .forEach((link) => link.remove());
+    };
+  }, [saleProducts]);
+
+  const showToast = useCallback((message) => {
     setToast(message);
     window.setTimeout(() => setToast(''), 2200);
-  };
+  }, []);
 
-  const toggleWishlist = (product) => {
+  const toggleWishlist = useCallback((product) => {
     setWishlist((current) => {
       const next = new Set(current);
       if (next.has(product.id)) {
@@ -51,9 +143,9 @@ export default function Sales() {
       }
       return next;
     });
-  };
+  }, [showToast]);
 
-  const addSaleItem = (product) => {
+  const addSaleItem = useCallback((product) => {
     const size = selectedSizes[product.id] || 'M';
     addItem({
       productId: product.id,
@@ -65,7 +157,11 @@ export default function Sales() {
     });
     openCart();
     showToast(`${product.name} added to cart`);
-  };
+  }, [addItem, openCart, selectedSizes, showToast]);
+
+  const selectSize = useCallback((productId, size) => {
+    setSelectedSizes((current) => ({ ...current, [productId]: size }));
+  }, []);
 
   return (
     <section className="astravia-sales-page">
@@ -83,8 +179,8 @@ export default function Sales() {
         </div>
 
         <div className="sales-feature-card">
-          <div className="sales-feature-badge">Up to 50% Off</div>
-          <img src="/models/Tshirt44.png" alt="Astravia sale feature tee" />
+          <div className="sales-feature-badge">{heroProduct ? `${heroProduct.discount}% Off` : 'Sale'}</div>
+          {heroProduct?.image && <img src={heroProduct.image} alt={heroProduct.name} loading="eager" decoding="async" fetchPriority="high" />}
           <div className="sales-feature-foot">
             <span>Limited stock</span>
             <strong>Ends Soon</strong>
@@ -128,57 +224,30 @@ export default function Sales() {
 
       {toast && <div className="sales-toast">{toast}</div>}
 
-      <div className="sales-product-grid">
-        {visibleProducts.map((product) => (
-          <article className="sale-product-card" key={product.id}>
-            <div className="sale-card-top">
-              <span>-{product.discount}%</span>
-              <button
-                type="button"
-                className={wishlist.has(product.id) ? 'active' : ''}
-                aria-label={`Save ${product.name}`}
-                onClick={() => toggleWishlist(product)}
-              >
-                <FiHeart aria-hidden="true" />
-              </button>
-            </div>
-
-            <Link className="sale-card-image" to={`/products/${product.id}`}>
-              <img src={product.image} alt={product.name} />
-            </Link>
-
+      <div className="sales-product-grid" aria-busy={salesQuery.isFetching && !loading}>
+        {loading && Array.from({ length: 8 }).map((_, index) => (
+          <article className="sale-product-card sale-product-skeleton" key={`sale-skeleton-${index}`} aria-hidden="true" />
+        ))}
+        {!loading && visibleProducts.length === 0 && (
+          <article className="sale-product-card sale-empty-card">
             <div className="sale-card-info">
-              <p>{product.category}</p>
-              <h3>{product.name}</h3>
-              <div className="sale-price-row">
-                <strong>{formatAstraviaPrice(product.salePrice)}</strong>
-                <span>{formatAstraviaPrice(product.price)}</span>
-              </div>
-            </div>
-
-            <div className="sale-size-row">
-              {product.sizes.map((size) => (
-                <button
-                  type="button"
-                  className={(selectedSizes[product.id] || 'M') === size ? 'selected' : ''}
-                  key={size}
-                  onClick={() => setSelectedSizes((current) => ({ ...current, [product.id]: size }))}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-
-            <div className="sale-card-actions">
-              <button type="button" onClick={() => addSaleItem(product)}>
-                <FiShoppingBag aria-hidden="true" />
-                Add
-              </button>
-              <Link to={`/products/${product.id}`}>
-                View <FiArrowRight aria-hidden="true" />
-              </Link>
+              <p>Astravia Sale</p>
+              <h3>No active sale campaigns</h3>
+              <div className="sale-price-row"><strong>Check back soon</strong></div>
             </div>
           </article>
+        )}
+        {!loading && visibleProducts.map((product, index) => (
+          <SaleProductCard
+            key={product.campaignId || product.id}
+            product={product}
+            index={index}
+            isWishlisted={wishlist.has(product.id)}
+            selectedSize={selectedSizes[product.id] || 'M'}
+            onWishlistToggle={toggleWishlist}
+            onSizeSelect={selectSize}
+            onAdd={addSaleItem}
+          />
         ))}
       </div>
 

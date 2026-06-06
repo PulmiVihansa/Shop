@@ -1,11 +1,17 @@
+import { useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
+import { prefetchCollectionProducts } from '../hooks/useCollectionProducts.js';
+import { prefetchSalesProducts } from '../services/salesQueries.js';
 
 export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
+  const warmSales = useCallback(() => prefetchSalesProducts(queryClient), [queryClient]);
 
   return (
     <>
@@ -15,13 +21,27 @@ export default function Header() {
             <img src="/models/logo.png" alt="Astravia" />
           </Link>
           <div className="nm">
-            <Link to="/collection" className="nl">
+            <Link
+              to="/collection"
+              className="nl"
+              onMouseEnter={prefetchCollectionProducts}
+              onFocus={prefetchCollectionProducts}
+              onPointerDown={prefetchCollectionProducts}
+              onClick={prefetchCollectionProducts}
+            >
               Collection
             </Link>
             <Link to="/giftvoucher" className="nl">
               Gift Vouchers
             </Link>
-            <Link to="/sales" className="nl">
+            <Link
+              to="/sales"
+              className="nl"
+              onMouseEnter={warmSales}
+              onFocus={warmSales}
+              onPointerDown={warmSales}
+              onClick={warmSales}
+            >
               Sale
             </Link>
             <Link to="/contact" className="nl">
@@ -127,3 +147,4 @@ export default function Header() {
     </>
   );
 }
+

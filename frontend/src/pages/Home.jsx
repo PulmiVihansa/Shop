@@ -3,12 +3,15 @@ import { FiCheck, FiLock, FiRefreshCw, FiShield, FiTruck, FiUpload } from 'react
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import LightPillar from '../components/home/LightPillar.jsx';
 import TShirtExperience from '../components/home/TShirtExperience.jsx';
 import IntroVideoGate from '../components/home/IntroVideoGate.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { compressTryOnImage, generateVirtualTryOn } from '../services/aiTryOn.js';
+import api from '../services/api.js';
+import { prefetchSalesProducts } from '../services/salesQueries.js';
 import '../styles/home.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -48,7 +51,7 @@ const products = [
     sizes: ['L', 'XL'],
   },
   {
-    name: 'Olive Cargo Tee',
+    name: 'Charcoal Oversized Tee',
     sub: 'Oversized - Washed Olive',
     price: '2,800',
     oldPrice: '3,500',
@@ -140,10 +143,33 @@ const aiResponses = {
     'The Phantom Navy Tee is calling your name. Heavyweight fabric, clean drop, works for anything.',
     'Honestly? The Ghost Type Tee - cream on black, subtle flex, versatile enough for any occasion.',
   ],
-  night: 'Night out? Break Rules Tee or Blood Script Tee. Pair with black cargo pants and chunky sneakers. That fit is locked.',
+  night: 'Night out? Break Rules Tee or Blood Script Tee. Pair with black tailored trousers and chunky sneakers. That fit is locked.',
   casual: 'Casual day? Ghost Type Tee in cream - pair it with olive joggers and clean white shoes. Effortless but intentional.',
   statement: "Blood Script Tee. Limited run, red print on black. One piece, whole outfit. That's your statement.",
   minimal: 'Ghost Type Tee - cream white, subtle typography, premium GSM. Clean, minimal, confident. No need for anything loud.',
+};
+
+let featuredProductsCache = null;
+
+const formatHomePrice = (value) => Number(value || 0).toLocaleString();
+
+const normalizeFeaturedProduct = (entry, index) => {
+  const product = entry.product || entry;
+  const image = entry.featureImage || entry.stackImage || entry.image || product.images?.[0] || product.image || '';
+  return {
+    id: entry.productId || product.id || product._id || entry.id || entry._id,
+    number: index + 1,
+    name: entry.productName || product.name || entry.name || 'Astravia Product',
+    stackImage: image,
+    featureImage: image,
+    description: product.description || entry.description || 'Premium Astravia piece with a clean oversized streetwear silhouette.',
+    fabric: product.fabric || 'Premium Fabric',
+    fit: product.fit || 'Astravia Fit',
+    limited: product.badges?.[0] || entry.badge || 'Featured Drop',
+    price: formatHomePrice(product.price || entry.price),
+    sizes: product.sizes?.length ? product.sizes : entry.sizes || [],
+    sub: product.category || entry.category || '',
+  };
 };
 
 function getAIResponse(message) {
@@ -157,11 +183,14 @@ function getAIResponse(message) {
 
 export default function Home() {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { addItem, openCart } = useCart();
   const [introComplete, setIntroComplete] = useState(false);
   const [cartCount, setCartCount] = useState(2);
   const [filter, setFilter] = useState('all');
   const [activeProductIndex, setActiveProductIndex] = useState(0);
+  const [featuredProducts, setFeaturedProducts] = useState(() => featuredProductsCache || []);
+  const [featuredLoading, setFeaturedLoading] = useState(!featuredProductsCache);
   const [selectedSize, setSelectedSize] = useState('S');
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState([
@@ -194,23 +223,28 @@ export default function Home() {
     return products.filter((product) => product.cat.includes(filter));
   }, [filter]);
 
-  const featuredProducts = useMemo(
-    () => [
-      { ...products[5], id: 'ghost-type-tee', number: 6, name: 'Ghost Type Tee', stackImage: '/models/Tshirt22.png', featureImage: '/models/Tshirt22.png', description: 'Collector-weight graphic tee with a clean oversized streetwear silhouette.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Collector Drop', price: '5,500' },
-      { ...products[4], id: 'shadow-box-tee', number: 5, name: 'Shadow Box Tee', stackImage: '/models/Tshirt11.png', featureImage: '/models/Tshirt11.png', description: 'Minimal black graphic tee with a premium matte finish and relaxed drape.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '3,600' },
-      { ...products[3], id: 'chaos-tee', number: 4, name: 'Chaos Tee', stackImage: '/models/Tshirt8.png', featureImage: '/models/Tshirt44.png', description: 'A loud red-on-black graphic piece with a clean premium drape.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '4,990' },
-      { ...products[2], id: 'shadow-tee', number: 3, name: 'Shadow Tee', stackImage: '/models/Tshirt7.png', featureImage: '/models/Tshirt33.png', description: 'A deep black oversized cut with red artwork and collector-level presence.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '4,690' },
-      { ...products[1], id: 'void-tee', number: 2, name: 'Void Tee', stackImage: '/models/Tshirt6.png', featureImage: '/models/Tshirt11.png', description: 'Dark graphic tee with a sharp campaign silhouette and premium streetwear weight.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '4,490' },
-      { ...products[0], id: 'break-rules-tee', number: 1, name: 'Break Rules Tee', stackImage: '/models/Tshirt5.png', featureImage: '/models/Tshirt22.png', description: 'Premium oversized tee crafted from heavy-weight 280GSM cotton. Built to stand out.', fabric: '280 GSM Fabric', fit: 'Oversized Fit', limited: 'Limited Edition', price: '5,290' },
-    ],
-    [],
-  );
-  const activeProduct = featuredProducts[activeProductIndex % Math.max(1, featuredProducts.length)] || products[0];
+  const orderedFeaturedProducts = useMemo(() => {
+    if (!featuredProducts.length) return [];
+    const safeActiveIndex = Math.min(activeProductIndex, featuredProducts.length - 1);
+    return [
+      { ...featuredProducts[safeActiveIndex], originalIndex: safeActiveIndex },
+      ...featuredProducts.slice(0, safeActiveIndex).map((product, originalIndex) => ({ ...product, originalIndex })),
+      ...featuredProducts.slice(safeActiveIndex + 1).map((product, offset) => ({
+        ...product,
+        originalIndex: safeActiveIndex + 1 + offset,
+      })),
+    ];
+  }, [activeProductIndex, featuredProducts]);
+  const activeProduct = orderedFeaturedProducts[0] || null;
 
   const stackRef = useRef(null);
   const panelRef = useRef(null);
   const selectedTryOnProduct = tryOnProducts[tryOnProductIndex] || tryOnProducts[0];
   const activeLockerItem = lockerItems[activeLockerIndex] || lockerItems[0];
+
+  useEffect(() => {
+    prefetchSalesProducts(queryClient);
+  }, [queryClient]);
 
   useEffect(() => {
     try {
@@ -223,6 +257,31 @@ export default function Home() {
       setIntroComplete(true);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadFeaturedProducts = async () => {
+      try {
+        const response = await api.get('/products', { params: { limit: 5 } });
+        const items = Array.isArray(response.data) ? response.data.slice(0, 5).map(normalizeFeaturedProduct) : [];
+        featuredProductsCache = items;
+        if (!cancelled) {
+          setFeaturedProducts(items);
+          setActiveProductIndex(0);
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) setFeaturedProducts([]);
+      } finally {
+        if (!cancelled) setFeaturedLoading(false);
+      }
+    };
+
+    loadFeaturedProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -245,6 +304,7 @@ export default function Home() {
   }, [visibleProducts.length]);
 
   useEffect(() => {
+    if (!featuredProducts.length) return undefined;
     const context = gsap.context(() => {
       const scrollTrigger = ScrollTrigger.create({
         trigger: '#products',
@@ -478,7 +538,15 @@ export default function Home() {
           <p className="hero-sub">Premium oversized tees built for men who don't follow the script. Crafted in Sri Lanka. Worn everywhere.</p>
           <div className="hero-ctas">
             <a href="#products" className="btn-primary">Shop the Drop</a>
-            <a href="/sales" className="btn-ghost">View Sales</a>
+            <Link
+              to="/sales"
+              className="btn-ghost"
+              onMouseEnter={() => prefetchSalesProducts(queryClient)}
+              onFocus={() => prefetchSalesProducts(queryClient)}
+              onPointerDown={() => prefetchSalesProducts(queryClient)}
+            >
+              View Sales
+            </Link>
           </div>
         </div>
 
@@ -519,22 +587,28 @@ export default function Home() {
 
         <div className="collection-showcase">
           <div className="collection-stack" aria-label="Featured product stack" ref={stackRef}>
-            {featuredProducts
+            {featuredLoading && Array.from({ length: 5 }).map((_, index) => (
+              <div
+                className={`luxury-product-card featured-product-skeleton stack-step-${index}`}
+                style={{ '--stack-step': index }}
+                key={`featured-skeleton-${index}`}
+                aria-hidden="true"
+              />
+            ))}
+            {!featuredLoading && orderedFeaturedProducts
               .map((product, index) => {
-                const number = product.number;
                 const step = index; // 04(back)=0 ... 01(front)=3
-                const label = String(number).padStart(2, '0');
-                const isActive = index === activeProductIndex;
-                const zIndex = isActive ? 50 : 10 + (featuredProducts.length - Math.abs(index - activeProductIndex));
+                const label = String(index + 1).padStart(2, '0');
+                const isActive = index === 0;
 
                 return (
                   <button
                     type="button"
                     className={`luxury-product-card stack-step-${step} ${isActive ? 'active' : ''}`}
                     data-card-index={index}
-                    style={{ zIndex, '--stack-step': step }}
-                    key={product.name}
-                    onClick={() => setActiveProductIndex(index)}
+                    style={{ '--stack-step': step }}
+                    key={product.id || product.name}
+                    onClick={() => setActiveProductIndex(product.originalIndex)}
                   >
                     <span className="stack-card-number">{label}</span>
                     <span className="stack-brand">ASTRAVIA</span>
@@ -555,7 +629,17 @@ export default function Home() {
               })}
           </div>
 
-          <motion.div className="active-product-panel reveal" ref={panelRef}>
+          {featuredLoading ? (
+            <div className="active-product-panel featured-product-empty" ref={panelRef} aria-hidden="true">
+              <div className="active-product-visual" />
+              <div className="active-product-info">
+                <div className="featured-panel-line" />
+                <div className="featured-panel-line wide" />
+                <div className="featured-panel-line short" />
+              </div>
+            </div>
+          ) : activeProduct ? (
+          <motion.div className="active-product-panel" ref={panelRef}>
             <div className="active-product-visual">
               <span className="product-img-glow product-img-glow--panel" aria-hidden="true" />
               <AnimatePresence mode="wait">
@@ -624,8 +708,23 @@ export default function Home() {
               </AnimatePresence>
             </div>
           </motion.div>
+          ) : (
+            <div className="active-product-panel featured-product-empty" ref={panelRef}>
+              <div className="active-product-visual" aria-hidden="true">
+                <span className="product-img-glow product-img-glow--panel" />
+              </div>
+              <div className="active-product-info">
+                <div className="product-badge badge-new">Featured Drop</div>
+                <div className="active-product-content">
+                  <h3>Featured drops coming soon</h3>
+                  <p className="active-product-copy">Fresh Astravia pieces are being prepared for this space.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
+        {featuredProducts.length > 0 && (
         <div className="collection-controls">
           <button type="button" onClick={() => setActiveProductIndex((index) => Math.max(0, index - 1))} aria-label="Previous product">
             &lt;
@@ -635,6 +734,7 @@ export default function Home() {
           </button>
           <span>Scroll to explore</span>
         </div>
+        )}
 
         <div className="collection-service-row">
           {[

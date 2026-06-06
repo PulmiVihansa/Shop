@@ -33,6 +33,18 @@ const getNextInvoiceId = async (db, start = 1001) => {
   return `${prefix}-${String(max + 1).padStart(4, '0')}`;
 };
 
+const randomTransactionId = () => `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
+
+const getNextTransactionId = async (db) => {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const transactionId = randomTransactionId();
+    const existing = await db.transaction.findUnique({ where: { transactionId } });
+    if (!existing) return transactionId;
+  }
+
+  return getNextPublicId(db, 'transaction', 'transactionId', 'TXN', 100001);
+};
+
 const ensureCustomerForOrder = async (db, user, details = {}) => {
   const userId = user?._id || user?.id || null;
   const email = String(details.email || user?.email || '').toLowerCase();
@@ -103,7 +115,7 @@ const createTransactionAndInvoice = async (db, order, details = {}) => {
       })
     : await db.transaction.create({
         data: {
-          transactionId: await getNextPublicId(db, 'transaction', 'transactionId', 'TXN', 1001),
+          transactionId: details.transactionId || await getNextTransactionId(db),
           orderId: order.id,
           customerId: order.customerId,
           amount: Number(details.amount ?? order.totalAmount ?? 0),
@@ -167,6 +179,7 @@ const createTransactionAndInvoice = async (db, order, details = {}) => {
 
 module.exports = {
   getNextPublicId,
+  getNextTransactionId,
   getNextInvoiceId,
   ensureCustomerForOrder,
   createTransactionAndInvoice

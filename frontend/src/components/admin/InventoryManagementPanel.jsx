@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { FiAlertCircle, FiBarChart2, FiBox, FiPackage, FiSearch, FiTrendingDown, FiTrendingUp } from 'react-icons/fi';
 import api, { getErrorMessage } from '../../services/api.js';
+import { getStockStatus, getTotalStock } from '../../utils/stockStatus.js';
 import '../../styles/inventory-dashboard.css';
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const LOW_STOCK_LIMIT = 15;
+const LOW_STOCK_LIMIT = 10;
 
 const fallbackDashboard = {
   summary: {
@@ -43,12 +44,6 @@ const dateText = (value) => {
   });
 };
 
-const getStatus = (stock, reorderThreshold) => {
-  if (Number(stock || 0) === 0) return { label: 'Out of Stock', className: 'out' };
-  if (Number(stock || 0) < Number(reorderThreshold || LOW_STOCK_LIMIT)) return { label: 'Low Stock', className: 'low' };
-  return { label: 'In Stock', className: 'healthy' };
-};
-
 export default function InventoryManagementPanel({ products, onRefreshData, currency = 'LKR' }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,22 +52,12 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
   const [filters, setFilters] = useState({
     name: '',
     sku: '',
-    collection: '',
     category: '',
-    subcategory: '',
     sortBy: 'recent'
   });
 
-  const collections = useMemo(
-    () => Array.from(new Set((dashboard.items || []).map((item) => item.collection).filter(Boolean))).sort(),
-    [dashboard.items]
-  );
   const categories = useMemo(
     () => Array.from(new Set((dashboard.items || []).map((item) => item.category).filter(Boolean))).sort(),
-    [dashboard.items]
-  );
-  const subcategories = useMemo(
-    () => Array.from(new Set((dashboard.items || []).map((item) => item.subcategory).filter(Boolean))).sort(),
     [dashboard.items]
   );
 
@@ -84,9 +69,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
         params: {
           name: query.name || undefined,
           sku: query.sku || undefined,
-          collection: query.collection || undefined,
           category: query.category || undefined,
-          subcategory: query.subcategory || undefined,
           sortBy: query.sortBy || 'recent'
         }
       });
@@ -94,7 +77,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
     } catch (err) {
       setError(getErrorMessage(err));
       const fallbackItems = (products || []).map((item) => {
-        const stock = Number(item.stock || 0);
+        const stock = getTotalStock(item);
         const value = stock * Number(item.price || 0);
         return {
           ...item,
@@ -108,8 +91,8 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
         summary: {
           totalProducts: fallbackItems.length,
           totalInventoryValue: fallbackItems.reduce((sum, item) => sum + Number(item.inventoryValue || 0), 0),
-          lowStockProducts: fallbackItems.filter((item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) < LOW_STOCK_LIMIT).length,
-          outOfStockProducts: fallbackItems.filter((item) => Number(item.stock || 0) === 0).length,
+          lowStockProducts: fallbackItems.filter((item) => getStockStatus(item).className === 'low').length,
+          outOfStockProducts: fallbackItems.filter((item) => getStockStatus(item).className === 'out').length,
           totalUnits: fallbackItems.reduce((sum, item) => sum + Number(item.stock || 0), 0)
         },
         items: fallbackItems
@@ -144,9 +127,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
     setFilters({
       name: '',
       sku: '',
-      collection: '',
       category: '',
-      subcategory: '',
       sortBy: 'recent'
     });
   };
@@ -157,11 +138,11 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
   };
 
   const lowStockAlertItems = useMemo(
-    () => (dashboard.items || []).filter((item) => Number(item.stock || 0) > 0 && Number(item.stock || 0) < LOW_STOCK_LIMIT),
+    () => (dashboard.items || []).filter((item) => getStockStatus(item).className === 'low'),
     [dashboard.items]
   );
   const outOfStockAlertItems = useMemo(
-    () => (dashboard.items || []).filter((item) => Number(item.stock || 0) === 0),
+    () => (dashboard.items || []).filter((item) => getStockStatus(item).className === 'out'),
     [dashboard.items]
   );
 
@@ -205,30 +186,12 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
               onChange={(event) => setFilters((prev) => ({ ...prev, sku: event.target.value }))}
             />
             <select
-              value={filters.collection}
-              onChange={(event) => setFilters((prev) => ({ ...prev, collection: event.target.value }))}
-            >
-              <option value="">All Collections</option>
-              {collections.map((collection) => (
-                <option key={collection} value={collection}>{collection}</option>
-              ))}
-            </select>
-            <select
               value={filters.category}
               onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))}
             >
               <option value="">All Categories</option>
               {categories.map((category) => (
                 <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-            <select
-              value={filters.subcategory}
-              onChange={(event) => setFilters((prev) => ({ ...prev, subcategory: event.target.value }))}
-            >
-              <option value="">All Subcategories</option>
-              {subcategories.map((subcategory) => (
-                <option key={subcategory} value={subcategory}>{subcategory}</option>
               ))}
             </select>
             <select
@@ -255,7 +218,6 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                 <th>Product Name</th>
                 <th>Collection</th>
                 <th>Category</th>
-                <th>Subcategory</th>
                 <th>Price</th>
                 <th>Total Stock</th>
                 <th>Inventory Value</th>
@@ -266,20 +228,20 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
             <tbody>
               {loading && Array.from({ length: 6 }).map((_, index) => (
                 <tr key={`loading-${index}`}>
-                  <td colSpan={11}><div className="inv-skeleton-row" /></td>
+                  <td colSpan={10}><div className="inv-skeleton-row" /></td>
                 </tr>
               ))}
 
               {!loading && dashboard.items.length === 0 && (
                 <tr>
-                  <td colSpan={11}><div className="inv-empty-state"><h3>No matching products</h3><p>Try a different search or clear filters.</p></div></td>
+                  <td colSpan={10}><div className="inv-empty-state"><h3>No matching products</h3><p>Try a different search or clear filters.</p></div></td>
                 </tr>
               )}
 
               {!loading && dashboard.items.map((item) => {
-                const status = getStatus(item.stock, item.reorderThreshold);
+                const status = getStockStatus(item);
                 const isOpen = expandedId === item.id;
-                const lowWarning = Number(item.stock || 0) > 0 && Number(item.stock || 0) < Number(item.reorderThreshold || LOW_STOCK_LIMIT);
+                const lowWarning = status.className === 'low';
 
                 return (
                   <Fragment key={item.id}>
@@ -297,16 +259,15 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                       <td><strong>{item.name}</strong></td>
                       <td>{item.collection || '-'}</td>
                       <td>{item.category || '-'}</td>
-                      <td>{item.subcategory || '-'}</td>
                       <td>{money(item.price, currency)}</td>
-                      <td>{item.stock}</td>
+                      <td>{getTotalStock(item)}</td>
                       <td>{money(item.inventoryValue, currency)}</td>
                       <td><span className={`inv-status ${status.className}`}>{status.label}</span></td>
                       <td>{dateText(item.updatedAt)}</td>
                     </tr>
                     {isOpen && (
                       <tr className="inv-expanded-row">
-                        <td colSpan={11}>
+                        <td colSpan={10}>
                           <div className="inv-expanded-content">
                             <div className="inv-size-grid">
                               <table>
@@ -320,12 +281,12 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                                 <tbody>
                                   {SIZES.map((size) => {
                                     const qty = Number(item.sizeStock?.[size] || 0);
-                                    const sizeStatus = qty === 0 ? 'out' : qty < LOW_STOCK_LIMIT ? 'low' : 'healthy';
+                                    const sizeStatus = getStockStatus(qty);
                                     return (
                                       <tr key={`${item.id}-${size}`}>
                                         <td>{size}</td>
                                         <td>{qty}</td>
-                                        <td><span className={`inv-status ${sizeStatus}`}>{qty === 0 ? 'Out of Stock' : qty < LOW_STOCK_LIMIT ? 'Low Stock' : 'In Stock'}</span></td>
+                                        <td><span className={`inv-status ${sizeStatus.className}`}>{sizeStatus.label}</span></td>
                                       </tr>
                                     );
                                   })}
@@ -333,9 +294,9 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                               </table>
                             </div>
                             <div className="inv-health">
-                              <p>Total Stock: <strong>{item.stock}</strong></p>
+                              <p>Total Stock: <strong>{getTotalStock(item)}</strong></p>
                               <p>Inventory Value: <strong>{money(item.inventoryValue, currency)}</strong></p>
-                              <p>Low Stock Warning: <strong>{lowWarning ? `Warning: below ${LOW_STOCK_LIMIT} units` : `Healthy: ${LOW_STOCK_LIMIT}+ units`}</strong></p>
+                              <p>Low Stock Warning: <strong>{lowWarning ? `Warning: ${LOW_STOCK_LIMIT} units or less` : `Healthy: more than ${LOW_STOCK_LIMIT} units`}</strong></p>
                             </div>
                           </div>
                         </td>
@@ -357,7 +318,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
 
         <div className="inv-alert-banner">
           <strong>Inventory Alerts</strong>
-          <span>{lowStockAlertItems.length} low stock product(s) below {LOW_STOCK_LIMIT} units</span>
+          <span>{lowStockAlertItems.length} low stock product(s) at {LOW_STOCK_LIMIT} units or less</span>
           <span>{outOfStockAlertItems.length} out of stock product(s)</span>
         </div>
         {(lowStockAlertItems.length > 0 || outOfStockAlertItems.length > 0) && (
@@ -366,7 +327,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
               <p key={`out-${item.id}`}>{item.name} is out of stock.</p>
             ))}
             {lowStockAlertItems.slice(0, 6).map((item) => (
-              <p key={`low-${item.id}`}>{item.name} is low ({item.stock} units, below {LOW_STOCK_LIMIT}).</p>
+              <p key={`low-${item.id}`}>{item.name} is low ({getTotalStock(item)} units, {LOW_STOCK_LIMIT} or less).</p>
             ))}
           </div>
         )}

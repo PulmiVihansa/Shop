@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FiArrowLeft, FiArrowRight, FiCreditCard, FiLock, FiMail, FiMapPin, FiTag, FiTruck } from 'react-icons/fi';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import '../styles/checkout.css';
+
+const checkoutDetailsKey = 'astravia_checkout_details';
 
 const fallbackItems = [
   {
@@ -39,8 +42,44 @@ const fallbackItems = [
 
 const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const readSavedCheckoutDetails = () => {
+  try {
+    return JSON.parse(localStorage.getItem(checkoutDetailsKey) || '{}');
+  } catch (error) {
+    return {};
+  }
+};
+
+const getProfileAddress = (user = {}) => {
+  if (!user?.address) return {};
+  if (typeof user.address === 'string') return { line1: user.address };
+  return user.address;
+};
+
+const toCheckoutText = (value) => (value === undefined || value === null ? '' : String(value));
+
+const buildCheckoutDetails = (user = {}) => {
+  const saved = readSavedCheckoutDetails();
+  const profileAddress = getProfileAddress(user);
+
+  return {
+    email: toCheckoutText(saved.email || user?.email),
+    fullName: toCheckoutText(saved.fullName || user?.name || user?.fullName || profileAddress.fullName),
+    phone: toCheckoutText(saved.phone || user?.phone || profileAddress.phone),
+    line1: toCheckoutText(saved.line1 || profileAddress.line1 || profileAddress.addressLine1 || profileAddress.street),
+    line2: toCheckoutText(saved.line2 || profileAddress.line2 || profileAddress.addressLine2),
+    city: toCheckoutText(saved.city || profileAddress.city),
+    province: toCheckoutText(saved.province || profileAddress.province || profileAddress.state),
+    postalCode: toCheckoutText(saved.postalCode || profileAddress.postalCode || profileAddress.zip),
+    country: toCheckoutText(saved.country || profileAddress.country || 'Sri Lanka'),
+  };
+};
+
+const requiredCheckoutFields = ['email', 'fullName', 'phone', 'line1', 'city', 'province', 'country'];
+
 export default function Checkout() {
   const { items } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const checkoutState = location.state || {};
@@ -48,6 +87,8 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [coupon, setCoupon] = useState('');
   const [toast, setToast] = useState('');
+  const [touchedFields, setTouchedFields] = useState({});
+  const [customerDetails, setCustomerDetails] = useState(() => buildCheckoutDetails(user));
 
   const checkoutItems = useMemo(() => {
     if (checkoutState.items?.length) return checkoutState.items;
@@ -63,6 +104,22 @@ export default function Checkout() {
   const shipping = shippingMethod === 'standard' ? 250 : 550;
   const discount = Math.round(subtotal * 0.2);
   const total = subtotal + shipping - discount;
+  const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerDetails.email.trim());
+  const checkoutValid = requiredCheckoutFields.every((field) => customerDetails[field].trim()) && emailReady;
+
+  useEffect(() => {
+    if (!user) return;
+    const profileDetails = buildCheckoutDetails(user);
+    setCustomerDetails((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, value]) => [key, value || profileDetails[key] || (key === 'country' ? 'Sri Lanka' : '')])
+      )
+    );
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(checkoutDetailsKey, JSON.stringify(customerDetails));
+  }, [customerDetails]);
 
   const showToast = (message) => {
     setToast(message);
@@ -73,7 +130,38 @@ export default function Checkout() {
     showToast(coupon.trim() ? 'Coupon applied to your Astravia order.' : 'Enter a coupon or gift card code first.');
   };
 
+  const updateCustomerDetail = (field, value) => {
+    setCustomerDetails((current) => ({ ...current, [field]: value }));
+  };
+
+  const markFieldTouched = (field) => {
+    setTouchedFields((current) => ({ ...current, [field]: true }));
+  };
+
+  const isFieldInvalid = (field) => {
+    if (!touchedFields[field]) return false;
+    if (field === 'email') return !emailReady;
+    return requiredCheckoutFields.includes(field) && !customerDetails[field].trim();
+  };
+
   const proceedToPayment = () => {
+    if (!checkoutValid) {
+      setTouchedFields(Object.fromEntries(requiredCheckoutFields.map((field) => [field, true])));
+      showToast('Complete required contact and shipping fields first.');
+      return;
+    }
+
+    const address = {
+      fullName: customerDetails.fullName.trim(),
+      line1: customerDetails.line1.trim(),
+      line2: customerDetails.line2.trim(),
+      city: customerDetails.city.trim(),
+      province: customerDetails.province.trim(),
+      postalCode: customerDetails.postalCode.trim(),
+      country: customerDetails.country.trim(),
+      phone: customerDetails.phone.trim(),
+    };
+
     showToast('Checkout validated. Proceeding to secure payment.');
     window.setTimeout(() => {
       navigate('/payment', {
@@ -85,6 +173,10 @@ export default function Checkout() {
           total,
           shippingMethod,
           paymentMethod,
+          customerName: address.fullName,
+          customerEmail: customerDetails.email.trim(),
+          phone: address.phone,
+          address,
         },
       });
     }, 450);
@@ -124,10 +216,19 @@ export default function Checkout() {
                 <FiMail aria-hidden="true" />
                 <h2>Contact Information</h2>
               </div>
-              <div className="checkout-display-row">
-                <FiMail aria-hidden="true" />
-                <span>yourmail@gmail.com</span>
-                <button type="button">Edit</button>
+              <div className="checkout-field-grid">
+                <label className="checkout-field">
+                  <span>Email Address *</span>
+                  <input
+                    type="email"
+                    value={customerDetails.email}
+                    onBlur={() => markFieldTouched('email')}
+                    onChange={(event) => updateCustomerDetail('email', event.target.value)}
+                    placeholder="Enter your email address"
+                    aria-invalid={isFieldInvalid('email')}
+                    required
+                  />
+                </label>
               </div>
             </section>
 
@@ -136,15 +237,90 @@ export default function Checkout() {
                 <FiMapPin aria-hidden="true" />
                 <h2>Shipping Address</h2>
               </div>
-              <div className="checkout-address-box">
-                <div>
-                  <p>Ravindu Perera</p>
-                  <p>123, Galle Road</p>
-                  <p>Colombo 04, Western Province</p>
-                  <p>Sri Lanka</p>
-                  <p>+94 77 123 4567</p>
-                </div>
-                <button type="button">Edit</button>
+              <div className="checkout-field-grid checkout-field-grid-two">
+                <label className="checkout-field">
+                  <span>Full Name *</span>
+                  <input
+                    type="text"
+                    value={customerDetails.fullName}
+                    onBlur={() => markFieldTouched('fullName')}
+                    onChange={(event) => updateCustomerDetail('fullName', event.target.value)}
+                    aria-invalid={isFieldInvalid('fullName')}
+                    required
+                  />
+                </label>
+                <label className="checkout-field">
+                  <span>Phone Number *</span>
+                  <input
+                    type="tel"
+                    value={customerDetails.phone}
+                    onBlur={() => markFieldTouched('phone')}
+                    onChange={(event) => updateCustomerDetail('phone', event.target.value)}
+                    aria-invalid={isFieldInvalid('phone')}
+                    required
+                  />
+                </label>
+                <label className="checkout-field checkout-field-wide">
+                  <span>Address Line 1 *</span>
+                  <input
+                    type="text"
+                    value={customerDetails.line1}
+                    onBlur={() => markFieldTouched('line1')}
+                    onChange={(event) => updateCustomerDetail('line1', event.target.value)}
+                    aria-invalid={isFieldInvalid('line1')}
+                    required
+                  />
+                </label>
+                <label className="checkout-field checkout-field-wide">
+                  <span>Address Line 2</span>
+                  <input
+                    type="text"
+                    value={customerDetails.line2}
+                    onChange={(event) => updateCustomerDetail('line2', event.target.value)}
+                  />
+                </label>
+                <label className="checkout-field">
+                  <span>City *</span>
+                  <input
+                    type="text"
+                    value={customerDetails.city}
+                    onBlur={() => markFieldTouched('city')}
+                    onChange={(event) => updateCustomerDetail('city', event.target.value)}
+                    aria-invalid={isFieldInvalid('city')}
+                    required
+                  />
+                </label>
+                <label className="checkout-field">
+                  <span>Province *</span>
+                  <input
+                    type="text"
+                    value={customerDetails.province}
+                    onBlur={() => markFieldTouched('province')}
+                    onChange={(event) => updateCustomerDetail('province', event.target.value)}
+                    aria-invalid={isFieldInvalid('province')}
+                    required
+                  />
+                </label>
+                <label className="checkout-field">
+                  <span>Postal Code</span>
+                  <input
+                    type="text"
+                    value={customerDetails.postalCode}
+                    onChange={(event) => updateCustomerDetail('postalCode', event.target.value)}
+                  />
+                </label>
+                <label className="checkout-field">
+                  <span>Country *</span>
+                  <select
+                    value={customerDetails.country}
+                    onBlur={() => markFieldTouched('country')}
+                    onChange={(event) => updateCustomerDetail('country', event.target.value)}
+                    aria-invalid={isFieldInvalid('country')}
+                    required
+                  >
+                    <option value="Sri Lanka">Sri Lanka</option>
+                  </select>
+                </label>
               </div>
             </section>
 
@@ -253,7 +429,7 @@ export default function Checkout() {
             <button type="button" onClick={applyCoupon}>Apply</button>
           </div>
 
-          <button type="button" className="checkout-pay-button" onClick={proceedToPayment}>
+          <button type="button" className="checkout-pay-button" onClick={proceedToPayment} disabled={!checkoutValid}>
             Proceed To Payment
             <FiArrowRight aria-hidden="true" />
           </button>

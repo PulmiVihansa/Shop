@@ -215,6 +215,71 @@
   margin-bottom: 0;
 }
 
+.checkout-field-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.checkout-field-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkout-field-wide {
+  grid-column: 1 / -1;
+}
+
+.checkout-field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.checkout-field span {
+  color: rgba(255, 255, 255, 0.68);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.96rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.checkout-field input,
+.checkout-field select {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.025);
+  color: #fff;
+  font: inherit;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.checkout-field input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.checkout-field input:focus,
+.checkout-field select:focus {
+  border-color: rgba(255, 27, 50, 0.82);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 28px rgba(255, 27, 50, 0.12);
+}
+
+.checkout-field input[aria-invalid="true"],
+.checkout-field select[aria-invalid="true"] {
+  border-color: rgba(255, 27, 50, 0.72);
+}
+
+.checkout-field select {
+  appearance: auto;
+}
+
+.checkout-field select option {
+  background: #0a0a0a;
+  color: #fff;
+}
+
 .checkout-option-list {
   display: grid;
   gap: 12px;
@@ -528,6 +593,12 @@
   filter: brightness(1.1);
 }
 
+.checkout-pay-button:disabled {
+  opacity: 0.48;
+  transform: none;
+  filter: grayscale(0.2);
+}
+
 .checkout-security-note {
   display: flex;
   justify-content: center;
@@ -613,6 +684,7 @@
   }
 
   .checkout-payment-grid,
+  .checkout-field-grid-two,
   .checkout-coupon-row {
     grid-template-columns: 1fr;
   }

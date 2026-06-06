@@ -16,17 +16,10 @@ export default function App() {
   const isSizeGuide = location.pathname === '/sizeguide';
   const isReturns = location.pathname === '/returns';
   const isAbout = location.pathname === '/about';
-  const isNewArrivals = location.pathname === '/new-arrivals';
   const isCollection = location.pathname === '/collection';
   const isProductDetails = location.pathname.startsWith('/products/');
   const isCheckout = location.pathname === '/checkout';
   const isPayment = location.pathname === '/payment';
-  const isMenNewArrivals = location.pathname === '/men-new-arrivals';
-  const isMenShirts = location.pathname === '/men-shirts';
-  const isMenTrousers = location.pathname === '/men-trousers';
-  const isAccessories = location.pathname === '/accessories';
-  const isWomen = location.pathname === '/women';
-  const isTops = location.pathname === '/tops';
   const isAdmin = location.pathname.startsWith('/admin');
   const hideHeader = isAdmin;
 
@@ -108,18 +101,11 @@ export default function App() {
             isSizeGuide ||
             isReturns ||
             isAbout ||
-            isNewArrivals ||
             isCollection ||
             isProductDetails ||
             isCheckout ||
             isPayment ||
-            isWomen ||
-            isTops ||
-            isAdmin ||
-            isMenNewArrivals ||
-            isMenShirts ||
-            isMenTrousers ||
-            isAccessories
+            isAdmin
               ? { padding: 0 }
               : undefined
           }

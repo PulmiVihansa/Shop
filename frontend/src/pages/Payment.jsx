@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiArrowRight, FiCheck, FiCreditCard, FiLock, FiShield, FiSmartphone, FiTruck } from 'react-icons/fi';
+import api, { getErrorMessage } from '../services/api.js';
 import '../styles/payment.css';
 
 const fallbackItems = [
@@ -20,6 +21,7 @@ export default function Payment() {
   const [card, setCard] = useState({ name: '', number: '', expiry: '', cvc: '' });
   const [saveCard, setSaveCard] = useState(true);
   const [toast, setToast] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const items = checkout.items?.length ? checkout.items : fallbackItems;
   const subtotal = checkout.subtotal ?? items.reduce((total, item) => total + Number(item.price || 0) * (item.quantity || 1), 0);
@@ -38,20 +40,68 @@ export default function Payment() {
     window.setTimeout(() => setToast(''), 2600);
   };
 
-  const confirmPayment = () => {
-    navigate('/order-success', {
-      state: {
-        order: {
-          orderNumber: `AST-${Date.now().toString().slice(-6)}`,
-          totalAmount: total,
-          items,
-          voucher: checkout.voucher,
-          orderType: isVoucherPayment ? 'voucher' : 'product',
-          payment: { method: method === 'card' ? 'Credit / Debit Card' : 'Cash on Delivery', status: method === 'card' ? 'Paid' : 'Pending' },
-          shipping: isVoucherPayment ? 'digital voucher' : checkout.shippingMethod || 'standard',
-        },
-      },
+  const submitPayHereForm = ({ gatewayUrl, fields }) => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = gatewayUrl;
+    form.style.display = 'none';
+    Object.entries(fields || {}).forEach(([key, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value ?? '';
+      form.appendChild(input);
     });
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const buildOrderPayload = () => ({
+    items,
+    subtotal,
+    shippingCost: shipping,
+    discount,
+    totalAmount: total,
+    paymentMethod: method === 'cod' ? 'COD' : 'ONLINE',
+    customerName: checkout.customerName || 'Ravindu Perera',
+    customerEmail: checkout.customerEmail || 'yourmail@gmail.com',
+    phone: checkout.phone || '+94 77 123 4567',
+    address: checkout.address || {
+      fullName: checkout.customerName || 'Ravindu Perera',
+      line1: '123, Galle Road',
+      city: 'Colombo 04',
+      province: 'Western Province',
+      country: 'Sri Lanka',
+      phone: checkout.phone || '+94 77 123 4567',
+    },
+  });
+
+  const confirmPayment = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const payload = buildOrderPayload();
+      if (method === 'cod') {
+        const response = await api.post('/orders', payload);
+        navigate('/order-success', {
+          state: {
+            order: {
+              ...response.data,
+              voucher: checkout.voucher,
+              orderType: isVoucherPayment ? 'voucher' : 'product',
+              shipping: isVoucherPayment ? 'digital voucher' : checkout.shippingMethod || 'standard',
+            },
+          },
+        });
+        return;
+      }
+
+      const response = await api.post('/payments/create', payload);
+      submitPayHereForm(response.data);
+    } catch (error) {
+      showToast(getErrorMessage(error));
+      setSubmitting(false);
+    }
   };
 
   return (

@@ -24,14 +24,14 @@ const getAnalyticsDashboard = () => ({
     { label: 'Sun', customers: 148 }
   ],
   popularCategories: [
-    { label: 'Women', value: 64 },
-    { label: 'Men', value: 41 },
-    { label: 'Accessories', value: 29 }
+    { label: 'Graphic Tees', value: 64 },
+    { label: 'Oversized Tees', value: 41 },
+    { label: 'Hoodies', value: 29 }
   ],
   topProducts: [
-    { name: 'Silk Wrap Maxi', views: 8420, sales: 82, conversion: 6.4 },
+    { name: 'Astravia Noir Graphic Tee', views: 8420, sales: 82, conversion: 6.4 },
     { name: 'Linen Oxford Shirt', views: 7060, sales: 74, conversion: 5.8 },
-    { name: 'Raffia Structured Tote', views: 5940, sales: 68, conversion: 5.1 }
+    { name: 'Gold Mark Hoodie', views: 5940, sales: 68, conversion: 5.1 }
   ],
   heatmap: [
     { label: 'Mon', value: 42 },
@@ -43,8 +43,8 @@ const getAnalyticsDashboard = () => ({
     { label: 'Sun', value: 81 }
   ],
   insights: {
-    bestSellingProduct: 'Silk Wrap Maxi',
-    highestRevenueCategory: 'Women',
+    bestSellingProduct: 'Astravia Noir Graphic Tee',
+    highestRevenueCategory: 'Graphic Tees',
     highestRevenueMonth: 'May 2026',
     mostValuableCustomer: 'Maya Perera'
   }

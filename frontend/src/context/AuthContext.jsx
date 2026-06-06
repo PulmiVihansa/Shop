@@ -86,9 +86,10 @@ export function AuthProvider({ children }) {
   function logout() {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('atelier_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('atelier_user');
+    ['atelier_token', 'token', 'atelier_user', 'admin_token', 'admin_user'].forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
   }
 
   const value = useMemo(

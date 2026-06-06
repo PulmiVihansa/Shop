@@ -12,7 +12,7 @@ const bulkOrders = [
     status: 'Pending',
     date: '2026-05-29',
     deliveryDate: '2026-07-10',
-    requestedProducts: ['Linen Oxford Shirt', 'Raffia Structured Tote'],
+    requestedProducts: ['Linen Oxford Shirt', 'Gold Mark Hoodie'],
     notes: 'Needs custom woven label and staggered shipment.'
   },
   {
@@ -26,7 +26,7 @@ const bulkOrders = [
     status: 'Approved',
     date: '2026-05-25',
     deliveryDate: '2026-06-28',
-    requestedProducts: ['Silk Scarf Botanical', 'Canvas Weekend Tote'],
+    requestedProducts: ['Astravia Noir Graphic Tee', 'Oversized Charcoal Tee'],
     notes: 'Resort capsule packaging requested.'
   },
   {
@@ -40,7 +40,7 @@ const bulkOrders = [
     status: 'Production',
     date: '2026-05-18',
     deliveryDate: '2026-06-20',
-    requestedProducts: ['Silk Wrap Maxi', 'Velvet Column Gown'],
+    requestedProducts: ['Noir Technical Jacket', 'Gold Mark Hoodie'],
     notes: 'Priority production slot confirmed.'
   },
   {
@@ -54,7 +54,7 @@ const bulkOrders = [
     status: 'Completed',
     date: '2026-05-02',
     deliveryDate: '2026-05-31',
-    requestedProducts: ['Woven Leather Belt', 'Leather Card Holder'],
+    requestedProducts: ['Premium T-Shirt Pack', 'Polo Shirt Pack'],
     notes: 'Delivered with branded invoice pack.'
   }
 ];

@@ -1,0 +1,71 @@
+
+> shop-frontend@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m630[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m12:58:10 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:01:06 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m1:01:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m1:01:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/ProductDetails.jsx[22m
+[2m1:02:12 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/collection.css[22m
+[2m1:02:29 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:03:26 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:04:43 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:05:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/admin/InventoryManagementPanel.jsx[22m
+[2m1:05:38 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/admin/InventoryManagementPanel.jsx[22m
+[2m1:06:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/inventory-dashboard.css[22m
+[2m1:06:12 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/admin.css[22m
+[2m1:06:22 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MenTrousers.jsx, /src/pages/Women.jsx, /src/pages/Tops.jsx, /src/pages/NewArrivals.jsx, /src/pages/Accessories.jsx, /src/pages/Men.jsx, /src/pages/MenShirts.jsx, /src/pages/MenNewArrivals.jsx, /src/pages/SearchResults.jsx[22m
+[2m1:06:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/routes/AppRoutes.jsx[22m
+[2m1:06:52 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:07:49 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Accessories.jsx[22m
+[2m1:07:49 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Women.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Tops.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Men.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MenNewArrivals.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MenShirts.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MenTrousers.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/NewArrivals.jsx[22m
+[2m1:07:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/accessories.css[22m
+[2m1:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/dresses.css[22m
+[2m1:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/tops.css[22m
+[2m1:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/men-new-arrivals.css[22m
+[2m1:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/men-shirts.css[22m
+[2m1:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/men-trousers.css[22m
+[2m1:07:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/newarrivals.css[22m
+[2m1:09:08 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SizeGuide.jsx[22m
+[2m1:10:21 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SizeGuide.jsx[22m
+[2m1:13:15 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:13:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/routes/AppRoutes.jsx[22m
+[2m1:13:36 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SizeGuide.jsx[22m
+[2m1:13:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SizeGuide.jsx[22m
+[2m1:14:28 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Home.jsx[22m
+[2m1:15:28 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SearchResults.jsx[22m
+[2m1:15:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:26:43 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:28:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m1:29:34 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m1:30:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:30:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:31:08 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:31:59 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m1:33:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m1:34:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/admin.css[22m
+[2m1:37:59 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/collection.css[22m
+[2m2:05:12 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AdminDashboard.jsx[22m
+[2m2:08:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Payment.jsx[22m
+[2m2:08:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/OrderSuccess.jsx[22m
+[2m2:26:10 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Checkout.jsx[22m
+[2m2:26:30 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/checkout.css[22m
+[2m2:27:34 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Checkout.jsx[22m
+[2m2:44:56 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m2:45:13 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m2:45:26 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m2:45:39 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m2:45:58 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Collection.jsx[22m
+[2m2:46:54 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/collection.css[22m
+[2m2:47:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Header.jsx[22m
+[2m2:51:49 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Header.jsx[22m

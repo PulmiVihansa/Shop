@@ -22,9 +22,8 @@ const normalize = (product) => {
     id: product.id || product._id,
     name: product.name || product.title,
     title: product.title || product.name,
-    collection: product.collection || 'female',
+    collection: 'men',
     category: product.category || '',
-    subcategory: product.subcategory || '',
     colors: toList(product.colors || product.swatches || product.colours),
     swatches: toList(product.colors || product.swatches || product.colours),
     sizes: toList(product.sizes),
@@ -33,7 +32,7 @@ const normalize = (product) => {
   };
 };
 
-export default function useProducts({ fallback = EMPTY_FALLBACK, collection, category, subcategory, query } = {}) {
+export default function useProducts({ fallback = EMPTY_FALLBACK, collection = 'men', category, query } = {}) {
   const fallbackProducts = useMemo(() => fallback.map(normalize), [fallback]);
   const [products, setProducts] = useState(fallbackProducts);
   const [loading, setLoading] = useState(false);
@@ -49,7 +48,6 @@ export default function useProducts({ fallback = EMPTY_FALLBACK, collection, cat
         const params = {
           collection,
           category,
-          subcategory,
           q: query || undefined,
         };
         const response = await api.get('/products', {
@@ -66,7 +64,6 @@ export default function useProducts({ fallback = EMPTY_FALLBACK, collection, cat
                     id: nextProducts[0].id,
                     collection: nextProducts[0].collection,
                     category: nextProducts[0].category,
-                    subcategory: nextProducts[0].subcategory,
                   }
                 : null,
             });
@@ -88,7 +85,7 @@ export default function useProducts({ fallback = EMPTY_FALLBACK, collection, cat
     return () => {
       active = false;
     };
-  }, [collection, category, fallbackProducts, subcategory, query]);
+  }, [collection, category, fallbackProducts, query]);
 
   return useMemo(() => ({ products, loading, error }), [products, loading, error]);
 }

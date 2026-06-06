@@ -1,10 +1,7 @@
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import Home from '../pages/Home.jsx';
 import Login from '../pages/Login.jsx';
 import Signup from '../pages/Signup.jsx';
-import Men from '../pages/Men.jsx';
-import Women from '../pages/Women.jsx';
-import Accessories from '../pages/Accessories.jsx';
 import SearchResults from '../pages/SearchResults.jsx';
 import Wishlist from '../pages/Wishlist.jsx';
 import Sales from '../pages/Sales.jsx';
@@ -16,11 +13,6 @@ import Returns from '../pages/Returns.jsx';
 import FAQ from '../pages/FAQ.jsx';
 import Support from '../pages/Support.jsx';
 import About from '../pages/About.jsx';
-import NewArrivals from '../pages/NewArrivals.jsx';
-import Tops from '../pages/Tops.jsx';
-import MenNewArrivals from '../pages/MenNewArrivals.jsx';
-import MenShirts from '../pages/MenShirts.jsx';
-import MenTrousers from '../pages/MenTrousers.jsx';
 import ProductDetails from '../pages/ProductDetails.jsx';
 import Checkout from '../pages/Checkout.jsx';
 import Payment from '../pages/Payment.jsx';
@@ -39,9 +31,7 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/auth/success" element={<AuthSuccess />} />
-      <Route path="/men" element={<Men />} />
-      <Route path="/women" element={<Women />} />
-      <Route path="/accessories" element={<Accessories />} />
+      <Route path="/men" element={<Navigate to="/collection" replace />} />
       <Route path="/search" element={<SearchResults />} />
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/sales" element={<Sales />} />
@@ -53,11 +43,7 @@ export default function AppRoutes() {
       <Route path="/faq" element={<FAQ />} />
       <Route path="/support" element={<Support />} />
       <Route path="/about" element={<About />} />
-      <Route path="/new-arrivals" element={<NewArrivals />} />
-      <Route path="/men-new-arrivals" element={<MenNewArrivals />} />
-      <Route path="/men-shirts" element={<MenShirts />} />
-      <Route path="/men-trousers" element={<MenTrousers />} />
-      <Route path="/tops" element={<Tops />} />
+      <Route path="/new-arrivals" element={<Navigate to="/collection" replace />} />
       <Route path="/products/:id" element={<ProductDetails />} />
       <Route
         path="/checkout"

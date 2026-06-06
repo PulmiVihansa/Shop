@@ -5,6 +5,12 @@ const { getAnalyticsDashboard } = require('../services/analyticsService');
 
 const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
 const getOrderTotal = (order) => Number(order.totalAmount ?? order.totalPrice ?? 0);
+const getTotalStock = (product) => {
+  if (product?.sizeStock && typeof product.sizeStock === 'object') {
+    return Object.values(product.sizeStock).reduce((sum, value) => sum + Math.max(0, Math.trunc(Number(value) || 0)), 0);
+  }
+  return Math.max(0, Math.trunc(Number(product?.stock) || 0));
+};
 const getOrderDate = (order) => order.orderDate || order.createdAt || new Date();
 const getOrderItems = (order) => {
   if (Array.isArray(order.items) && order.items.length) return order.items;
@@ -19,7 +25,10 @@ const getOrderItems = (order) => {
 
 const buildAnalytics = (products, orders, users, expenses = []) => {
   const revenue = orders.reduce((sum, order) => sum + getOrderTotal(order), 0);
-  const lowStock = products.filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 15);
+  const lowStock = products.filter((product) => {
+    const stock = getTotalStock(product);
+    return stock > 0 && stock <= 10;
+  });
   const productSales = {};
 
   orders.forEach((order) => {

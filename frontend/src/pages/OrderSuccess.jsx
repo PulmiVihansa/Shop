@@ -1,9 +1,12 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FiArrowRight, FiCheck, FiClipboard, FiHome, FiPackage, FiShield, FiTruck } from 'react-icons/fi';
+import api from '../services/api.js';
 import '../styles/order-success.css';
 
 const fallbackOrder = {
-  orderNumber: 'AST-202600',
+  orderId: '',
+  transactionId: '',
   totalAmount: 7317,
   payment: { method: 'Credit / Debit Card', status: 'Paid' },
   shipping: 'standard',
@@ -17,11 +20,33 @@ const fallbackOrder = {
 const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function OrderSuccess() {
-  const { state } = useLocation();
-  const order = state?.order || fallbackOrder;
-  const orderNumber = order.orderNumber || order.orderId || (order._id ? `AST-${String(order._id).slice(-6).toUpperCase()}` : fallbackOrder.orderNumber);
+  const location = useLocation();
+  const { state, search } = location;
+  const [remoteOrder, setRemoteOrder] = useState(null);
+  const queryOrderId = useMemo(() => {
+    const params = new URLSearchParams(search);
+    return params.get('order_id') || params.get('orderId') || '';
+  }, [search]);
+  const order = remoteOrder || state?.order || fallbackOrder;
+  const orderNumber = order.orderId || order.orderNumber || '';
+  const transactionId = order.transactionId || order.payment?.reference || '';
   const items = order.items?.length ? order.items : fallbackOrder.items;
   const total = order.totalAmount ?? order.totalPrice ?? items.reduce((sum, item) => sum + Number(item.price || 0) * (item.quantity || 1), 0);
+
+  useEffect(() => {
+    if (!queryOrderId || state?.order) return;
+    let active = true;
+    api.get(`/payments/order/${encodeURIComponent(queryOrderId)}`)
+      .then((response) => {
+        if (active) setRemoteOrder(response.data);
+      })
+      .catch(() => {
+        if (active) setRemoteOrder(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [queryOrderId, state?.order]);
 
   return (
     <section className="astravia-confirmation-page">
@@ -53,12 +78,16 @@ export default function OrderSuccess() {
 
           <div className="confirmation-meta">
             <div>
-              <span>Order No.</span>
-              <strong>{orderNumber}</strong>
+              <span>Order ID</span>
+              <strong>{orderNumber || 'Pending'}</strong>
+            </div>
+            <div>
+              <span>Transaction ID</span>
+              <strong>{transactionId || 'Pending'}</strong>
             </div>
             <div>
               <span>Payment</span>
-              <strong>{order.payment?.status || 'Paid'}</strong>
+              <strong>{order.payment?.status || order.paymentStatus || 'Pending'}</strong>
             </div>
             <div>
               <span>Total</span>

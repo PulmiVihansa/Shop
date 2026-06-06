@@ -4,9 +4,7 @@ import { NavLink } from 'react-router-dom';
 export default function CategoryMenu() {
   return (
     <nav className="category-menu">
-      <NavLink to="/men">Men</NavLink>
-      <NavLink to="/women">Women</NavLink>
-      <NavLink to="/accessories">Accessories</NavLink>
+      <NavLink to="/collection">Men</NavLink>
     </nav>
   );
 }

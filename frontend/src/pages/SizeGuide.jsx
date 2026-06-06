@@ -1,64 +1,6 @@
 import { useMemo, useState } from 'react';
 import '../styles/sizeguide.css';
 
-const womenRows = [
-  {
-    size: 'XS',
-    eu: '32-34',
-    uk: '4-6',
-    us: '0-2',
-    bust: { cm: '80-84', in: '31.5-33' },
-    waist: { cm: '60-64', in: '23.5-25' },
-    hips: { cm: '86-90', in: '34-35.5' },
-  },
-  {
-    size: 'S',
-    eu: '36-38',
-    uk: '8-10',
-    us: '4-6',
-    bust: { cm: '84-88', in: '33-34.5' },
-    waist: { cm: '64-68', in: '25-27' },
-    hips: { cm: '90-94', in: '35.5-37' },
-  },
-  {
-    size: 'M',
-    eu: '38-40',
-    uk: '10-12',
-    us: '6-8',
-    bust: { cm: '88-92', in: '34.5-36' },
-    waist: { cm: '68-72', in: '27-28.5' },
-    hips: { cm: '94-98', in: '37-38.5' },
-    highlight: true,
-  },
-  {
-    size: 'L',
-    eu: '40-42',
-    uk: '12-14',
-    us: '8-10',
-    bust: { cm: '92-96', in: '36-38' },
-    waist: { cm: '72-76', in: '28.5-30' },
-    hips: { cm: '98-102', in: '38.5-40' },
-  },
-  {
-    size: 'XL',
-    eu: '42-44',
-    uk: '14-16',
-    us: '10-12',
-    bust: { cm: '96-100', in: '38-39.5' },
-    waist: { cm: '76-80', in: '30-31.5' },
-    hips: { cm: '102-106', in: '40-41.5' },
-  },
-  {
-    size: 'XXL',
-    eu: '44-46',
-    uk: '16-18',
-    us: '12-14',
-    bust: { cm: '100-106', in: '39.5-42' },
-    waist: { cm: '80-86', in: '31.5-34' },
-    hips: { cm: '106-112', in: '42-44' },
-  },
-];
-
 const menRows = [
   {
     size: 'S',
@@ -104,60 +46,56 @@ const menRows = [
 ];
 
 const shoeRows = [
-  { eu: '36', ukW: '3', ukM: '-', usW: '5.5', usM: '-', foot: { cm: '22.5', in: '8.9' } },
-  { eu: '37', ukW: '4', ukM: '-', usW: '6.5', usM: '-', foot: { cm: '23.5', in: '9.3' } },
-  { eu: '38', ukW: '5', ukM: '-', usW: '7.5', usM: '-', foot: { cm: '24', in: '9.4' } },
-  { eu: '39', ukW: '6', ukM: '-', usW: '8.5', usM: '-', foot: { cm: '24.5', in: '9.6' }, highlight: true },
-  { eu: '40', ukW: '6.5', ukM: '6', usW: '9', usM: '7', foot: { cm: '25', in: '9.8' } },
-  { eu: '41', ukW: '7.5', ukM: '7', usW: '10', usM: '8', foot: { cm: '25.5', in: '10' } },
-  { eu: '42', ukW: '-', ukM: '8', usW: '-', usM: '9', foot: { cm: '26.5', in: '10.4' } },
-  { eu: '43', ukW: '-', ukM: '9', usW: '-', usM: '10', foot: { cm: '27.5', in: '10.8' } },
-  { eu: '44', ukW: '-', ukM: '10', usW: '-', usM: '11', foot: { cm: '28', in: '11' } },
+  { eu: '40', uk: '6', us: '7', foot: { cm: '25', in: '9.8' } },
+  { eu: '41', uk: '7', us: '8', foot: { cm: '25.5', in: '10' } },
+  { eu: '42', uk: '8', us: '9', foot: { cm: '26.5', in: '10.4' }, highlight: true },
+  { eu: '43', uk: '9', us: '10', foot: { cm: '27.5', in: '10.8' } },
+  { eu: '44', uk: '10', us: '11', foot: { cm: '28', in: '11' } },
+  { eu: '45', uk: '11', us: '12', foot: { cm: '29', in: '11.4' } },
 ];
 
-const womenFitGuide = [
-  { size: 'XS', bMin: 80, bMax: 84, wMin: 60, wMax: 64, hMin: 86, hMax: 90 },
-  { size: 'S', bMin: 84, bMax: 88, wMin: 64, wMax: 68, hMin: 90, hMax: 94 },
-  { size: 'M', bMin: 88, bMax: 92, wMin: 68, wMax: 72, hMin: 94, hMax: 98 },
-  { size: 'L', bMin: 92, bMax: 96, wMin: 72, wMax: 76, hMin: 98, hMax: 102 },
-  { size: 'XL', bMin: 96, bMax: 100, wMin: 76, wMax: 80, hMin: 102, hMax: 106 },
-  { size: 'XXL', bMin: 100, bMax: 106, wMin: 80, wMax: 86, hMin: 106, hMax: 112 },
+const menFitGuide = [
+  { size: 'S', cMin: 86, cMax: 92, wMin: 74, wMax: 80, sMin: 42, sMax: 44 },
+  { size: 'M', cMin: 92, cMax: 98, wMin: 80, wMax: 86, sMin: 44, sMax: 46 },
+  { size: 'L', cMin: 98, cMax: 104, wMin: 86, wMax: 92, sMin: 46, sMax: 48 },
+  { size: 'XL', cMin: 104, cMax: 110, wMin: 92, wMax: 98, sMin: 48, sMax: 50 },
+  { size: 'XXL', cMin: 110, cMax: 116, wMin: 98, wMax: 104, sMin: 50, sMax: 52 },
 ];
 
 export default function SizeGuide() {
-  const [activeTab, setActiveTab] = useState('women');
+  const [activeTab, setActiveTab] = useState('men');
   const [unit, setUnit] = useState('cm');
-  const [bust, setBust] = useState('');
+  const [chest, setChest] = useState('');
   const [waist, setWaist] = useState('');
-  const [hips, setHips] = useState('');
+  const [shoulder, setShoulder] = useState('');
   const [fitResult, setFitResult] = useState(null);
 
   const fitNote = useMemo(
     () =>
-      "Based on your measurements. Between sizes? Size up for a relaxed drape, or down for a closer fit. Our most popular women's size is M.",
+      'Based on your measurements. Between sizes? Size up for a relaxed streetwear fit, or down for a sharper contemporary fit.',
     []
   );
 
   const handleFindSize = () => {
-    const bustVal = parseFloat(bust) || 0;
+    const chestVal = parseFloat(chest) || 0;
     const waistVal = parseFloat(waist) || 0;
-    const hipsVal = parseFloat(hips) || 0;
+    const shoulderVal = parseFloat(shoulder) || 0;
 
-    if (!bustVal && !waistVal && !hipsVal) return;
+    if (!chestVal && !waistVal && !shoulderVal) return;
 
     const toCm = (value) => (unit === 'in' ? value * 2.54 : value);
-    const bCm = toCm(bustVal);
+    const cCm = toCm(chestVal);
     const wCm = toCm(waistVal);
-    const hCm = toCm(hipsVal);
+    const sCm = toCm(shoulderVal);
 
     let bestScore = Infinity;
     let bestSize = 'M';
 
-    womenFitGuide.forEach((size) => {
+    menFitGuide.forEach((size) => {
       let score = 0;
-      if (bCm) score += Math.min(Math.abs(bCm - size.bMin), Math.abs(bCm - size.bMax));
+      if (cCm) score += Math.min(Math.abs(cCm - size.cMin), Math.abs(cCm - size.cMax));
       if (wCm) score += Math.min(Math.abs(wCm - size.wMin), Math.abs(wCm - size.wMax));
-      if (hCm) score += Math.min(Math.abs(hCm - size.hMin), Math.abs(hCm - size.hMax));
+      if (sCm) score += Math.min(Math.abs(sCm - size.sMin), Math.abs(sCm - size.sMax));
       if (score < bestScore) {
         bestScore = score;
         bestSize = size.size;
@@ -181,7 +119,7 @@ export default function SizeGuide() {
           </div>
           <div>
             <p className="ph-desc">
-              All Atelier garments are cut generously and with movement in mind. If you&apos;re between sizes, we
+              All Astravia garments are cut generously and with movement in mind. If you&apos;re between sizes, we
               always recommend sizing up - our pieces are designed to drape, not constrict.
             </p>
             <div className="ph-note">
@@ -191,7 +129,7 @@ export default function SizeGuide() {
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               <p>
-                <strong>Still unsure?</strong> Email hello@atelier.com with your measurements and we&apos;ll personally
+                <strong>Still unsure?</strong> Email hello@astravia.com with your measurements and we&apos;ll personally
                 recommend the right size for you.
               </p>
             </div>
@@ -202,7 +140,6 @@ export default function SizeGuide() {
       <div className="ctrl">
         <div className="tabs">
           {[
-            { id: 'women', label: 'Women' },
             { id: 'men', label: 'Men' },
             { id: 'shoes', label: 'Footwear' },
           ].map((tab) => (
@@ -253,7 +190,7 @@ export default function SizeGuide() {
                   </text>
                 </svg>
               </div>
-              <div className="mc-n">Bust / Chest</div>
+              <div className="mc-n">Chest</div>
               <p className="mc-d">
                 Measure around the fullest part of your chest. Keep the tape parallel to the floor - comfortable, not
                 tight.
@@ -282,9 +219,9 @@ export default function SizeGuide() {
                   <line x1="9" y1="66" x2="45" y2="66" strokeDasharray="3,2" />
                 </svg>
               </div>
-              <div className="mc-n">Hips</div>
+              <div className="mc-n">Shoulder</div>
               <p className="mc-d">
-                Measure around the fullest part of your hips and seat, approximately 20-23cm below your natural waist.
+                Measure shoulder point to shoulder point across the back for a clean, structured fit.
               </p>
             </div>
             <div className="mc">
@@ -305,23 +242,23 @@ export default function SizeGuide() {
           </div>
         </div>
 
-        {activeTab === 'women' && (
-          <div id="tw">
+        {activeTab === 'men' && (
+          <div id="tm">
             <div className="ff">
               <div className="ff-in">
                 <h2 className="ff-h">Fit Finder</h2>
-                <p className="ff-sub">Enter your measurements and we&apos;ll suggest your Atelier size.</p>
+                <p className="ff-sub">Enter your measurements and we&apos;ll suggest your Astravia menswear size.</p>
                 <div className="ff-row">
                   <div className="ff-f">
                     <label className="ff-l">
-                      Bust (<span className="ul">{unit}</span>)
+                      Chest (<span className="ul">{unit}</span>)
                     </label>
                     <input
                       type="number"
                       className="ff-i"
-                      value={bust}
-                      onChange={(event) => setBust(event.target.value)}
-                      placeholder={unit === 'cm' ? 'e.g. 90' : 'e.g. 35.5'}
+                      value={chest}
+                      onChange={(event) => setChest(event.target.value)}
+                      placeholder={unit === 'cm' ? 'e.g. 98' : 'e.g. 38.5'}
                     />
                   </div>
                   <div className="ff-f">
@@ -338,14 +275,14 @@ export default function SizeGuide() {
                   </div>
                   <div className="ff-f">
                     <label className="ff-l">
-                      Hips (<span className="ul">{unit}</span>)
+                      Shoulder (<span className="ul">{unit}</span>)
                     </label>
                     <input
                       type="number"
                       className="ff-i"
-                      value={hips}
-                      onChange={(event) => setHips(event.target.value)}
-                      placeholder={unit === 'cm' ? 'e.g. 96' : 'e.g. 37.5'}
+                      value={shoulder}
+                      onChange={(event) => setShoulder(event.target.value)}
+                      placeholder={unit === 'cm' ? 'e.g. 46' : 'e.g. 18'}
                     />
                   </div>
                   <button className="ff-btn" type="button" onClick={handleFindSize}>
@@ -361,52 +298,6 @@ export default function SizeGuide() {
 
             <div className="ts">
               <h3 className="ts-h">
-                Women&apos;s Clothing <span className="ts-tag">Ready-to-Wear</span>
-              </h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Size</th>
-                    <th>EU</th>
-                    <th>UK</th>
-                    <th>US</th>
-                    <th>
-                      Bust (<span className="us">{unit}</span>)
-                    </th>
-                    <th>
-                      Waist (<span className="us">{unit}</span>)
-                    </th>
-                    <th>
-                      Hips (<span className="us">{unit}</span>)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {womenRows.map((row) => (
-                    <tr key={row.size} className={row.highlight ? 'hl' : ''}>
-                      <td>{row.size}</td>
-                      <td>{row.eu}</td>
-                      <td>{row.uk}</td>
-                      <td>{row.us}</td>
-                      <td className="m">{row.bust[unit]}</td>
-                      <td className="m">{row.waist[unit]}</td>
-                      <td className="m">{row.hips[unit]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="ts-note">
-                All measurements in {unit === 'cm' ? 'centimetres' : 'inches'}. Our garments include 2-3cm ease.{' '}
-                <span className="ts-highlight">Ash row</span> = our most popular size.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'men' && (
-          <div id="tm">
-            <div className="ts">
-              <h3 className="ts-h">
                 Men&apos;s Clothing <span className="ts-tag">Ready-to-Wear</span>
               </h3>
               <table>
@@ -414,7 +305,7 @@ export default function SizeGuide() {
                   <tr>
                     <th>Size</th>
                     <th>EU</th>
-                    <th>UK/US</th>
+                    <th>UK</th>
                     <th>
                       Chest (<span className="us">{unit}</span>)
                     </th>
@@ -440,7 +331,7 @@ export default function SizeGuide() {
                 </tbody>
               </table>
               <p className="ts-note">
-                All measurements in {unit === 'cm' ? 'centimetres' : 'inches'}. Includes 2-3cm ease.{' '}
+                All measurements in {unit === 'cm' ? 'centimetres' : 'inches'}. Our garments include 2-3cm ease.{' '}
                 <span className="ts-highlight">Ash row</span> = our most popular size.
               </p>
             </div>
@@ -457,10 +348,8 @@ export default function SizeGuide() {
                 <thead>
                   <tr>
                     <th>EU</th>
-                    <th>UK Women</th>
-                    <th>UK Men</th>
-                    <th>US Women</th>
-                    <th>US Men</th>
+                    <th>UK</th>
+                    <th>US</th>
                     <th>
                       Foot Length (<span className="us">{unit}</span>)
                     </th>
@@ -470,10 +359,8 @@ export default function SizeGuide() {
                   {shoeRows.map((row) => (
                     <tr key={row.eu} className={row.highlight ? 'hl' : ''}>
                       <td>{row.eu}</td>
-                      <td>{row.ukW}</td>
-                      <td>{row.ukM}</td>
-                      <td>{row.usW}</td>
-                      <td>{row.usM}</td>
+                      <td>{row.uk}</td>
+                      <td>{row.us}</td>
                       <td className="m">{row.foot[unit]}</td>
                     </tr>
                   ))}
@@ -488,7 +375,7 @@ export default function SizeGuide() {
         )}
 
         <div className="care">
-          <h2 className="care-h">Caring for your Atelier pieces</h2>
+          <h2 className="care-h">Caring for your Astravia pieces</h2>
           <div className="cgrid">
             <div className="cc">
               <svg className="cc-ic" viewBox="0 0 24 24" aria-hidden="true">

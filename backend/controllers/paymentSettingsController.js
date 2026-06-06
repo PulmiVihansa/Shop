@@ -8,6 +8,7 @@ const sanitize = (settings) => ({
   currency: settings.currency || 'LKR',
   enableCOD: Boolean(settings.enableCOD),
   enableOnlinePayment: Boolean(settings.enableOnlinePayment),
+  sandboxMode: Boolean(settings.sandboxMode ?? settings.payhereSandbox ?? true),
   whatsappNumber: settings.whatsappNumber || '',
   hasMerchantSecret: Boolean(settings.merchantSecret),
   updatedAt: settings.updatedAt
@@ -25,6 +26,7 @@ const getPaymentSettingsDoc = async () => {
     currency: process.env.PAYMENT_CURRENCY || 'LKR',
     enableCOD: process.env.ENABLE_COD !== 'false',
     enableOnlinePayment: process.env.ENABLE_ONLINE_PAYMENT === 'true',
+    sandboxMode: String(process.env.PAYHERE_SANDBOX ?? 'true').toLowerCase() !== 'false',
     whatsappNumber: process.env.STORE_WHATSAPP || ''
   };
 
@@ -49,6 +51,7 @@ const updatePaymentSettings = async (req, res) => {
       currency: String(req.body.currency || 'LKR').trim().toUpperCase(),
       enableCOD: Boolean(req.body.enableCOD),
       enableOnlinePayment: Boolean(req.body.enableOnlinePayment),
+      sandboxMode: Boolean(req.body.sandboxMode),
       whatsappNumber: String(req.body.whatsappNumber || '').replace(/[^\d]/g, '')
     };
 
