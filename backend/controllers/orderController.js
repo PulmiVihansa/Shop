@@ -23,6 +23,27 @@ const toText = (value, fallback = '') => {
   return String(value).trim();
 };
 
+const memoryOrderMatches = (order, id) => (
+  String(order._id || '') === String(id) ||
+  String(order.id || '') === String(id) ||
+  String(order.orderId || '') === String(id)
+);
+
+const findOrderByAnyId = (id, include = {}) => prisma.order.findFirst({
+  where: {
+    OR: [
+      { id },
+      { orderId: id }
+    ]
+  },
+  include
+});
+
+const orderStatusData = (status) => ({
+  status,
+  orderStatus: status.toUpperCase()
+});
+
 const buildSummaryProductName = (items) => {
   if (!items.length) return 'Product';
   if (items.length === 1) return items[0].name || 'Product';
@@ -350,19 +371,19 @@ const updateOrderStatus = async (req, res) => {
     }
 
     if (global.useMemoryStore) {
-      const order = store.orders.find((entry) => entry._id === req.params.id);
+      const order = store.orders.find((entry) => memoryOrderMatches(entry, req.params.id));
       if (!order) return res.status(404).json({ message: 'Order not found' });
-      order.orderStatus = orderStatus;
+      order.orderStatus = orderStatus.toUpperCase();
       order.status = orderStatus;
       order.updatedAt = new Date();
       return res.json(normalizeOrder(order));
     }
 
-    const existing = await prisma.order.findUnique({ where: { id: req.params.id } });
+    const existing = await findOrderByAnyId(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Order not found' });
     const order = await prisma.order.update({
-      where: { id: req.params.id },
-      data: { status: orderStatus },
+      where: { id: existing.id },
+      data: orderStatusData(orderStatus),
       include: {
         user: { select: { id: true, name: true, email: true, customerId: true } },
         customer: true,
@@ -385,7 +406,7 @@ const updateOrderPaymentStatus = async (req, res) => {
     }
 
     if (global.useMemoryStore) {
-      const order = store.orders.find((entry) => entry._id === req.params.id);
+      const order = store.orders.find((entry) => memoryOrderMatches(entry, req.params.id));
       if (!order) return res.status(404).json({ message: 'Order not found' });
       order.paymentStatus = paymentStatus;
       order.payment = {
@@ -396,47 +417,39 @@ const updateOrderPaymentStatus = async (req, res) => {
       return res.json(normalizeOrder(order));
     }
 
-    const existing = await prisma.order.findUnique({
-      where: { id: req.params.id },
+    const existing = await findOrderByAnyId(req.params.id, {
       include: { transaction: true, transactionRecord: true }
     });
     if (!existing) return res.status(404).json({ message: 'Order not found' });
-    if (paymentStatus === 'REFUNDED' && !(existing.transaction || existing.transactionRecord)) {
-      return res.status(400).json({ message: 'Cannot refund an order without a transaction' });
-    }
 
     const order = await prisma.$transaction(async (tx) => {
-      if (paymentStatus === 'PAID' || paymentStatus === 'REFUNDED') {
-        await tx.order.update({
-          where: { id: existing.id },
-          data: {
-            paymentStatus,
-            orderStatus: paymentStatus === 'PAID' ? 'PROCESSING' : String(existing.orderStatus || existing.status || 'PENDING').toUpperCase(),
-            status: paymentStatus === 'PAID' ? 'processing' : existing.status
-          }
-        });
-        await createTransactionAndInvoice(tx, existing, {
-          paymentMethod: req.body.paymentMethod || existing.transaction?.paymentMethod || existing.transactionRecord?.paymentMethod || 'COD',
-          paymentStatus
-        });
-      } else if (existing.transaction || existing.transactionRecord) {
-        await tx.order.update({
-          where: { id: existing.id },
-          data: { paymentStatus }
-        });
+      const transaction = existing.transaction || existing.transactionRecord;
+      const nextOrderData = {
+        paymentStatus,
+        ...(paymentStatus === 'PAID' ? orderStatusData('processing') : {})
+      };
+
+      await tx.order.update({
+        where: { id: existing.id },
+        data: nextOrderData
+      });
+
+      if (transaction) {
         await tx.transaction.update({
-          where: { id: (existing.transaction || existing.transactionRecord).id },
-          data: { paymentStatus }
-        });
-      } else {
-        await tx.order.update({
-          where: { id: existing.id },
+          where: { id: transaction.id },
           data: { paymentStatus }
         });
       }
 
+      if (paymentStatus === 'PAID' && !transaction) {
+        await createTransactionAndInvoice(tx, existing, {
+          paymentMethod: req.body.paymentMethod || 'COD',
+          paymentStatus
+        }).catch(() => null);
+      }
+
       return tx.order.findUnique({
-        where: { id: req.params.id },
+        where: { id: existing.id },
         include: {
           user: { select: { id: true, name: true, email: true, customerId: true } },
           customer: true,

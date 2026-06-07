@@ -22,6 +22,7 @@ const virtualTryOnRoutes = require('./routes/virtualTryOnRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const featuredProductRoutes = require('./routes/featuredProductRoutes');
 const giftVoucherRoutes = require('./routes/giftVoucherRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 
 // Load environment variables.
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -106,6 +107,7 @@ app.use('/api/virtual-tryon', virtualTryOnRoutes);
 app.use('/api/sales', cachePublicRead(120), salesRoutes);
 app.use('/api/featured-products', cachePublicRead(120), featuredProductRoutes);
 app.use('/api/gift-vouchers', giftVoucherRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {

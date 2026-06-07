@@ -11,6 +11,7 @@ import {
   FiShield,
   FiTruck,
 } from 'react-icons/fi';
+import api, { getErrorMessage } from '../services/api.js';
 import '../styles/contact.css';
 
 const departments = ['General', 'Orders', 'Returns', 'Sizing', 'Collabs'];
@@ -62,9 +63,10 @@ export default function Contact() {
     setError('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setSuccessRef('');
 
     if (!form.email.trim() || !form.message.trim()) {
       setError('Add your email and message so the Astravia team can reply.');
@@ -72,9 +74,12 @@ export default function Contact() {
     }
 
     setSubmitting(true);
-    window.setTimeout(() => {
-      setSuccessRef(makeRef());
-      setSubmitting(false);
+    try {
+      const response = await api.post('/contact', {
+        ...form,
+        department: activeDept,
+      });
+      setSuccessRef(response.data?.reference || makeRef());
       setForm({
         name: '',
         email: '',
@@ -82,7 +87,11 @@ export default function Contact() {
         subject: activeSubject,
         message: '',
       });
-    }, 900);
+    } catch (submitError) {
+      setError(getErrorMessage(submitError));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

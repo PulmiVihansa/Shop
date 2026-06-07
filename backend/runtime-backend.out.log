@@ -320,3 +320,253 @@ PostgreSQL connected
     category: 'Graphic Tees'
   }
 }
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 12,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 5,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}
+[products:get] {
+  source: 'prisma',
+  filter: { collection: 'men', category: '', q: '' },
+  count: 13,
+  sample: {
+    id: 'cmq3czhko0001i9zk66sck0gj',
+    collection: 'men',
+    category: 'Graphic Tees'
+  }
+}

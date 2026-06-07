@@ -1469,8 +1469,15 @@ export default function AdminDashboard() {
   };
 
   const updateStatus = async (id, status) => {
-    await api.put(`/orders/${id}/status`, { status });
-    await loadAdminData();
+    try {
+      const response = await api.put(`/orders/${id}/status`, { status });
+      setSelectedOrder(response.data);
+      await loadAdminData();
+      setMessage(`Order status updated to ${status}`);
+      setError('');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const deleteCustomer = async (id) => {
@@ -1985,7 +1992,8 @@ export default function AdminDashboard() {
 
   const updatePaymentStatus = async (id, paymentStatus) => {
     try {
-      await api.put(`/orders/${id}/payment-status`, { paymentStatus });
+      const response = await api.put(`/orders/${id}/payment-status`, { paymentStatus });
+      setSelectedOrder(response.data);
       await loadAdminData();
       setMessage(`Payment status updated to ${paymentStatus}`);
       setError('');
