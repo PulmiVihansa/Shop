@@ -421,6 +421,8 @@ nav {
   white-space: nowrap;
   position: relative;
   z-index: 6;
+  max-width: 100vw;
+  contain: layout paint;
   margin-top: clamp(-5rem, -5vw, -3.5rem);
   box-shadow: 0 -1px 0 var(--red), 0 1px 0 var(--red);
 }
@@ -3011,6 +3013,269 @@ nav {
   letter-spacing: 0.08em;
 }
 
+.drop-lab-section {
+  grid-template-columns: minmax(220px, 0.85fr) minmax(420px, 1.35fr) minmax(290px, 0.95fr);
+  align-items: center;
+  overflow: hidden;
+}
+
+.drop-lab-console,
+.drop-lab-result {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(8, 8, 8, 0.9);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.42);
+}
+
+.drop-lab-console {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.45rem);
+}
+
+.drop-lab-console::before {
+  content: "";
+  position: absolute;
+  inset: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.drop-lab-tabs,
+.drop-lab-kit {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.drop-lab-tabs button,
+.drop-lab-kit span {
+  min-height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.74);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.drop-lab-tabs button {
+  display: grid;
+  place-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
+}
+
+.drop-lab-tabs button span {
+  color: rgba(255, 31, 61, 0.8);
+  font-size: 0.66rem;
+}
+
+.drop-lab-tabs button:hover,
+.drop-lab-tabs button.active {
+  transform: translateY(-2px);
+  border-color: rgba(255, 31, 61, 0.58);
+  background: rgba(255, 31, 61, 0.12);
+  color: #fff;
+}
+
+.drop-lab-stage {
+  position: relative;
+  display: grid;
+  min-height: clamp(380px, 42vw, 540px);
+  place-items: center;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 24% 22%, rgba(68, 221, 255, 0.18), transparent 30%),
+    radial-gradient(circle at 78% 72%, rgba(205, 255, 77, 0.15), transparent 28%),
+    linear-gradient(160deg, #121212, #050505 68%);
+}
+
+.drop-lab-stage::before {
+  content: "";
+  position: absolute;
+  inset: 10%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  transform: rotate(-12deg);
+}
+
+.drop-lab-orbit {
+  position: absolute;
+  inset: 12%;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  animation: dropLabSpin 15s linear infinite;
+}
+
+.drop-lab-orbit span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  background: var(--swatch);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--swatch) 60%, transparent);
+  transform: rotate(calc(var(--spin-step) * 120deg)) translateX(clamp(120px, 18vw, 190px));
+}
+
+.drop-lab-product {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(78%, 380px);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 0 70px rgba(255, 255, 255, 0.06), 0 28px 70px rgba(0, 0, 0, 0.48);
+  animation: dropLabFloat 4.5s ease-in-out infinite;
+}
+
+.drop-lab-product img {
+  width: min(90%, 330px);
+  height: clamp(285px, 34vw, 420px);
+  object-fit: contain;
+  filter: drop-shadow(0 28px 34px rgba(0, 0, 0, 0.72));
+}
+
+.drop-lab-scan {
+  position: absolute;
+  z-index: 3;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(68, 221, 255, 0.8), rgba(255, 31, 61, 0.85), transparent);
+  box-shadow: 0 0 22px rgba(68, 221, 255, 0.45);
+  animation: dropLabScan 3.6s ease-in-out infinite;
+}
+
+.drop-lab-kit span {
+  display: grid;
+  place-items: center;
+  padding: 0.7rem;
+  text-align: center;
+}
+
+.drop-lab-result {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.2rem, 2vw, 1.75rem);
+}
+
+.drop-lab-result h3 {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.drop-lab-result p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.7;
+}
+
+.drop-lab-brief {
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drop-lab-palette {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.drop-lab-palette span {
+  width: 42px;
+  height: 42px;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34);
+}
+
+.drop-lab-score-list {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.1rem;
+}
+
+.drop-lab-cart {
+  margin-top: 0.2rem;
+}
+
+.drop-lab-secondary-link {
+  display: grid;
+  min-height: 48px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+
+.drop-lab-secondary-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(68, 221, 255, 0.46);
+  color: #fff;
+}
+
+@keyframes dropLabFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes dropLabSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dropLabScan {
+  0%,
+  100% {
+    top: 16%;
+    opacity: 0;
+  }
+
+  18%,
+  82% {
+    opacity: 1;
+  }
+
+  50% {
+    top: 84%;
+  }
+}
+
 @keyframes tryonArrowPulse {
   0%,
   100% {
@@ -3781,6 +4046,16 @@ footer {
     gap: 2rem;
   }
 
+  .drop-lab-section {
+    grid-template-columns: 1fr;
+  }
+
+  .drop-lab-console,
+  .drop-lab-result {
+    width: 100%;
+    max-width: 720px;
+  }
+
   .astravia-locker-section {
     grid-template-columns: 1fr;
   }
@@ -3889,6 +4164,26 @@ footer {
 }
 
 @media (max-width: 520px) {
+  .hero-bg-text {
+    display: none;
+  }
+
+  .collection-service-row {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  .service-item {
+    align-items: flex-start;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem;
+  }
+
+  .service-item:last-child {
+    border-bottom: 0;
+  }
+
   .hero-title {
     font-size: clamp(3.7rem, 18vw, 5.2rem);
   }
@@ -3913,6 +4208,32 @@ footer {
 
   .tryon-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .drop-lab-console,
+  .drop-lab-result {
+    border-radius: 18px;
+  }
+
+  .drop-lab-tabs,
+  .drop-lab-kit {
+    grid-template-columns: 1fr;
+  }
+
+  .drop-lab-stage {
+    min-height: 330px;
+  }
+
+  .drop-lab-product {
+    width: min(86%, 300px);
+  }
+
+  .drop-lab-product img {
+    height: 285px;
+  }
+
+  .drop-lab-orbit span {
+    transform: rotate(calc(var(--spin-step) * 120deg)) translateX(108px);
   }
 
   .locker-cabinet {
@@ -4023,4 +4344,10 @@ footer {
     text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
     transform: none;
   }
+}
+.hero-visual-fallback {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0) 58%);
 }

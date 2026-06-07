@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export default function HomeNav({ cartCount = 2 }) {
+export default function HomeNav({ cartCount = 0 }) {
   return (
     <nav>
       <Link to="/" className="nav-logo">

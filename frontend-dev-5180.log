@@ -1,0 +1,38 @@
+
+> shop-frontend@0.1.0 dev
+> vite --host 127.0.0.1 --port 5180
+
+Re-optimizing dependencies because vite config has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m912[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5180[22m/[39m
+[2m11:54:30 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/header.css[22m
+[2m11:54:45 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m11:57:20 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/header.css[22m
+[2m11:58:49 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/header.css[22m
+[2m12:00:34 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/header.css[22m
+[2m12:01:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/header.css[22m
+[2m12:03:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/header.css[22m
+[2m12:04:01 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/home.css[22m
+[2m12:24:05 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/routes/AppRoutes.jsx[22m
+[2m12:24:21 PM[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+Re-optimizing dependencies because lockfile has changed
+[2m12:24:22 PM[22m [36m[1m[vite][22m[39m server restarted.
+[2m12:35:24 PM[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+[2m12:35:24 PM[22m [36m[1m[vite][22m[39m server restarted.
+[2m2:12:03 PM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m2:12:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/routes/AppRoutes.jsx[22m
+[2m2:12:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Sales.jsx[22m
+[2m2:12:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Footer/Footer.jsx[22m
+[2m2:12:42 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m2:13:49 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/About.jsx[22m
+[2m2:14:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/routes/AppRoutes.jsx[22m
+[2m2:14:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Footer/Footer.jsx[22m
+[2m2:14:55 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m2:19:13 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/home/IntroVideoGate.jsx[22m
+[2m2:29:35 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Footer/footer.css[22m
+[2m2:37:03 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GiftVoucher.jsx[22m
+[2m2:37:23 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/giftvoucher.css[22m
+[2m2:44:45 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GiftVoucher.jsx[22m
+[2m2:45:03 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/giftvoucher.css[22m

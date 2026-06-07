@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer/Footer.jsx';
@@ -8,9 +8,11 @@ import { CartProvider } from './context/CartContext.jsx';
 // Global app layout with header, routed pages, and footer.
 export default function App() {
   const location = useLocation();
+  const [introActive, setIntroActive] = useState(false);
   const isHome = location.pathname === '/';
   const isLogin = location.pathname === '/login';
   const isSignup = location.pathname === '/signup';
+  const isAccount = location.pathname === '/account';
   const isWishlist = location.pathname === '/wishlist';
   const isContact = location.pathname === '/contact';
   const isSizeGuide = location.pathname === '/sizeguide';
@@ -21,7 +23,7 @@ export default function App() {
   const isCheckout = location.pathname === '/checkout';
   const isPayment = location.pathname === '/payment';
   const isAdmin = location.pathname.startsWith('/admin');
-  const hideHeader = isAdmin;
+  const hideHeader = isAdmin || (isHome && introActive);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -30,7 +32,21 @@ export default function App() {
   }, [location.pathname]);
 
   useEffect(() => {
+    const handleIntroActive = (event) => {
+      setIntroActive(Boolean(event.detail?.active));
+    };
+
+    window.addEventListener('astravia:intro-active', handleIntroActive);
+    return () => window.removeEventListener('astravia:intro-active', handleIntroActive);
+  }, []);
+
+  useEffect(() => {
+    if (!isHome && introActive) setIntroActive(false);
+  }, [introActive, isHome]);
+
+  useEffect(() => {
     if (isAdmin) return undefined;
+    if (!window.matchMedia?.('(pointer: fine)').matches) return undefined;
 
     const cursor = document.getElementById('cursor');
     const ring = document.getElementById('cursorRing');
@@ -97,6 +113,7 @@ export default function App() {
             isContact ||
             isLogin ||
             isSignup ||
+            isAccount ||
             isWishlist ||
             isSizeGuide ||
             isReturns ||

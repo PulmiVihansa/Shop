@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { FiHeart, FiLock, FiRefreshCw, FiShield, FiTruck } from 'react-icons/fi';
 import { useCart } from '../context/CartContext.jsx';
-import api from '../services/api.js';
+import { fetchProductById, fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
 import { getStockStatus } from '../utils/stockStatus.js';
+import { resolveImageList } from '../utils/imageUrl.js';
+import { getAvailableSizes } from '../utils/availableSizes.js';
 import '../styles/collection.css';
 
 const wishlistStorageKey = 'astravia_wishlist';
@@ -20,7 +23,7 @@ const readWishlist = () => {
 
 const normalizeProductId = (product) => product?.id || product?._id || '';
 const productPath = (product) => `/products/${product?.slug || normalizeProductId(product)}`;
-const productImages = (product) => (Array.isArray(product?.images) ? product.images.filter(Boolean) : []);
+const productImages = (product) => resolveImageList(Array.isArray(product?.images) ? product.images.filter(Boolean) : []);
 const productMatchesRoute = (product, routeId) => {
   if (!product || !routeId) return false;
   return [product.slug, product.id, product._id]
@@ -34,13 +37,7 @@ const needsProductRefresh = (product) => (
   product.description === undefined ||
   (!Array.isArray(product.sizes) && !product.sizeStock)
 );
-const availableSizes = (product) => {
-  const stock = product?.sizeStock && typeof product.sizeStock === 'object' ? product.sizeStock : {};
-  const fromStock = Object.entries(stock)
-    .filter(([, quantity]) => Number(quantity || 0) > 0)
-    .map(([size]) => size);
-  return fromStock.length ? fromStock : (product?.sizes || []).filter(Boolean);
-};
+const availableSizes = (product) => getAvailableSizes(product);
 
 const colorValue = (color) => {
   const value = String(color || '').trim();
@@ -70,68 +67,32 @@ export default function ProductDetails() {
   const navigate = useNavigate();
   const { addItem, openCart } = useCart();
   const routeProduct = productMatchesRoute(location.state?.product, id) ? location.state.product : null;
-  const [loadedProduct, setLoadedProduct] = useState(() => routeProduct);
-  const [allProducts, setAllProducts] = useState(() => (routeProduct ? [routeProduct] : []));
-  const [loadingProduct, setLoadingProduct] = useState(!routeProduct);
-  const [notFound, setNotFound] = useState(false);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [activeThumb, setActiveThumb] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
   const [activeTab, setActiveTab] = useState('Description');
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const productQuery = useQuery({
+    queryKey: ['products', 'detail', id],
+    queryFn: () => fetchProductById(id),
+    enabled: Boolean(id) && (!routeProduct || needsProductRefresh(routeProduct)),
+    initialData: routeProduct || undefined,
+    ...productsQueryDefaults,
+  });
+  const allProductsQuery = useQuery({
+    queryKey: ['products', 'related', id],
+    queryFn: () => fetchProducts({ source: 'detail-related', collection: routeProduct?.collection || 'men', view: 'collection', limit: 12 }),
+    enabled: Boolean(id),
+    placeholderData: routeProduct ? [routeProduct] : [],
+    ...productsQueryDefaults,
+  });
+
+  const loadedProduct = productQuery.data || routeProduct;
+  const allProducts = allProductsQuery.data || (routeProduct ? [routeProduct] : []);
+  const loadingProduct = productQuery.isLoading && !routeProduct;
+  const notFound = !routeProduct && productQuery.isError;
   const product = productMatchesRoute(loadedProduct, id) ? loadedProduct : routeProduct;
-
-  useEffect(() => {
-    let active = true;
-
-    if (routeProduct) {
-      setLoadedProduct(routeProduct);
-      setAllProducts((current) => (current.length ? current : [routeProduct]));
-      setLoadingProduct(false);
-      setNotFound(false);
-    }
-
-    const shouldFetchProduct = needsProductRefresh(routeProduct);
-    const shouldFetchProducts = allProducts.length < 2;
-    if (!shouldFetchProduct && !shouldFetchProducts) {
-      return () => {
-        active = false;
-      };
-    }
-
-    async function loadProductData() {
-      setNotFound(false);
-      setLoadingProduct(shouldFetchProduct && !routeProduct);
-      try {
-        const [productRes, productsRes] = await Promise.all([
-          shouldFetchProduct ? api.get(`/products/${id}`) : Promise.resolve(null),
-          shouldFetchProducts ? api.get('/products') : Promise.resolve(null),
-        ]);
-        if (!active) return;
-        if (productRes?.data) setLoadedProduct(productRes.data);
-        if (productsRes?.data) {
-          const rows = Array.isArray(productsRes.data) ? productsRes.data : [];
-          setAllProducts(rows);
-          if (!productRes?.data && routeProduct) {
-            const matchingProduct = rows.find((item) => productMatchesRoute(item, id));
-            if (matchingProduct && needsProductRefresh(routeProduct)) setLoadedProduct(matchingProduct);
-          }
-        }
-      } catch {
-        if (active && shouldFetchProduct && !routeProduct) {
-          setLoadedProduct(null);
-          setNotFound(true);
-        }
-      } finally {
-        if (active) setLoadingProduct(false);
-      }
-    }
-    loadProductData();
-    return () => {
-      active = false;
-    };
-  }, [allProducts.length, id, routeProduct]);
 
   useEffect(() => {
     if (!product) return;
@@ -311,7 +272,7 @@ export default function ProductDetails() {
 
           <div className="product-main-panel">
             {activeImage ? (
-              <img src={activeImage} alt={product?.name || 'Product'} loading="eager" decoding="async" fetchPriority="high" />
+              <img src={activeImage} alt={product?.name || 'Product'} loading="eager" decoding="async" fetchpriority="high" />
             ) : (
               <div className="product-detail-skeleton product-image-skeleton" aria-hidden="true" />
             )}
@@ -325,7 +286,7 @@ export default function ProductDetails() {
             <h1>{product?.name || <span className="product-detail-skeleton text title" aria-hidden="true" />}</h1>
             {product ? (
               <div className="product-rating">
-              <span>{'★'.repeat(Math.round(rating))}{'☆'.repeat(Math.max(0, 5 - Math.round(rating)))}</span>
+              <span>{'?'.repeat(Math.round(rating))}{'?'.repeat(Math.max(0, 5 - Math.round(rating)))}</span>
               <small>{reviewCount} Reviews</small>
               </div>
             ) : (
@@ -455,7 +416,7 @@ export default function ProductDetails() {
             {reviews.map((review, index) => (
               <article key={`${review.name || 'review'}-${index}`}>
                 <strong>{review.name || 'Customer'}</strong>
-                <span>{'★'.repeat(Math.round(Number(review.rating || 0)))}</span>
+                <span>{'?'.repeat(Math.round(Number(review.rating || 0)))}</span>
                 <p>{review.comment || review.message || ''}</p>
               </article>
             ))}

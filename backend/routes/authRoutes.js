@@ -4,10 +4,12 @@ const {
   registerUser,
   loginUser,
   getMe,
+  updateAvatar,
   redirectGoogleAuthSuccess,
   redirectWithOAuthError
 } = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/authMiddleware');
+const { uploadAvatarImage } = require('../middleware/avatarUpload');
 const devLog = require('../utils/devLog');
 
 // Auth routes for register and login.
@@ -42,5 +44,6 @@ router.get(
   redirectGoogleAuthSuccess
 );
 router.get('/me', authMiddleware, getMe);
+router.put('/avatar', authMiddleware, uploadAvatarImage, updateAvatar);
 
 module.exports = router;

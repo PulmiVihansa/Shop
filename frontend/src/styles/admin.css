@@ -4927,6 +4927,167 @@
 }
 
 @media (max-width: 720px) {
+  .admin-shell {
+    display: block;
+  }
+
+  .admin-sidebar {
+    padding: 0.85rem;
+  }
+
+  .admin-sidebar nav,
+  .admin-sidebar-nav {
+    grid-template-columns: 1fr;
+    max-height: 42vh;
+  }
+
+  .admin-main {
+    padding: 0.85rem;
+  }
+
+  .admin-topbar,
+  .admin-section-head,
+  .settings-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-topbar h1 {
+    font-size: clamp(2.25rem, 14vw, 3.4rem);
+  }
+
+  .admin-metric {
+    min-height: 108px;
+  }
+
+  .admin-panel {
+    padding: 0.85rem;
+    border-radius: 12px;
+  }
+
+  .admin-table-wrap {
+    overflow-x: hidden;
+  }
+
+  .admin-table,
+  .customer-table,
+  .bulk-orders-table {
+    min-width: 0;
+  }
+
+  .admin-table,
+  .admin-table thead,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table th,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .admin-table tr {
+    overflow: hidden;
+    border: 1px solid rgba(191, 175, 158, 0.32);
+    border-radius: 12px;
+    background: #fffdf9;
+  }
+
+  .admin-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
+    padding: 0.72rem 0.8rem;
+    border-bottom: 1px solid rgba(238, 231, 218, 0.86);
+    text-align: right;
+  }
+
+  .admin-table td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    color: #746a5c;
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .admin-table td:empty {
+    display: none;
+  }
+
+  .admin-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .admin-actions,
+  .admin-image-row,
+  .dashboard-main-grid,
+  .dashboard-main-grid.balanced,
+  .settings-grid,
+  .settings-form,
+  .settings-system-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions {
+    display: grid;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .admin-actions button,
+  .admin-table button,
+  .admin-primary,
+  .admin-primary.admin-primary-product,
+  .settings-secondary,
+  .settings-system-actions button,
+  .settings-save {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+  }
+
+  .admin-product-submit-row {
+    justify-content: stretch;
+  }
+
+  .admin-image-preview,
+  .admin-product-preview-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+  }
+
+  .settings-hero {
+    display: flex;
+    position: static;
+  }
+
+  .dashboard-kpi-card footer {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-product-bars div,
+  .dashboard-activity p {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-activity i {
+    display: none;
+  }
+
   .admin-product-section-title {
     display: block;
   }
@@ -4972,10 +5133,6 @@
   .bulk-orders-table th,
   .bulk-orders-table td {
     padding-block: 0.8rem;
-  }
-
-  .bulk-orders-table {
-    min-width: 1060px;
   }
 
   .bulk-save-button {
@@ -5059,5 +5216,27 @@
   .invoice-pagination {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-main,
+  .admin-sidebar {
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
+
+  .admin-table tbody {
+    padding: 0.55rem;
+  }
+
+  .admin-table td {
+    align-items: flex-start;
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .admin-table td::before {
+    flex-basis: auto;
   }
 }

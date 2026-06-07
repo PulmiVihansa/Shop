@@ -1,0 +1,373 @@
+.account-page {
+  min-height: 100vh;
+  padding: 108px 1.2rem 4rem;
+  color: #f5f0e8;
+  background:
+    linear-gradient(145deg, rgba(255, 31, 61, 0.12), transparent 34%),
+    linear-gradient(25deg, rgba(245, 240, 232, 0.08), transparent 48%),
+    #070707;
+}
+
+.account-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.account-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.4rem;
+  padding: 1.4rem 0 1.8rem;
+  border-bottom: 1px solid rgba(245, 240, 232, 0.1);
+}
+
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  min-width: 0;
+}
+
+.account-page-avatar {
+  position: relative;
+  width: 94px;
+  height: 104px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(245, 240, 232, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 31, 61, 0.28), transparent 48%),
+    rgba(255, 255, 255, 0.06);
+}
+
+.account-page-avatar button {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  min-height: 28px;
+  border: 1px solid rgba(245, 240, 232, 0.22);
+  border-radius: 999px;
+  background: rgba(8, 8, 8, 0.72);
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.account-page-avatar button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.account-page-avatar input {
+  display: none;
+}
+
+.account-page-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-page-avatar span {
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.account-eyebrow,
+.account-member-card span,
+.account-detail-list span,
+.account-stat span,
+.account-action-grid a span,
+.account-section-head span,
+.account-order-card span {
+  color: rgba(245, 240, 232, 0.56);
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.account-eyebrow {
+  margin: 0 0 0.45rem;
+  color: #ff1f3d;
+}
+
+.account-hero h1 {
+  margin: 0;
+  color: #fff;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.5rem, 7vw, 5.4rem);
+  font-weight: 500;
+  line-height: 0.9;
+}
+
+.account-hero p {
+  margin: 0.55rem 0 0;
+  color: rgba(245, 240, 232, 0.62);
+}
+
+.account-hero .account-avatar-message {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+}
+
+.account-signout {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0 1.25rem;
+  border: 1px solid rgba(255, 31, 61, 0.42);
+  border-radius: 999px;
+  background: rgba(255, 31, 61, 0.1);
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.account-main-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.account-profile-panel,
+.account-content > *,
+.account-orders-panel {
+  border: 1px solid rgba(245, 240, 232, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.account-profile-panel {
+  padding: 1rem;
+}
+
+.account-member-card {
+  padding: 1.1rem;
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 31, 61, 0.18), transparent 44%),
+    rgba(245, 240, 232, 0.055);
+}
+
+.account-member-card strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #fff;
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.12em;
+}
+
+.account-member-card p {
+  margin: 0.9rem 0 0;
+  color: rgba(245, 240, 232, 0.62);
+}
+
+.account-detail-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.account-detail-list div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(245, 240, 232, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.account-detail-list strong {
+  color: #fff;
+  font-weight: 500;
+}
+
+.account-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.account-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.account-stat {
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.account-stat strong {
+  color: #fff;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 500;
+}
+
+.account-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.account-action-grid a {
+  min-height: 150px;
+  display: grid;
+  align-content: space-between;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(245, 240, 232, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.account-action-grid a:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 31, 61, 0.38);
+  background: rgba(255, 31, 61, 0.08);
+}
+
+.account-action-grid svg {
+  width: 22px;
+  height: 22px;
+  color: #ff1f3d;
+}
+
+.account-action-grid a > svg:last-child {
+  justify-self: end;
+  color: rgba(245, 240, 232, 0.48);
+}
+
+.account-action-grid strong {
+  color: #fff;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.account-orders-panel {
+  padding: 1rem;
+}
+
+.account-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.account-section-head a {
+  color: #ff1f3d;
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.account-order-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.account-order-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.account-order-card div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.account-order-card div:last-child {
+  text-align: right;
+}
+
+.account-order-card strong {
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.account-empty-state {
+  padding: 2rem 1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(245, 240, 232, 0.62);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .account-main-grid,
+  .account-stat-row,
+  .account-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .account-page {
+    padding: 86px 0.85rem 3rem;
+  }
+
+  .account-identity {
+    align-items: flex-start;
+  }
+
+  .account-page-avatar {
+    width: 68px;
+    height: 76px;
+  }
+
+  .account-order-card {
+    grid-template-columns: 1fr;
+  }
+
+  .account-order-card div:last-child {
+    text-align: left;
+  }
+}

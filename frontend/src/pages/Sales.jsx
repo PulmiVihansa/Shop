@@ -41,7 +41,7 @@ const SaleProductCard = memo(function SaleProductCard({
             alt={product.name}
             loading={eagerImage ? 'eager' : 'lazy'}
             decoding="async"
-            fetchPriority={eagerImage ? 'high' : 'auto'}
+            fetchpriority={eagerImage ? 'high' : 'auto'}
           />
         ) : <span>No image</span>}
       </Link>
@@ -56,7 +56,7 @@ const SaleProductCard = memo(function SaleProductCard({
       </div>
 
       <div className="sale-size-row">
-        {(product.sizes.length ? product.sizes : ['S', 'M', 'L', 'XL']).map((size) => (
+        {product.sizes.map((size) => (
           <button
             type="button"
             className={selectedSize === size ? 'selected' : ''}
@@ -146,7 +146,11 @@ export default function Sales() {
   }, [showToast]);
 
   const addSaleItem = useCallback((product) => {
-    const size = selectedSizes[product.id] || 'M';
+    const size = selectedSizes[product.id] || product.sizes[0] || '';
+    if (!size) {
+      showToast(`${product.name} is out of stock`);
+      return;
+    }
     addItem({
       productId: product.id,
       name: product.name,
@@ -180,7 +184,7 @@ export default function Sales() {
 
         <div className="sales-feature-card">
           <div className="sales-feature-badge">{heroProduct ? `${heroProduct.discount}% Off` : 'Sale'}</div>
-          {heroProduct?.image && <img src={heroProduct.image} alt={heroProduct.name} loading="eager" decoding="async" fetchPriority="high" />}
+          {heroProduct?.image && <img src={heroProduct.image} alt={heroProduct.name} loading="eager" decoding="async" fetchpriority="high" />}
           <div className="sales-feature-foot">
             <span>Limited stock</span>
             <strong>Ends Soon</strong>
@@ -243,7 +247,7 @@ export default function Sales() {
             product={product}
             index={index}
             isWishlisted={wishlist.has(product.id)}
-            selectedSize={selectedSizes[product.id] || 'M'}
+            selectedSize={selectedSizes[product.id] || product.sizes[0] || ''}
             onWishlistToggle={toggleWishlist}
             onSizeSelect={selectSize}
             onAdd={addSaleItem}

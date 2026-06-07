@@ -50,6 +50,11 @@ export function AuthProvider({ children }) {
     localStorage.setItem('atelier_user', JSON.stringify(data.user));
   }
 
+  function updateUser(nextUser) {
+    setUser(nextUser);
+    localStorage.setItem('atelier_user', JSON.stringify(nextUser));
+  }
+
   async function login(credentials) {
     const response = await api.post('/auth/login', credentials);
     persistSession(response.data);
@@ -102,6 +107,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       authenticateWithToken,
+      updateUser,
       logout
     }),
     [user, token, loading]

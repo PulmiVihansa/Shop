@@ -151,12 +151,17 @@ const createCustomerForOrder = async (order, updatedOrderData = {}) => {
 };
 
 const getBulkOrders = async (req, res) => {
-  if (global.useMemoryStore) {
-    return res.json(buildDashboard(store.bulkOrderRequests.map(normalizeOrder)));
-  }
+  try {
+    if (global.useMemoryStore) {
+      return res.json(buildDashboard(store.bulkOrderRequests.map(normalizeOrder)));
+    }
 
-  const orders = await prisma.bulkOrderRequest.findMany({ orderBy: { createdAt: 'desc' } });
-  res.json(buildDashboard(orders.map(normalizeOrder)));
+    const orders = await prisma.bulkOrderRequest.findMany({ orderBy: { createdAt: 'desc' } });
+    return res.json(buildDashboard(orders.map(normalizeOrder)));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: error.message || 'Unable to load bulk orders' });
+  }
 };
 
 const createBulkOrderRequest = async (req, res) => {

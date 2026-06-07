@@ -1,9 +1,12 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const prisma = require('../config/prisma');
 const { store, createId, seedAdmin, getNextCustomerId } = require('../data/memoryStore');
 const { getNextCustomerId: getNextDbCustomerId } = require('../utils/customerId');
 const { withId } = require('../utils/dbFormat');
+const { avatarUploadsDir, toAvatarImagePath } = require('../middleware/avatarUpload');
 const devLog = require('../utils/devLog');
 
 const createToken = (id) => {
@@ -36,9 +39,34 @@ const sendAuthResponse = (res, user, status = 200) => {
       email: user.email,
       avatar: user.avatar,
       provider: user.provider,
-      role: user.role
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     }
   });
+};
+
+const serializeUser = (user) => ({
+  id: user._id || user.id,
+  customerId: user.customerId,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+  provider: user.provider,
+  role: user.role,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt
+});
+
+const isAvatarUploadPath = (value) => String(value || '').startsWith('/uploads/avatars/');
+
+const deleteAvatarFile = (avatarPath) => {
+  if (!isAvatarUploadPath(avatarPath)) return;
+  const filename = path.basename(avatarPath);
+  const resolved = path.resolve(avatarUploadsDir, filename);
+  if (resolved.startsWith(path.resolve(avatarUploadsDir))) {
+    fs.promises.unlink(resolved).catch(() => {});
+  }
 };
 
 const redirectGoogleAuthSuccess = (req, res) => {
@@ -204,23 +232,55 @@ const loginUser = async (req, res) => {
 };
 
 const getMe = async (req, res) => {
-  res.json({
-    user: {
-      id: req.user._id || req.user.id,
-      customerId: req.user.customerId,
-      name: req.user.name,
-      email: req.user.email,
-      avatar: req.user.avatar,
-      provider: req.user.provider,
-      role: req.user.role
+  res.json({ user: serializeUser(req.user) });
+};
+
+const updateAvatar = async (req, res) => {
+  const nextAvatar = req.file ? toAvatarImagePath(req.file) : '';
+
+  if (!nextAvatar) {
+    return res.status(400).json({ message: 'Avatar image is required' });
+  }
+
+  try {
+    if (global.useMemoryStore) {
+      const userId = req.user._id || req.user.id;
+      const index = store.users.findIndex((user) => String(user._id || user.id) === String(userId));
+      if (index === -1) {
+        deleteAvatarFile(nextAvatar);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const previousAvatar = store.users[index].avatar;
+      store.users[index] = { ...store.users[index], avatar: nextAvatar, updatedAt: new Date() };
+      deleteAvatarFile(previousAvatar);
+      return res.json({ user: serializeUser(store.users[index]) });
     }
-  });
+
+    const existing = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!existing) {
+      deleteAvatarFile(nextAvatar);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatar: nextAvatar }
+    });
+    deleteAvatarFile(existing.avatar);
+    return res.json({ user: serializeUser(user) });
+  } catch (error) {
+    deleteAvatarFile(nextAvatar);
+    console.error('[auth] avatar update failed', error);
+    return res.status(500).json({ message: 'Avatar update failed', error: error.message });
+  }
 };
 
 module.exports = {
   registerUser,
   loginUser,
   getMe,
+  updateAvatar,
   redirectGoogleAuthSuccess,
   handleGoogleAuthFailure,
   redirectWithOAuthError,

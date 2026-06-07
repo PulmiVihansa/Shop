@@ -1,5 +1,8 @@
 const prisma = require('../config/prisma');
 const { store, createId, seedProducts } = require('../data/memoryStore');
+const fs = require('fs');
+const path = require('path');
+const { productUploadsDir, toProductImagePath } = require('../middleware/productImageUpload');
 const {
   normalizeCollection,
   normalizeCategory,
@@ -20,9 +23,32 @@ const sanitizeText = (value, fallback = '') => {
   return String(value).trim();
 };
 
+const parseJsonValue = (value, fallback) => {
+  if (typeof value !== 'string') return value ?? fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const parseJsonObject = (value, fallback = {}) => {
+  const parsed = parseJsonValue(value, fallback);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : fallback;
+};
+
 const sanitizeStringArray = (value, fallback = []) => {
-  if (!Array.isArray(value)) return fallback;
-  return value.map((item) => sanitizeText(item)).filter(Boolean);
+  const parsed = parseJsonValue(value, value);
+  if (Array.isArray(parsed)) return parsed.map((item) => sanitizeText(item)).filter(Boolean);
+  if (typeof parsed === 'string') {
+    return parsed
+      .split(',')
+      .map((item) => sanitizeText(item))
+      .filter(Boolean);
+  }
+  return fallback;
 };
 
 const normalizeSizeCode = (value) => sanitizeText(value).toUpperCase();
@@ -40,8 +66,8 @@ const sanitizeRating = (value, fallback = 0) => {
 };
 
 const sanitizeJsonArray = (value, fallback = []) => {
-  if (!Array.isArray(value)) return fallback;
-  return value;
+  const parsed = parseJsonValue(value, value);
+  return Array.isArray(parsed) ? parsed : fallback;
 };
 
 const getAllSizeKeys = (sizes = [], sizeStock = {}) => {
@@ -143,7 +169,10 @@ const sanitizeProductPayload = (payload = {}, existing = null) => {
     collection,
     category,
     colors,
-    images: sanitizeStringArray(payload.images, existing?.images || []),
+    images: [
+      ...sanitizeStringArray(payload.images, existing?.images || []).map(sanitizeStoredImage),
+      ...sanitizeStringArray(payload.uploadedImages, []).map(sanitizeStoredImage),
+    ].filter(Boolean),
     sizes: sanitizeStringArray(payload.sizes, existing?.sizes || []),
     badges: sanitizeStringArray(payload.badges, existing?.badges || []),
     material: sanitizeText(payload.material, existing?.material || ''),
@@ -159,7 +188,7 @@ const sanitizeProductPayload = (payload = {}, existing = null) => {
     reviews: sanitizeJsonArray(payload.reviews, existing?.reviews || []),
   };
 
-  const mergedSizeStock = normalizeSizeStock(payload.sizeStock || existing?.sizeStock || {}, next.sizes);
+  const mergedSizeStock = normalizeSizeStock(parseJsonObject(payload.sizeStock, existing?.sizeStock || {}), next.sizes);
   next.sizeStock = mergedSizeStock;
   next.stock = getTotalStock(mergedSizeStock);
 
@@ -241,11 +270,72 @@ const getInventorySummary = (records) => {
   return { totalProducts, totalInventoryValue, lowStockProducts, outOfStockProducts, totalUnits };
 };
 
+const isBase64Image = (value) => /^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(String(value || ''));
+
+const isProductUploadPath = (value) => String(value || '').startsWith('/uploads/products/');
+
+const sanitizeStoredImage = (image) => {
+  const value = sanitizeText(image);
+  if (!value || isBase64Image(value)) return '';
+  return value;
+};
+
+const sanitizeProductImage = (image) => {
+  const value = sanitizeText(image);
+  return isBase64Image(value) ? '' : value;
+};
+
+const sanitizeProductImages = (images) => (
+  Array.isArray(images) ? images.map(sanitizeProductImage).filter(Boolean) : []
+);
+
+const looksLikePlaceholderCopy = (value) => {
+  const text = sanitizeText(value).toLowerCase();
+  if (!text) return true;
+  if (text.length < 18) return true;
+  if (/^(test|demo|sample|placeholder|lorem ipsum)\b/.test(text)) return true;
+  if (/^[a-z\s]{1,24}$/.test(text) && !/[aeiou].*[aeiou].*[aeiou]/.test(text)) return true;
+  return false;
+};
+
+const publicProductDescription = (product) => {
+  if (!looksLikePlaceholderCopy(product.description)) return product.description;
+  const name = sanitizeText(product.name, 'Astravia piece');
+  const category = sanitizeText(product.category, 'streetwear');
+  return `${name} is an Astravia ${category} piece with a premium oversized fit, limited-drop energy, and everyday comfort.`;
+};
+
+const getUploadedProductImages = (req) => (
+  Array.isArray(req.files) ? req.files.map(toProductImagePath).filter(Boolean) : []
+);
+
+const resolveProductUploadFile = (imagePath) => {
+  if (!isProductUploadPath(imagePath)) return '';
+  const filename = path.basename(imagePath);
+  const resolved = path.resolve(productUploadsDir, filename);
+  return resolved.startsWith(path.resolve(productUploadsDir)) ? resolved : '';
+};
+
+const deleteProductImageFiles = (images = []) => {
+  sanitizeStringArray(images).forEach((imagePath) => {
+    const filePath = resolveProductUploadFile(imagePath);
+    if (filePath) fs.promises.unlink(filePath).catch(() => {});
+  });
+};
+
+const deleteRemovedProductImages = (previousImages = [], nextImages = []) => {
+  const nextSet = new Set(sanitizeStringArray(nextImages));
+  const removed = sanitizeStringArray(previousImages).filter((image) => !nextSet.has(image));
+  deleteProductImageFiles(removed);
+};
+
 const normalizeProduct = (product) => {
   const collection = normalizeCollection(product.collection, 'men');
   const category = normalizeCategory(collection, product.category, getDefaultCollectionCategory(collection));
   const sizeStock = normalizeSizeStock(product.sizeStock || {}, product.sizes || []);
   const stock = getTotalStock(sizeStock);
+  const images = sanitizeProductImages(product.images || []);
+  const description = publicProductDescription({ ...product, category });
 
   return {
     id: product._id || product.id,
@@ -254,13 +344,13 @@ const normalizeProduct = (product) => {
     title: product.name,
     slug: product.slug || slugify(product.name),
     price: product.price,
-    description: product.description,
+    description,
     collection,
     category,
     categoryLabel: category,
     colors: product.colors || [],
-    images: product.images || [],
-    image: product.images?.[0] || '',
+    images,
+    image: images[0] || '',
     sizes: getAllSizeKeys(product.sizes || [], sizeStock),
     stock,
     totalStock: stock,
@@ -272,7 +362,7 @@ const normalizeProduct = (product) => {
     careInstructions: product.careInstructions || '',
     countryOfOrigin: product.countryOfOrigin || '',
     metaTitle: product.metaTitle || '',
-    metaDescription: product.metaDescription || '',
+    metaDescription: looksLikePlaceholderCopy(product.metaDescription) ? description : product.metaDescription,
     metaKeywords: product.metaKeywords || [],
     rating: toNumber(product.rating, 0),
     reviewCount: Math.max(0, Math.trunc(toNumber(product.reviewCount, 0))),
@@ -354,6 +444,13 @@ const getQueryLimit = (value) => {
   return Math.min(limit, 50);
 };
 
+const getEffectiveProductLimit = (req, collectionView) => {
+  const requested = getQueryLimit(req.query.limit || req.query.take);
+  if (requested) return requested;
+  if (collectionView || !req.headers.authorization) return 50;
+  return null;
+};
+
 const productMatches = (product, filter) => {
   if (filter.collection && normalizeCollection(product.collection, 'men') !== filter.collection) return false;
   if (filter.category && normalizeCategory('men', product.category, getDefaultCollectionCategory('men')) !== filter.category) return false;
@@ -411,7 +508,7 @@ const getProducts = async (req, res) => {
     }
 
     const query = { where, orderBy: { createdAt: 'desc' } };
-    const limit = getQueryLimit(req.query.limit || req.query.take);
+    const limit = getEffectiveProductLimit(req, collectionView);
     if (limit) {
       query.take = limit;
     }
@@ -420,7 +517,7 @@ const getProducts = async (req, res) => {
     }
 
     const products = await prisma.product.findMany(query);
-    const filteredProducts = products.filter((product) => productMatches(product, filter));
+    const filteredProducts = filter.q ? products.filter((product) => productMatches(product, filter)) : products;
     logProductQuery('prisma', filter, filteredProducts.length, filteredProducts[0]);
     res.json(filteredProducts.map(collectionView ? toCollectionListProduct : normalizeProduct));
   } catch (error) {
@@ -445,7 +542,7 @@ const getProductById = async (req, res) => {
       return res.json(normalizeProduct(product));
     }
 
-    let product = await prisma.product.findFirst({
+    const product = await prisma.product.findFirst({
       where: {
         OR: [
           { id: req.params.id },
@@ -453,10 +550,6 @@ const getProductById = async (req, res) => {
         ]
       }
     });
-    if (!product) {
-      const products = await prisma.product.findMany();
-      product = products.find((entry) => slugify(entry.name) === req.params.id);
-    }
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -468,8 +561,9 @@ const getProductById = async (req, res) => {
 };
 
 const createProduct = async (req, res) => {
+  const uploadedImages = getUploadedProductImages(req);
   try {
-    const payload = sanitizeProductPayload(req.body);
+    const payload = sanitizeProductPayload({ ...req.body, uploadedImages });
     if (global.useMemoryStore) {
       if (payload.slug && store.products.some((entry) => entry.slug === payload.slug)) {
         payload.slug = `${payload.slug}-${Date.now().toString(36)}`;
@@ -493,32 +587,38 @@ const createProduct = async (req, res) => {
     const product = await prisma.product.create({ data: payload });
     res.status(201).json(normalizeProduct(product));
   } catch (error) {
+    deleteProductImageFiles(uploadedImages);
     console.error(error);
       res.status(500).json({ message: error.message });
   }
 };
 
 const updateProduct = async (req, res) => {
+  const uploadedImages = getUploadedProductImages(req);
   try {
     if (global.useMemoryStore) {
       const index = store.products.findIndex((entry) => entry._id === req.params.id);
       if (index === -1) {
+        deleteProductImageFiles(uploadedImages);
         return res.status(404).json({ message: 'Product not found' });
       }
-      const payload = sanitizeProductPayload(req.body, store.products[index]);
+      const payload = sanitizeProductPayload({ ...req.body, uploadedImages }, store.products[index]);
       if (payload.slug && store.products.some((entry, entryIndex) => entryIndex !== index && entry.slug === payload.slug)) {
         payload.slug = `${payload.slug}-${Date.now().toString(36)}`;
       }
+      const previousImages = store.products[index].images || [];
       store.products[index] = { ...store.products[index], ...payload, updatedAt: new Date() };
+      deleteRemovedProductImages(previousImages, store.products[index].images);
       return res.json(normalizeProduct(store.products[index]));
     }
 
     const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!existing) {
+      deleteProductImageFiles(uploadedImages);
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const payload = sanitizeProductPayload(req.body, existing);
+    const payload = sanitizeProductPayload({ ...req.body, uploadedImages }, existing);
     if (payload.slug) {
       const existingSlug = await prisma.product.findUnique({ where: { slug: payload.slug } });
       if (existingSlug && existingSlug.id !== req.params.id) {
@@ -527,10 +627,13 @@ const updateProduct = async (req, res) => {
     }
     const product = await prisma.product.update({ where: { id: req.params.id }, data: payload });
     if (!product) {
+      deleteProductImageFiles(uploadedImages);
       return res.status(404).json({ message: 'Product not found' });
     }
+    deleteRemovedProductImages(existing.images, product.images);
     res.json(normalizeProduct(product));
   } catch (error) {
+    deleteProductImageFiles(uploadedImages);
     console.error(error);
       res.status(500).json({ message: error.message });
   }
@@ -543,7 +646,8 @@ const deleteProduct = async (req, res) => {
       if (index === -1) {
         return res.status(404).json({ message: 'Product not found' });
       }
-      store.products.splice(index, 1);
+      const [removedProduct] = store.products.splice(index, 1);
+      deleteProductImageFiles(removedProduct?.images || []);
       return res.json({ message: 'Product deleted' });
     }
 
@@ -552,6 +656,7 @@ const deleteProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
     await prisma.product.delete({ where: { id: req.params.id } });
+    deleteProductImageFiles(product.images || []);
     res.json({ message: 'Product deleted' });
   } catch (error) {
      console.error(error);

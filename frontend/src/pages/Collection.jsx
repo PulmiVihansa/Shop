@@ -2,13 +2,14 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiGrid, FiHeart, FiMenu, FiSliders } from 'react-icons/fi';
 import useCollectionProducts from '../hooks/useCollectionProducts.js';
+import { resolveImageUrl } from '../utils/imageUrl.js';
+import { getAvailableSizeOptions, getAvailableSizes } from '../utils/availableSizes.js';
 import '../styles/collection.css';
 
 const wishlistStorageKey = 'astravia_wishlist';
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const SKELETON_CARD_COUNT = 8;
 const formatAstraviaPrice = (value) => `Rs. ${Number(value || 0).toLocaleString()}.00`;
-const productImage = (product) => product.images?.[0] || '/models/Tshirt22.png';
+const productImage = (product) => resolveImageUrl(product.images?.[0]) || '/models/Tshirt22.png';
 const productPath = (product) => `/products/${product.slug || product.id || product._id}`;
 const productBadge = (product) => product.badges?.[0] || '';
 const productId = (product) => product.id || product._id || product.slug;
@@ -37,13 +38,7 @@ const uniqueSorted = (values) => {
   return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
 };
 const productColors = (product) => toList(product.colors || product.colours || product.swatches);
-const productSizesInStock = (product) => {
-  const stockEntries = Object.entries(product.sizeStock || {});
-  if (!stockEntries.length) return toList(product.sizes).map((size) => size.toUpperCase());
-  return stockEntries
-    .filter(([, quantity]) => Number(quantity || 0) > 0)
-    .map(([size]) => size.toUpperCase());
-};
+const productSizesInStock = (product) => getAvailableSizes(product).map((size) => size.toUpperCase());
 
 const readWishlist = () => {
   try {
@@ -130,9 +125,10 @@ export default function Collection() {
   const filterSections = useMemo(() => {
     const categories = filters.categories.length ? filters.categories : uniqueSorted(products.map((product) => product.category));
     const colors = filters.colors.length ? filters.colors : uniqueSorted(products.flatMap(productColors));
+    const sizeOptions = getAvailableSizeOptions(products);
     return [
       ['Category', categories],
-      ['Size', SIZE_OPTIONS],
+      ['Size', sizeOptions],
       ['Color', colors],
     ].filter(([, options]) => options.length);
   }, [filters, products]);
@@ -186,8 +182,8 @@ export default function Collection() {
             price: product.price,
             image: productImage(product),
             category: product.category,
-            selectedSize: Object.keys(product.sizeStock || {}).find((size) => Number(product.sizeStock?.[size] || 0) > 0) || '',
-            sizes: product.sizes || [],
+            selectedSize: getAvailableSizes(product)[0] || '',
+            sizes: getAvailableSizes(product),
             saved: 'Saved just now',
           },
         ];
@@ -247,7 +243,7 @@ export default function Collection() {
   return (
     <section className="collection-page">
       <div className="wishlisttop-banner">
-        <img src="/models/wishlisttop.png" alt="Astravia collection banner" />
+        <img src="/models/wishlisttop.png" alt="Astravia collection banner" loading="lazy" decoding="async" />
       </div>
 
       <div className="collection-shell">

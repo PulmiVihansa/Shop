@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api, { getErrorMessage } from '../services/api.js';
 import '../styles/giftvoucher.css';
 
 const amounts = [2500, 5000, 10000, 20000];
@@ -55,6 +56,7 @@ export default function GiftVoucher() {
   });
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
+  const [deliveryAction, setDeliveryAction] = useState('');
   const voucherCode = useMemo(() => codeForAmount(amount), [amount]);
   const validUntil = useMemo(() => formatValidUntil(), []);
   const selectedDesign = voucherDesigns.find((item) => item.id === design) ?? voucherDesigns[0];
@@ -65,16 +67,82 @@ export default function GiftVoucher() {
     window.setTimeout(() => setCopied(false), 1400);
   };
 
+  const showToast = (message) => {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 2600);
+  };
+
+  const voucherPayload = () => ({
+    amount,
+    code: voucherCode,
+    design: selectedDesign.name,
+    validUntil,
+    recipient: {
+      name: recipient.name.trim(),
+      email: recipient.email.trim(),
+      message: recipient.message.trim(),
+    },
+  });
+
+  const validateRecipientName = () => {
+    if (!recipient.name.trim()) {
+      showToast('Add the recipient name first.');
+      return false;
+    }
+    return true;
+  };
+
+  const validateRecipientEmail = () => {
+    if (!validateRecipientName()) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email.trim())) {
+      showToast('Add a valid recipient email first.');
+      return false;
+    }
+    return true;
+  };
+
+  const downloadVoucherPdf = async () => {
+    if (!validateRecipientName() || deliveryAction) return;
+    setDeliveryAction('download');
+    try {
+      const response = await api.post('/gift-vouchers/download', voucherPayload(), { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Astravia-${voucherCode}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+      showToast('Voucher PDF downloaded.');
+    } catch (error) {
+      showToast(getErrorMessage(error));
+    } finally {
+      setDeliveryAction('');
+    }
+  };
+
+  const emailVoucherPdf = async () => {
+    if (!validateRecipientEmail() || deliveryAction) return;
+    setDeliveryAction('email');
+    try {
+      await api.post('/gift-vouchers/email', voucherPayload());
+      showToast(`Voucher sent to ${recipient.email.trim()}.`);
+    } catch (error) {
+      showToast(getErrorMessage(error));
+    } finally {
+      setDeliveryAction('');
+    }
+  };
+
   const buyVoucher = () => {
     if (!recipient.name.trim()) {
-      setToast('Add the recipient name before checkout.');
-      window.setTimeout(() => setToast(''), 2400);
+      showToast('Add the recipient name before checkout.');
       return;
     }
 
     if (delivery === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email.trim())) {
-      setToast('Add a valid recipient email for delivery.');
-      window.setTimeout(() => setToast(''), 2400);
+      showToast('Add a valid recipient email for delivery.');
       return;
     }
 
@@ -231,7 +299,6 @@ export default function GiftVoucher() {
                     value={recipient.email}
                     onChange={(event) => setRecipient((current) => ({ ...current, email: event.target.value }))}
                     placeholder="name@email.com"
-                    disabled={delivery === 'pdf'}
                   />
                 </label>
                 <label className="voucher-message-field">
@@ -252,11 +319,27 @@ export default function GiftVoucher() {
                 <h2>Choose delivery format.</h2>
               </div>
               <div className="voucher-delivery-toggle">
-                <button type="button" className={delivery === 'email' ? 'active' : ''} onClick={() => setDelivery('email')}>
-                  Email Delivery
+                <button
+                  type="button"
+                  className={delivery === 'email' ? 'active' : ''}
+                  disabled={Boolean(deliveryAction)}
+                  onClick={() => {
+                    setDelivery('email');
+                    emailVoucherPdf();
+                  }}
+                >
+                  {deliveryAction === 'email' ? 'Sending...' : 'Email Delivery'}
                 </button>
-                <button type="button" className={delivery === 'pdf' ? 'active' : ''} onClick={() => setDelivery('pdf')}>
-                  PDF Download
+                <button
+                  type="button"
+                  className={delivery === 'pdf' ? 'active' : ''}
+                  disabled={Boolean(deliveryAction)}
+                  onClick={() => {
+                    setDelivery('pdf');
+                    downloadVoucherPdf();
+                  }}
+                >
+                  {deliveryAction === 'download' ? 'Preparing...' : 'PDF Download'}
                 </button>
               </div>
             </section>

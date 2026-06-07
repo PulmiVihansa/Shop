@@ -1,0 +1,61 @@
+import { Link, useLocation } from 'react-router-dom';
+
+const policies = {
+  '/privacy': {
+    kicker: 'Privacy Policy',
+    title: 'How Astravia handles customer data.',
+    intro: 'Use this page as the public privacy policy for the live store. Replace the placeholders with your final legal wording before launch.',
+    sections: [
+      ['Information we collect', 'Customer account details, delivery information, order history, payment status, support messages, and basic site analytics.'],
+      ['How we use it', 'To process orders, provide customer support, improve the store, prevent fraud, and send transactional updates.'],
+      ['Payments', 'Card or online payment details are handled by the selected payment provider. Astravia should not store raw card numbers.'],
+      ['Contact', 'Add your official privacy contact email and business address here before hosting.'],
+    ],
+  },
+  '/terms': {
+    kicker: 'Terms & Conditions',
+    title: 'The rules for using and buying from Astravia.',
+    intro: 'These starter terms should be reviewed and replaced with final business/legal wording before accepting live payments.',
+    sections: [
+      ['Orders', 'Orders are confirmed after payment or approved cash-on-delivery checkout, subject to stock availability and fraud checks.'],
+      ['Product information', 'Prices, stock, images, and descriptions should be kept accurate, but minor color or fit differences may occur.'],
+      ['Returns', 'Returns and exchanges follow the published returns policy and must meet the condition and time-window requirements.'],
+      ['Liability', 'Add your final limitation of liability, governing law, and dispute process before launch.'],
+    ],
+  },
+  '/shipping': {
+    kicker: 'Shipping Policy',
+    title: 'Delivery, dispatch, and order tracking.',
+    intro: 'Publish your final courier names, delivery areas, costs, and timelines here before going live.',
+    sections: [
+      ['Dispatch', 'Orders should be packed and dispatched within the timeframe shown at checkout or in the order confirmation.'],
+      ['Delivery fees', 'Delivery fees are calculated at checkout based on the order and available shipping methods.'],
+      ['Tracking', 'Customers can track eligible orders from their account or the order tracking page.'],
+      ['Delays', 'Add your final guidance for courier delays, incorrect addresses, and failed delivery attempts.'],
+    ],
+  },
+};
+
+export default function PolicyPage() {
+  const location = useLocation();
+  const policy = policies[location.pathname] || policies['/terms'];
+
+  return (
+    <section className="policy-page">
+      <div className="policy-shell">
+        <p>{policy.kicker}</p>
+        <h1>{policy.title}</h1>
+        <span>{policy.intro}</span>
+        <div className="policy-grid">
+          {policy.sections.map(([title, body]) => (
+            <article key={title}>
+              <h2>{title}</h2>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+        <Link to="/contact">Contact support</Link>
+      </div>
+    </section>
+  );
+}

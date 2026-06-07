@@ -96,7 +96,7 @@ export default function IntroVideoGate({ onFinish }) {
             className={`rawkode-video-intro__poster ${previewReady ? 'is-hidden' : ''}`}
             src={POSTER_URL}
             alt=""
-            fetchPriority="high"
+            fetchpriority="high"
             decoding="sync"
           />
 

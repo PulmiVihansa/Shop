@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import api from '../services/api.js';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
+import { resolveImageList } from '../utils/imageUrl.js';
 
 const STALE_TIME = 5 * 60 * 1000;
 const cacheKey = 'men-collection';
@@ -29,7 +31,7 @@ const uniqueSorted = (values) => {
 };
 
 const normalizeProduct = (product = {}) => {
-  const images = toList(product.images || product.image);
+  const images = resolveImageList(toList(product.images || product.image));
   const colors = toList(product.colors || product.colours || product.swatches);
   const sizeStock = product.sizeStock && typeof product.sizeStock === 'object' ? product.sizeStock : {};
   const stock = Number(product.totalStock ?? product.stock ?? 0);
@@ -98,10 +100,9 @@ export const fetchCollectionProducts = ({ force = false } = {}) => {
   if (!force && isFresh(entry)) return Promise.resolve(entry.products);
   if (entry.promise) return entry.promise;
 
-  const promise = api
-    .get('/products', { params: { collection: 'men', view: 'collection' } })
+  const promise = fetchProducts({ source: 'collection', collection: 'men', view: 'collection' })
     .then((response) => {
-      const products = Array.isArray(response.data) ? response.data.map(normalizeProduct) : [];
+      const products = Array.isArray(response) ? response.map(normalizeProduct) : [];
       setEntry({
         products,
         filters: buildFilters(products),
@@ -131,6 +132,11 @@ export const prefetchCollectionProducts = () => {
 
 export default function useCollectionProducts() {
   const [snapshot, setSnapshot] = useState(getCollectionProductsSnapshot);
+  const queryResult = useQuery({
+    queryKey: ['products', 'collection', 'men'],
+    queryFn: () => fetchCollectionProducts(),
+    ...productsQueryDefaults,
+  });
 
   useEffect(() => {
     const listener = () => setSnapshot(getCollectionProductsSnapshot());
@@ -138,9 +144,14 @@ export default function useCollectionProducts() {
     return () => listeners.delete(listener);
   }, []);
 
-  useEffect(() => {
-    fetchCollectionProducts().catch(() => {});
-  }, []);
+  const mergedSnapshot = useMemo(
+    () => ({
+      ...snapshot,
+      loading: queryResult.isLoading || snapshot.loading,
+      error: queryResult.error?.response?.data?.message || queryResult.error?.message || snapshot.error,
+    }),
+    [queryResult.error, queryResult.isLoading, snapshot]
+  );
 
-  return snapshot;
+  return mergedSnapshot;
 }

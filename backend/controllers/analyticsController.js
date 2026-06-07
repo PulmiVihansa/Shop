@@ -23,7 +23,7 @@ const getOrderItems = (order) => {
   }];
 };
 
-const buildAnalytics = (products, orders, users, expenses = []) => {
+const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) => {
   const revenue = orders.reduce((sum, order) => sum + getOrderTotal(order), 0);
   const lowStock = products.filter((product) => {
     const stock = getTotalStock(product);
@@ -61,16 +61,17 @@ const buildAnalytics = (products, orders, users, expenses = []) => {
     }, {})
   );
 
-  const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const expenseTotal = metrics.expenseTotal ?? expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
   return {
+    ...getAnalyticsDashboard(),
     totals: {
-      users: users.length,
-      orders: orders.length,
-      revenue,
+      users: metrics.userCount ?? users.length,
+      orders: metrics.orderCount ?? orders.length,
+      revenue: metrics.revenue ?? revenue,
       lowStock: lowStock.length,
       expenses: expenseTotal,
-      profit: revenue - expenseTotal
+      profit: (metrics.revenue ?? revenue) - expenseTotal
     },
     lowStock,
     recentOrders: orders.slice(0, 8),
@@ -79,8 +80,7 @@ const buildAnalytics = (products, orders, users, expenses = []) => {
     salesOverTime: monthlyRevenue,
     productPerformance: Object.values(productSales).sort((a, b) => b.revenue - a.revenue).slice(0, 8),
     customerGrowth,
-    orderFrequency: monthlyRevenue.map((entry) => ({ label: entry.label, orders: entry.orders })),
-    ...getAnalyticsDashboard()
+    orderFrequency: monthlyRevenue.map((entry) => ({ label: entry.label, orders: entry.orders }))
   };
 };
 
@@ -95,16 +95,63 @@ const getAnalytics = async (req, res) => {
       return res.json(buildAnalytics(store.products, orders, store.users, store.expenses));
     }
 
-    const [products, orders, users, expenses] = await Promise.all([
-      prisma.product.findMany(),
-      prisma.order.findMany({
-        include: { user: { select: { id: true, name: true, email: true } } },
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.user.findMany({ orderBy: { createdAt: 'desc' } }),
-      prisma.expense.findMany()
+    const products = await prisma.product.findMany({
+      select: {
+        id: true,
+        name: true,
+        collection: true,
+        category: true,
+        stock: true,
+        sizeStock: true,
+        price: true,
+        images: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    const [orderCount, userCount, orderTotals, expenseTotals] = await Promise.all([
+      prisma.order.count(),
+      prisma.user.count(),
+      prisma.order.aggregate({ _sum: { totalAmount: true } }),
+      prisma.expense.aggregate({ _sum: { amount: true } })
     ]);
-    res.json(buildAnalytics(products.map(withId), orders.map(normalizeOrder), users.map(withoutPassword), expenses.map(withId)));
+    const [orders, users] = await Promise.all([
+      prisma.order.findMany({
+        select: {
+          id: true,
+          orderId: true,
+          productName: true,
+          quantity: true,
+          price: true,
+          totalAmount: true,
+          items: true,
+          orderStatus: true,
+          status: true,
+          paymentStatus: true,
+          createdAt: true,
+          user: { select: { id: true, name: true, email: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500
+      }),
+      prisma.user.findMany({
+        select: { id: true, name: true, email: true, role: true, provider: true, avatar: true, customerId: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1000
+      })
+    ]);
+    res.json(buildAnalytics(
+      products.map(withId),
+      orders.map(normalizeOrder),
+      users.map(withoutPassword),
+      [],
+      {
+        orderCount,
+        userCount,
+        revenue: Number(orderTotals._sum.totalAmount || 0),
+        expenseTotal: Number(expenseTotals._sum.amount || 0)
+      }
+    ));
   } catch (error) {
      console.error(error);
      res.status(500).json({ message: error.message });

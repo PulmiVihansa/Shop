@@ -75,6 +75,10 @@ model Product {
   saleCampaigns SaleCampaign[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([collection, createdAt])
+  @@index([collection, category, createdAt])
+  @@index([stock])
 }
 
 model Order {
@@ -104,8 +108,10 @@ model Order {
 
   @@index([customerId])
   @@index([userId])
-  trackingNumber   String?
   @@index([status])
+  @@index([createdAt])
+  @@index([paymentStatus, createdAt])
+  @@index([orderStatus, createdAt])
 }
 
 model Transaction {
@@ -125,6 +131,7 @@ model Transaction {
 
   @@index([customerId])
   @@index([paymentStatus])
+  @@index([createdAt])
 }
 
 model Invoice {
@@ -153,6 +160,7 @@ model Invoice {
 
   @@index([customerId])
   @@index([status])
+  @@index([createdAt])
 }
 
 model Expense {
@@ -163,6 +171,9 @@ model Expense {
   date      DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([category, date])
+  @@index([date])
 }
 
 model Setting {
@@ -264,6 +275,7 @@ model BulkOrderRequest {
 
   @@index([bulkCustomerId])
   @@index([status])
+  @@index([createdAt])
 }
 
 model FeaturedProduct {
@@ -294,5 +306,6 @@ model SaleCampaign {
 
   @@index([productId])
   @@index([isActive, startDate, endDate])
+  @@index([createdAt])
 }
 

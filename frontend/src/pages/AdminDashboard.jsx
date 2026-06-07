@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaBuilding,
@@ -29,6 +29,7 @@ import api, { getErrorMessage } from '../services/api.js';
 import InventoryManagementPanel from '../components/admin/InventoryManagementPanel.jsx';
 import { COLLECTION_OPTIONS, getCategoryOptions } from '../utils/productStructure.js';
 import { getStockStatus, getTotalStock } from '../utils/stockStatus.js';
+import { resolveImageUrl } from '../utils/imageUrl.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
 import adminLogo from '../assets/Name 2.png';
@@ -38,6 +39,100 @@ const money = (value) => `LKR${Number(value || 0).toLocaleString()}`;
 const formatLkr = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
 const apiFileBase = () => String(api.defaults.baseURL || '').replace(/\/api\/?$/, '');
 const invoicePdfFileUrl = (invoice) => invoice?.pdfUrl ? `${apiFileBase()}${invoice.pdfUrl}` : '';
+const ADMIN_DATA_CACHE_MS = 60_000;
+const adminBaseDataCache = {
+  fetchedAt: 0,
+  promise: null,
+  data: null,
+};
+const financeDataCache = new Map();
+
+const fetchAdminDashboardData = (expenseFilter, { force = false } = {}) => {
+  const financeKey = expenseFilter || 'all';
+  const isBaseFresh = adminBaseDataCache.data && Date.now() - adminBaseDataCache.fetchedAt < ADMIN_DATA_CACHE_MS;
+  const financeEntry = financeDataCache.get(financeKey);
+  const isFinanceFresh = financeEntry?.data && Date.now() - financeEntry.fetchedAt < ADMIN_DATA_CACHE_MS;
+
+  const basePromise = !force && isBaseFresh
+    ? Promise.resolve(adminBaseDataCache.data)
+    : (!force && adminBaseDataCache.promise) || Promise.allSettled([
+    api.get('/products'),
+    api.get('/orders'),
+    api.get('/users'),
+    api.get('/analytics'),
+    api.get('/bulk-orders'),
+    api.get('/bulk-orders/customers'),
+    api.get('/transactions'),
+    api.get('/invoices', { params: { limit: 1000 } }),
+    api.get('/settings/payment'),
+    api.get('/content/homepage'),
+    api.get('/content/banners'),
+    api.get('/settings'),
+    api.get('/sales/admin'),
+    api.get('/featured-products/admin'),
+  ]).then((results) => {
+    const getResult = (index, fallback) => {
+      const result = results[index];
+      if (result.status === 'fulfilled') return result.value.data;
+      console.error(result.reason);
+      return fallback;
+    };
+
+    const data = {
+      productData: getResult(0, []),
+      orderData: getResult(1, []),
+      userData: getResult(2, []),
+      analyticsData: getResult(3, null),
+      bulkData: getResult(4, { summary: [], orders: [] }),
+      bulkCustomerData: getResult(5, []),
+      transactionData: getResult(6, []),
+      invoiceData: getResult(7, { summary: [], invoices: [] }),
+      paymentSettingsData: getResult(8, {}),
+      homepageData: getResult(9, null),
+      bannerData: getResult(10, []),
+      settingsData: getResult(11, {}),
+      salesData: getResult(12, []),
+      featuredData: getResult(13, []),
+    };
+
+    adminBaseDataCache.data = data;
+    adminBaseDataCache.fetchedAt = Date.now();
+    return data;
+  }).finally(() => {
+    adminBaseDataCache.promise = null;
+  });
+
+  if (!force && !isBaseFresh && !adminBaseDataCache.promise) {
+    adminBaseDataCache.promise = basePromise;
+  }
+
+  const financePromise = !force && isFinanceFresh
+    ? Promise.resolve(financeEntry.data)
+    : (!force && financeEntry?.promise) || api
+      .get('/finance', { params: { category: expenseFilter === 'all' ? undefined : expenseFilter } })
+      .then((response) => {
+        const data = response.data;
+        financeDataCache.set(financeKey, { data, fetchedAt: Date.now(), promise: null });
+        return data;
+      })
+      .catch((error) => {
+        console.error(error);
+        return null;
+      });
+
+  if (!force && !isFinanceFresh) {
+    financeDataCache.set(financeKey, {
+      data: financeEntry?.data || null,
+      fetchedAt: financeEntry?.fetchedAt || 0,
+      promise: financePromise,
+    });
+  }
+
+  return Promise.all([basePromise, financePromise]).then(([baseData, financeData]) => ({
+    ...baseData,
+    financeData,
+  }));
+};
 const buildInvoiceEmailMessage = (invoice) => [
   `Dear ${invoice.customer || invoice.customerName || 'Customer'},`,
   '',
@@ -136,6 +231,7 @@ const makeEmptyProduct = () => ({
   reviews: '',
   sizeStock: newSizeStock(),
   images: [],
+  imageUploads: [],
 });
 
 const getCollectionLabel = (value) => COLLECTION_OPTIONS.find((option) => option.value === value)?.label || value || '-';
@@ -730,6 +826,7 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const toast = useToast();
+  const mountedRef = useRef(false);
 
   const closeAdminTransientLayers = () => {
     setSelectedCustomer(null);
@@ -747,46 +844,26 @@ export default function AdminDashboard() {
     setActive(section);
   };
 
-  const loadAdminData = async () => {
-    const results = await Promise.allSettled([
-      api.get('/products'),
-      api.get('/orders'),
-      api.get('/users'),
-      api.get('/analytics'),
-      api.get('/finance', { params: { category: expenseFilter === 'all' ? undefined : expenseFilter } }),
-      api.get('/bulk-orders'),
-      api.get('/bulk-orders/customers'),
-      api.get('/transactions'),
-      api.get('/invoices', { params: { limit: 1000 } }),
-      api.get('/settings/payment'),
-      api.get('/content/homepage'),
-      api.get('/content/banners'),
-      api.get('/settings'),
-      api.get('/sales/admin'),
-      api.get('/featured-products/admin'),
-    ]);
-    const getResult = (index, fallback) => {
-      const result = results[index];
-      if (result.status === 'fulfilled') return result.value.data;
-      console.error(result.reason);
-      return fallback;
-    };
+  const loadAdminData = useCallback(async ({ force = true } = {}) => {
+    const {
+      productData,
+      orderData,
+      userData,
+      analyticsData,
+      financeData,
+      bulkData,
+      bulkCustomerData,
+      transactionData,
+      invoiceData,
+      paymentSettingsData,
+      homepageData,
+      bannerData,
+      settingsData,
+      salesData,
+      featuredData,
+    } = await fetchAdminDashboardData(expenseFilter, { force });
 
-    const productData = getResult(0, []);
-    const orderData = getResult(1, []);
-    const userData = getResult(2, []);
-    const analyticsData = getResult(3, null);
-    const financeData = getResult(4, null);
-    const bulkData = getResult(5, { summary: [], orders: [] });
-    const bulkCustomerData = getResult(6, []);
-    const transactionData = getResult(7, []);
-    const invoiceData = getResult(8, { summary: [], invoices: [] });
-    const paymentSettingsData = getResult(9, {});
-    const homepageData = getResult(10, null);
-    const bannerData = getResult(11, []);
-    const settingsData = getResult(12, {});
-    const salesData = getResult(13, []);
-    const featuredData = getResult(14, []);
+    if (!mountedRef.current) return;
 
     setProducts(Array.isArray(productData) ? productData : []);
     setOrders(Array.isArray(orderData) ? orderData : []);
@@ -802,11 +879,38 @@ export default function AdminDashboard() {
     setBanners(Array.isArray(bannerData) ? bannerData : []);
     setSaleCampaigns(Array.isArray(salesData) ? salesData : []);
     setFeaturedProducts(Array.isArray(featuredData) ? featuredData : []);
-  };
+  }, [expenseFilter]);
 
   useEffect(() => {
-    loadAdminData().catch((err) => setError(getErrorMessage(err)));
-  }, [expenseFilter]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminData({ force: false }).catch((err) => {
+      if (!cancelled) setError(getErrorMessage(err));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadAdminData]);
+
+  useEffect(() => {
+    const tables = document.querySelectorAll('.admin-table');
+    tables.forEach((table) => {
+      const headings = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+      table.querySelectorAll('tbody tr').forEach((row) => {
+        Array.from(row.children).forEach((cell, index) => {
+          if (!cell.getAttribute('data-label') && headings[index]) {
+            cell.setAttribute('data-label', headings[index]);
+          }
+        });
+      });
+    });
+  }, [active, products, orders, customers, finance, bulkOrders, transactions, invoices, bulkCustomers, saleCampaigns, featuredProducts]);
 
   useEffect(() => {
     if (!message) return;
@@ -967,7 +1071,7 @@ export default function AdminDashboard() {
   const showBulkStatusToast = (messages) => {
     const list = Array.isArray(messages) && messages.length ? messages : ['Status updated successfully'];
     list.slice(0, 3).forEach((item) => {
-      const text = String(item || '').replace(/^✓\s*/, '').replace(/^âœ“\s*/, '').trim();
+      const text = String(item || '').replace(/^\\?\s*/, '').trim();
       toast.success(text || 'Status updated successfully');
     });
   };
@@ -989,7 +1093,7 @@ export default function AdminDashboard() {
         const customersRes = await api.get('/bulk-orders/customers');
         setBulkCustomers(customersRes.data);
       }
-      showBulkStatusToast((response.data.messages || []).map((item) => `✓ ${item}`));
+      showBulkStatusToast((response.data.messages || []).map((item) => `? ${item}`));
     } catch (err) {
       setError(getErrorMessage(err));
     }
@@ -1012,7 +1116,7 @@ export default function AdminDashboard() {
       }
       const customersRes = await api.get('/bulk-orders/customers');
       setBulkCustomers(customersRes.data);
-      showBulkStatusToast(['✓ Bulk order deleted']);
+      showBulkStatusToast(['? Bulk order deleted']);
     } catch (err) {
       setError(getErrorMessage(err));
     }
@@ -1076,7 +1180,7 @@ export default function AdminDashboard() {
       acc[size] = Math.max(0, Math.trunc(Number(productForm.sizeStock?.[size] || 0)));
       return acc;
     }, {}),
-    images: productForm.images.map((item) => item.trim()).filter(Boolean),
+    images: productForm.images.map((item) => String(item || '').trim()).filter(Boolean),
   };
 
   const updateImageAt = (index, value) => {
@@ -1097,6 +1201,17 @@ export default function AdminDashboard() {
     }));
   };
 
+  const removePendingImageUpload = (index) => {
+    setProductForm((prev) => {
+      const upload = prev.imageUploads?.[index];
+      if (upload?.preview) URL.revokeObjectURL(upload.preview);
+      return {
+        ...prev,
+        imageUploads: (prev.imageUploads || []).filter((_, uploadIndex) => uploadIndex !== index),
+      };
+    });
+  };
+
   const toggleProductBadge = (badge) => {
     setProductForm((prev) => {
       const nextBadges = new Set(splitCommaValues(prev.badges));
@@ -1114,16 +1229,28 @@ export default function AdminDashboard() {
 
   const handleImageFiles = async (event) => {
     const files = Array.from(event.target.files || []);
-    const readers = files.map(
-      (file) =>
-        new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(file);
-        })
-    );
-    const dataUrls = await Promise.all(readers);
-    setProductForm((prev) => ({ ...prev, images: [...prev.images, ...dataUrls] }));
+    const uploads = files.map((file) => ({
+      id: `${file.name}-${file.lastModified}-${file.size}-${Math.random().toString(36).slice(2)}`,
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setProductForm((prev) => ({ ...prev, imageUploads: [...(prev.imageUploads || []), ...uploads] }));
+    event.target.value = '';
+  };
+
+  const buildProductFormData = () => {
+    const formData = new FormData();
+    Object.entries(productPayload).forEach(([key, value]) => {
+      if (Array.isArray(value) || (value && typeof value === 'object')) {
+        formData.append(key, JSON.stringify(value));
+      } else {
+        formData.append(key, value ?? '');
+      }
+    });
+    (productForm.imageUploads || []).forEach((upload) => {
+      if (upload.file) formData.append('images', upload.file);
+    });
+    return formData;
   };
 
   const submitProduct = async (event) => {
@@ -1131,13 +1258,17 @@ export default function AdminDashboard() {
     setError('');
     setMessage('');
     try {
+      const formData = buildProductFormData();
       if (editingId) {
-        await api.put(`/products/${editingId}`, productPayload);
+        await api.put(`/products/${editingId}`, formData);
         setMessage('Product updated');
       } else {
-        await api.post('/products', productPayload);
+        await api.post('/products', formData);
         setMessage('Product added');
       }
+      (productForm.imageUploads || []).forEach((upload) => {
+        if (upload.preview) URL.revokeObjectURL(upload.preview);
+      });
       setProductForm(makeEmptyProduct());
       setEditingId(null);
       await loadAdminData();
@@ -1175,6 +1306,7 @@ export default function AdminDashboard() {
         return acc;
       }, newSizeStock()),
       images: product.images?.length ? product.images : [],
+      imageUploads: [],
     });
   };
 
@@ -1413,7 +1545,7 @@ export default function AdminDashboard() {
         ? order.products
         : [{ name: order.productName, quantity: order.quantity, price: order.price, size: order.size }];
     const lines = orderItems.map((item) => `${item.name} x ${item.quantity} - ${money(Number(item.price || 0) * Number(item.quantity || 1))}`).join('\n');
-    const invoice = `ATELIER INVOICE\n\nInvoice ID: ${order.invoiceId || order.invoiceNumber || '-'}\nOrder Reference: ${order.orderId || order._id || '-'}\nTransaction Reference: ${order.transactionId || order.payment?.reference || '-'}\n\nCustomer: ${order.customerName || order.customer || order.user?.name || order.address?.fullName || 'Customer'}\nEmail: ${order.customerEmail || order.email || order.user?.email || ''}\n\n${lines}\n\nShipping: ${money(order.shippingCost ?? order.shipping ?? 0)}\nTotal: ${money(order.totalAmount ?? order.totalPrice ?? order.grandTotal ?? order.amount)}`;
+    const invoice = `ASTRAVIA INVOICE\n\nInvoice ID: ${order.invoiceId || order.invoiceNumber || '-'}\nOrder Reference: ${order.orderId || order._id || '-'}\nTransaction Reference: ${order.transactionId || order.payment?.reference || '-'}\n\nCustomer: ${order.customerName || order.customer || order.user?.name || order.address?.fullName || 'Customer'}\nEmail: ${order.customerEmail || order.email || order.user?.email || ''}\n\n${lines}\n\nShipping: ${money(order.shippingCost ?? order.shipping ?? 0)}\nTotal: ${money(order.totalAmount ?? order.totalPrice ?? order.grandTotal ?? order.amount)}`;
     const popup = window.open('', '_blank', 'width=720,height=900');
     popup.document.write(`<pre style="font-family:Arial;padding:32px;line-height:1.6">${invoice}</pre>`);
     popup.document.close();
@@ -1876,7 +2008,7 @@ export default function AdminDashboard() {
 
   const getProductImage = (item) => {
     const product = products.find((entry) => (entry.id || entry._id) === item.product);
-    return product?.images?.[0] || '';
+    return resolveImageUrl(product?.images?.[0] || '');
   };
 
   const getSaleStatus = (sale) => {
@@ -1999,7 +2131,7 @@ export default function AdminDashboard() {
             <div className="dashboard-activity">
               {dashboardData.activity.length ? dashboardData.activity.map((item, index) => (
                 <p key={`${item.type}-${item.label}-${index}`}>
-                  <i>✓</i>
+                  <i>?</i>
                   <span>{item.type}<em>{item.label || 'Astravia'}</em></span>
                   <time>{formatDate(item.date)}</time>
                 </p>
@@ -2134,11 +2266,11 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="admin-image-list">
-                {productForm.images.length === 0 && <p>No product images added yet.</p>}
+                {productForm.images.length === 0 && !(productForm.imageUploads || []).length && <p>No product images added yet.</p>}
                 {productForm.images.map((image, index) => (
                   <div className="admin-image-row" key={`${image}-${index}`}>
                     <div className="admin-image-preview">
-                      {image ? <img src={image} alt={`Product ${index + 1}`} /> : <span>Image</span>}
+                      {image ? <img src={resolveImageUrl(image)} alt={`Product ${index + 1}`} /> : <span>Image</span>}
                     </div>
                     <input
                       value={image}
@@ -2146,6 +2278,15 @@ export default function AdminDashboard() {
                       placeholder="https://example.com/product-image.jpg"
                     />
                     <button type="button" onClick={() => removeImageField(index)}>Remove</button>
+                  </div>
+                ))}
+                {(productForm.imageUploads || []).map((upload, index) => (
+                  <div className="admin-image-row" key={upload.id}>
+                    <div className="admin-image-preview">
+                      <img src={upload.preview} alt={`Pending upload ${index + 1}`} />
+                    </div>
+                    <input value={upload.file?.name || 'Pending upload'} readOnly />
+                    <button type="button" onClick={() => removePendingImageUpload(index)}>Remove</button>
                   </div>
                 ))}
               </div>
@@ -2234,7 +2375,7 @@ export default function AdminDashboard() {
                 return (
                   <Fragment key={id}>
                     <tr>
-                      <td><div className="admin-mini-image">{product.images?.[0] ? <img src={product.images[0]} alt={product.name} /> : <span>No Image</span>}</div></td>
+                      <td><div className="admin-mini-image">{product.images?.[0] ? <img src={resolveImageUrl(product.images[0])} alt={product.name} /> : <span>No Image</span>}</div></td>
                       <td>{product.name || '-'}</td>
                       <td>{getCollectionLabel(product.collection)}</td>
                       <td>{product.category || '-'}</td>
@@ -2295,7 +2436,7 @@ export default function AdminDashboard() {
           <div className="admin-section-head"><span>Preview</span><h2>{productPreview.name}</h2></div>
           <div className="admin-product-preview">
             <div className="admin-product-preview-image">
-              {productPreview.images?.[0] ? <img src={productPreview.images[0]} alt={productPreview.name} /> : <span>No Image</span>}
+              {productPreview.images?.[0] ? <img src={resolveImageUrl(productPreview.images[0])} alt={productPreview.name} /> : <span>No Image</span>}
             </div>
             <div>
               <p>{productPreview.description || 'No description provided.'}</p>
@@ -2346,7 +2487,7 @@ export default function AdminDashboard() {
           <label className="admin-check"><input type="checkbox" checked={saleForm.isActive} onChange={(e) => setSaleForm((prev) => ({ ...prev, isActive: e.target.checked }))} /> Active</label>
           {selectedSaleProduct && (
             <div className="admin-sale-preview">
-              <div className="admin-mini-image">{selectedSaleProduct.images?.[0] ? <img src={selectedSaleProduct.images[0]} alt={selectedSaleProduct.name} /> : <span>No Image</span>}</div>
+              <div className="admin-mini-image">{selectedSaleProduct.images?.[0] ? <img src={resolveImageUrl(selectedSaleProduct.images[0])} alt={selectedSaleProduct.name} /> : <span>No Image</span>}</div>
               <div>
                 <strong>{selectedSaleProduct.name}</strong>
                 <span>{selectedSaleProduct.category || 'Uncategorized'}</span>
@@ -2362,7 +2503,7 @@ export default function AdminDashboard() {
         <DataTable
           empty="No sale campaigns yet."
           columns={[
-            { key: 'image', label: 'Product Image', render: (row) => <div className="admin-mini-image">{row.image ? <img src={row.image} alt={row.productName} /> : <span>No Image</span>}</div> },
+            { key: 'image', label: 'Product Image', render: (row) => <div className="admin-mini-image">{row.image ? <img src={resolveImageUrl(row.image)} alt={row.productName} /> : <span>No Image</span>}</div> },
             { key: 'productName', label: 'Product Name' },
             { key: 'originalPrice', label: 'Original Price' },
             { key: 'salePrice', label: 'Sale Price' },
@@ -2377,7 +2518,7 @@ export default function AdminDashboard() {
           rows={saleCampaigns.map((sale) => ({
             id: sale.id || sale._id,
             raw: sale,
-            image: sale.image || sale.product?.images?.[0] || '',
+            image: resolveImageUrl(sale.image || sale.product?.images?.[0] || ''),
             productName: sale.productName || sale.product?.name || '-',
             originalPrice: money(sale.originalPrice),
             salePrice: money(sale.salePrice),
@@ -2418,7 +2559,7 @@ export default function AdminDashboard() {
         <DataTable
           empty="No featured products selected."
           columns={[
-            { key: 'image', label: 'Image', render: (row) => <div className="admin-mini-image">{row.image ? <img src={row.image} alt={row.productName} /> : <span>No Image</span>}</div> },
+            { key: 'image', label: 'Image', render: (row) => <div className="admin-mini-image">{row.image ? <img src={resolveImageUrl(row.image)} alt={row.productName} /> : <span>No Image</span>}</div> },
             { key: 'productName', label: 'Product' },
             { key: 'category', label: 'Category' },
             { key: 'price', label: 'Price' },
@@ -2429,7 +2570,7 @@ export default function AdminDashboard() {
           rows={featuredProducts.map((featured) => ({
             id: featured.id || featured._id,
             raw: featured,
-            image: featured.image || featured.product?.images?.[0] || '',
+            image: resolveImageUrl(featured.image || featured.product?.images?.[0] || ''),
             productName: featured.productName || featured.product?.name || '-',
             category: featured.category || featured.product?.category || '-',
             price: money(featured.price || featured.product?.price),
@@ -3248,7 +3389,7 @@ export default function AdminDashboard() {
                 </div>
                 {(selectedInvoice.products || []).map((item) => (
                   <article key={item.id || item.name}>
-                    <span className="invoice-item-thumb">{item.image ? <img src={item.image} alt={item.name} /> : item.name?.slice(0, 1)}</span>
+                    <span className="invoice-item-thumb">{item.image ? <img src={resolveImageUrl(item.image)} alt={item.name} /> : item.name?.slice(0, 1)}</span>
                     <div><strong>{item.name}</strong><small>SKU: {item.sku || item.product || 'ASTRAVIA'}</small></div>
                     <em>Qty {item.quantity}</em>
                     <em>{formatLkr(item.price)}</em>

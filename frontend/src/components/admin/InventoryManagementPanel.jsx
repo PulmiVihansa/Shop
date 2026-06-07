@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiAlertCircle, FiBarChart2, FiBox, FiPackage, FiSearch, FiTrendingDown, FiTrendingUp } from 'react-icons/fi';
 import api, { getErrorMessage } from '../../services/api.js';
 import { getStockStatus, getTotalStock } from '../../utils/stockStatus.js';
+import { resolveImageUrl } from '../../utils/imageUrl.js';
 import '../../styles/inventory-dashboard.css';
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -55,13 +56,18 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
     category: '',
     sortBy: 'recent'
   });
+  const productsRef = useRef(products || []);
+
+  useEffect(() => {
+    productsRef.current = products || [];
+  }, [products]);
 
   const categories = useMemo(
     () => Array.from(new Set((dashboard.items || []).map((item) => item.category).filter(Boolean))).sort(),
     [dashboard.items]
   );
 
-  const load = async (query = filters, withSkeleton = false) => {
+  const load = useCallback(async (query = filters, withSkeleton = false) => {
     if (withSkeleton) setLoading(true);
     setError('');
     try {
@@ -76,7 +82,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
       setDashboard(response.data || fallbackDashboard);
     } catch (err) {
       setError(getErrorMessage(err));
-      const fallbackItems = (products || []).map((item) => {
+      const fallbackItems = (productsRef.current || []).map((item) => {
         const stock = getTotalStock(item);
         const value = stock * Number(item.price || 0);
         return {
@@ -100,20 +106,14 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       load(filters, true);
     }, 160);
     return () => window.clearTimeout(timer);
-  }, [filters]);
-
-  useEffect(() => {
-    if (!loading) {
-      load(filters, false);
-    }
-  }, [products]);
+  }, [filters, load]);
 
   const summaryCards = [
     { label: 'Total Products', value: dashboard.summary.totalProducts, icon: <FiBox /> },
@@ -253,7 +253,7 @@ export default function InventoryManagementPanel({ products, onRefreshData, curr
                       </td>
                       <td>
                         <div className="inv-product-image">
-                          {item.images?.[0] ? <img src={item.images[0]} alt={item.name} /> : <span>No image</span>}
+                    {item.images?.[0] ? <img src={resolveImageUrl(item.images[0])} alt={item.name} /> : <span>No image</span>}
                         </div>
                       </td>
                       <td><strong>{item.name}</strong></td>

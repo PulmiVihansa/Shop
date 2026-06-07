@@ -1,20 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { FiCheck, FiLock, FiRefreshCw, FiShield, FiTruck, FiUpload } from 'react-icons/fi';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link, useLocation } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import LightPillar from '../components/home/LightPillar.jsx';
-import TShirtExperience from '../components/home/TShirtExperience.jsx';
-import IntroVideoGate from '../components/home/IntroVideoGate.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { compressTryOnImage, generateVirtualTryOn } from '../services/aiTryOn.js';
-import api from '../services/api.js';
+import { fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
 import { prefetchSalesProducts } from '../services/salesQueries.js';
+import { resolveImageUrl } from '../utils/imageUrl.js';
+import { getAvailableSizes } from '../utils/availableSizes.js';
 import '../styles/home.css';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const LightPillar = lazy(() => import('../components/home/LightPillar.jsx'));
+const TShirtExperience = lazy(() => import('../components/home/TShirtExperience.jsx'));
+const IntroVideoGate = lazy(() => import('../components/home/IntroVideoGate.jsx'));
 
 const products = [
   {
@@ -100,39 +103,48 @@ const tryOnProducts = [
   { id: 'chaos-tee', name: 'Rebel Tee', price: '4,990', image: '/models/Tshirt8.png', vibe: 'statement' },
 ];
 
-const lockerItems = [
+const dropLabModes = [
   {
-    id: 'break-rules-tee',
-    slot: '01',
-    name: 'Break Rules Tee',
-    price: '5,290',
-    image: '/models/Tshirt5.png',
-    score: '92%',
-    community: '4.8 / 5',
-    stock: 'LOW',
-    priority: '#1',
+    id: 'night-run',
+    label: 'Night Run',
+    productIndex: 1,
+    headline: 'Low light, high impact.',
+    brief: 'Built for night plans, black denim, silver chain, and one loud graphic doing the talking.',
+    palette: ['#050505', '#ff1f3d', '#d8d4cc'],
+    stats: [
+      ['Fit Match', 94],
+      ['Statement', 91],
+      ['Versatility', 78],
+    ],
+    kit: ['Black denim', 'Chrome accessories', 'Chunky sneakers'],
   },
   {
-    id: 'shadow-tee',
-    slot: '02',
-    name: 'Shadow Tee',
-    price: '4,690',
-    image: '/models/Tshirt7.png',
-    score: '88%',
-    community: '4.7 / 5',
-    stock: 'MEDIUM',
-    priority: '#2',
+    id: 'daily-uniform',
+    label: 'Daily Uniform',
+    productIndex: 0,
+    headline: 'Clean enough for every day.',
+    brief: 'A quiet oversized base for coffee runs, campus days, or errands that still need intent.',
+    palette: ['#f5f0e8', '#4d4d4d', '#a8a095'],
+    stats: [
+      ['Fit Match', 89],
+      ['Comfort', 96],
+      ['Repeat Wear', 93],
+    ],
+    kit: ['Wide-leg cargos', 'Minimal watch', 'White sneakers'],
   },
   {
-    id: 'void-tee',
-    slot: '03',
-    name: 'Void Tee',
-    price: '4,490',
-    image: '/models/Tshirt6.png',
-    score: '84%',
-    community: '4.6 / 5',
-    stock: 'LIMITED',
-    priority: '#3',
+    id: 'main-character',
+    label: 'Main Character',
+    productIndex: 5,
+    headline: 'For when subtle is cancelled.',
+    brief: 'A bolder pick for drops, photos, parties, and any outfit that needs a center of gravity.',
+    palette: ['#111111', '#ff4d5f', '#f4d35e'],
+    stats: [
+      ['Fit Match', 92],
+      ['Photo Energy', 97],
+      ['Limited Feel', 88],
+    ],
+    kit: ['Stacked rings', 'Relaxed trousers', 'High-top sneakers'],
   },
 ];
 
@@ -155,7 +167,9 @@ const formatHomePrice = (value) => Number(value || 0).toLocaleString();
 
 const normalizeFeaturedProduct = (entry, index) => {
   const product = entry.product || entry;
-  const image = entry.featureImage || entry.stackImage || entry.image || product.images?.[0] || product.image || '';
+  const image = resolveImageUrl(entry.featureImage || entry.stackImage || entry.image || product.images?.[0] || product.image || '');
+  const sizeStock = product.sizeStock || entry.sizeStock || {};
+  const rawSizes = product.sizes?.length ? product.sizes : entry.sizes || [];
   return {
     id: entry.productId || product.id || product._id || entry.id || entry._id,
     number: index + 1,
@@ -167,7 +181,8 @@ const normalizeFeaturedProduct = (entry, index) => {
     fit: product.fit || 'Astravia Fit',
     limited: product.badges?.[0] || entry.badge || 'Featured Drop',
     price: formatHomePrice(product.price || entry.price),
-    sizes: product.sizes?.length ? product.sizes : entry.sizes || [],
+    sizes: getAvailableSizes({ sizes: rawSizes, sizeStock }),
+    sizeStock,
     sub: product.category || entry.category || '',
   };
 };
@@ -186,7 +201,6 @@ export default function Home() {
   const queryClient = useQueryClient();
   const { addItem, openCart } = useCart();
   const [introComplete, setIntroComplete] = useState(false);
-  const [cartCount, setCartCount] = useState(2);
   const [filter, setFilter] = useState('all');
   const [activeProductIndex, setActiveProductIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState(() => featuredProductsCache || []);
@@ -215,7 +229,7 @@ export default function Home() {
   const [tryOnGlow, setTryOnGlow] = useState(false);
   const [tryOnProductIndex, setTryOnProductIndex] = useState(5);
   const [tryOnCompare, setTryOnCompare] = useState(50);
-  const [activeLockerIndex, setActiveLockerIndex] = useState(0);
+  const [activeDropLabIndex, setActiveDropLabIndex] = useState(0);
   const tryOnInputRef = useRef(null);
 
   const visibleProducts = useMemo(() => {
@@ -236,11 +250,23 @@ export default function Home() {
     ];
   }, [activeProductIndex, featuredProducts]);
   const activeProduct = orderedFeaturedProducts[0] || null;
+  const activeProductSizes = activeProduct?.sizes || [];
 
   const stackRef = useRef(null);
   const panelRef = useRef(null);
   const selectedTryOnProduct = tryOnProducts[tryOnProductIndex] || tryOnProducts[0];
-  const activeLockerItem = lockerItems[activeLockerIndex] || lockerItems[0];
+  const activeDropLabMode = dropLabModes[activeDropLabIndex] || dropLabModes[0];
+  const activeDropLabProduct = tryOnProducts[activeDropLabMode.productIndex] || tryOnProducts[0];
+
+  const featuredProductsQuery = useQuery({
+    queryKey: ['products', 'featured', 5],
+    queryFn: () => fetchProducts({ source: 'home', limit: 5 }),
+    select: (data) => (Array.isArray(data) ? data.slice(0, 5).map(normalizeFeaturedProduct) : []),
+    placeholderData: featuredProductsCache || [],
+    ...productsQueryDefaults,
+  });
+  const featuredProductsFromQuery = featuredProductsQuery.data || [];
+  const featuredLoadingFromQuery = featuredProductsQuery.isLoading && !featuredProductsFromQuery.length;
 
   useEffect(() => {
     prefetchSalesProducts(queryClient);
@@ -259,29 +285,25 @@ export default function Home() {
   }, [location.state]);
 
   useEffect(() => {
-    let cancelled = false;
-    const loadFeaturedProducts = async () => {
-      try {
-        const response = await api.get('/products', { params: { limit: 5 } });
-        const items = Array.isArray(response.data) ? response.data.slice(0, 5).map(normalizeFeaturedProduct) : [];
-        featuredProductsCache = items;
-        if (!cancelled) {
-          setFeaturedProducts(items);
-          setActiveProductIndex(0);
-        }
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) setFeaturedProducts([]);
-      } finally {
-        if (!cancelled) setFeaturedLoading(false);
-      }
-    };
+    featuredProductsCache = featuredProductsFromQuery;
+    setFeaturedProducts(featuredProductsFromQuery);
+    setActiveProductIndex(0);
+    setFeaturedLoading(featuredLoadingFromQuery);
+  }, [featuredLoadingFromQuery, featuredProductsFromQuery]);
 
-    loadFeaturedProducts();
+  useEffect(() => {
+    if (!activeProduct) return;
+    setSelectedSize((current) => (
+      current && activeProductSizes.includes(current) ? current : activeProductSizes[0] || ''
+    ));
+  }, [activeProduct, activeProductSizes]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('astravia:intro-active', { detail: { active: !introComplete } }));
     return () => {
-      cancelled = true;
+      window.dispatchEvent(new CustomEvent('astravia:intro-active', { detail: { active: false } }));
     };
-  }, []);
+  }, [introComplete]);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -351,27 +373,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const context = gsap.context(() => {
-      const timeline = gsap.timeline({
-        scrollTrigger: {
-          trigger: '.astravia-locker-section',
-          start: 'top 64%',
-          once: true,
-        },
-      });
-
-      timeline
-        .to('.locker-cabinet', { x: 5, duration: 0.08, repeat: 5, yoyo: true, ease: 'power1.inOut' })
-        .to('.locker-led, .locker-interior-light', { opacity: 1, duration: 0.35, ease: 'power2.out' }, '-=0.05')
-        .to('.locker-door-left', { rotateY: -82, x: -22, z: 18, duration: 1.05, ease: 'power3.inOut' }, '+=0.05')
-        .to('.locker-door-right', { rotateY: 82, x: 22, z: 18, duration: 1.05, ease: 'power3.inOut' }, '<')
-        .to('.locker-shirt', { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12, ease: 'back.out(1.3)' }, '-=0.35');
-    });
-
-    return () => context.revert();
-  }, []);
-
-  useEffect(() => {
     setTryOnResult('');
     setTryOnError('');
   }, [tryOnProductIndex]);
@@ -394,12 +395,6 @@ export default function Home() {
     const size = calculatedChest < 86 ? 'S' : calculatedChest < 96 ? 'M' : calculatedChest < 106 ? 'L' : calculatedChest < 116 ? 'XL' : 'XXL';
     setSelectedSize(size);
     setSizeResult(true);
-  };
-
-  const addToCart = (name) => {
-    setCartCount((count) => count + 1);
-    setAddedProduct(name);
-    window.setTimeout(() => setAddedProduct(''), 2000);
   };
 
   const subscribe = () => {
@@ -484,6 +479,18 @@ export default function Home() {
     openCart();
   };
 
+  const handleDropLabAddToCart = () => {
+    addItem({
+      productId: `drop-lab-${activeDropLabProduct.name.toLowerCase().replace(/\s+/g, '-')}`,
+      name: activeDropLabProduct.name,
+      price: Number(String(activeDropLabProduct.price).replace(/,/g, '')),
+      image: activeDropLabProduct.image,
+      size: selectedSize || 'M',
+      quantity: 1,
+    });
+    openCart();
+  };
+
   const handleDownloadTryOn = async () => {
     if (!tryOnResult) return;
     const link = document.createElement('a');
@@ -509,27 +516,37 @@ export default function Home() {
 
   return (
     <>
-      {!introComplete && <IntroVideoGate onFinish={() => setIntroComplete(true)} />}
+      {!introComplete && (
+        <Suspense fallback={null}>
+          <IntroVideoGate onFinish={() => setIntroComplete(true)} />
+        </Suspense>
+      )}
 
       <section className="hero">
         <div className="hero-light-pillar-background" aria-hidden="true">
-          <LightPillar
-            topColor="#727176"
-            bottomColor="#f17474"
-            intensity={1}
-            rotationSpeed={0.3}
-            glowAmount={0.002}
-            pillarWidth={3}
-            pillarHeight={0.4}
-            noiseIntensity={0.5}
-            pillarRotation={25}
-            interactive={false}
-            mixBlendMode="screen"
-            quality="high"
-          />
+          <Suspense fallback={<div className="hero-visual-fallback" aria-hidden="true" />}>
+            <LightPillar
+              topColor="#727176"
+              bottomColor="#f17474"
+              intensity={1}
+              rotationSpeed={0.3}
+              glowAmount={0.002}
+              pillarWidth={3}
+              pillarHeight={0.4}
+              noiseIntensity={0.5}
+              pillarRotation={25}
+              interactive={false}
+              mixBlendMode="screen"
+              quality="high"
+            />
+          </Suspense>
         </div>
         <div className="hero-3d-layer" aria-hidden="true">
-          {introComplete && <TShirtExperience className="hero-canvas" />}
+          {introComplete && (
+            <Suspense fallback={<div className="hero-canvas hero-visual-fallback" aria-hidden="true" />}>
+              <TShirtExperience className="hero-canvas" />
+            </Suspense>
+          )}
         </div>
 
         <div className="hero-left">
@@ -621,6 +638,8 @@ export default function Home() {
                         alt=""
                         className="stack-product-image"
                         draggable={false}
+                        loading={step === 0 ? 'eager' : 'lazy'}
+                        decoding="async"
                       />
                       <span className="product-img-shadow" />
                     </span>
@@ -687,7 +706,7 @@ export default function Home() {
                   <div className="active-size-row">
                     <span>Size</span>
                     <div className="product-sizes">
-                      {(activeProduct.sizes.length ? activeProduct.sizes : ['S', 'M', 'L', 'XL']).map((size) => (
+                      {activeProductSizes.map((size) => (
                         <button
                           type="button"
                           className={`size-dot ${selectedSize === size ? 'selected-size' : ''}`}
@@ -756,85 +775,80 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="virtual-tryon-section astravia-locker-section" id="astravia-locker">
+      <section className="virtual-tryon-section drop-lab-section" id="drop-lab">
         <div className="tryon-copy tryon-animate">
-          <p className="tryon-kicker">Personal Collection</p>
-          <h2 className="tryon-title">YOUR<br />ASTRAVIA<br /><span>LOCKER.</span></h2>
+          <p className="tryon-kicker">Live Styling Engine</p>
+          <h2 className="tryon-title">DROP<br />LAB<br /><span>LIVE.</span></h2>
           <p className="tryon-description">
-            Save up to 3 favorite Astravia tees. We'll analyze your picks and recommend which drop deserves your money first.
+            Pick a mood and let Astravia build a wearable tee setup with a match score, color palette, styling kit, and instant cart action.
           </p>
           <ul className="tryon-features">
-            {['Save 3 tees', 'AI recommendation', 'Community ranking', 'Limited stock alerts'].map((item) => (
+            {['Choose your vibe', 'See the fit formula', 'Add the pick instantly', 'Switch moods anytime'].map((item) => (
               <li key={item}><FiCheck aria-hidden="true" />{item}</li>
             ))}
           </ul>
         </div>
 
-        <div className="locker-stage tryon-animate">
-          <div className="locker-cabinet">
-            <span className="locker-led" aria-hidden="true" />
-            <span className="locker-interior-light" aria-hidden="true" />
-            <span className="locker-top-lip" aria-hidden="true" />
-            <span className="locker-bottom-shadow" aria-hidden="true" />
-            <div className="locker-interior">
-              <span className="locker-divider locker-divider-one" aria-hidden="true" />
-              <span className="locker-divider locker-divider-two" aria-hidden="true" />
-              <div className="locker-rail" aria-hidden="true" />
-              {lockerItems.map((item, index) => (
-                <button
-                  type="button"
-                  className={`locker-shirt locker-shirt-${index + 1} ${activeLockerIndex === index ? 'active' : ''}`}
-                  key={item.id}
-                  onClick={() => setActiveLockerIndex(index)}
-                >
-                  <span className="locker-hanger" aria-hidden="true" />
-                  <span className="locker-slot">#{item.slot} Tee</span>
-                  <img src={item.image} alt={item.name} />
-                </button>
+        <div className="drop-lab-console tryon-animate">
+          <div className="drop-lab-tabs" role="tablist" aria-label="Drop Lab modes">
+            {dropLabModes.map((mode, index) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeDropLabIndex === index}
+                className={activeDropLabIndex === index ? 'active' : ''}
+                key={mode.id}
+                onClick={() => setActiveDropLabIndex(index)}
+              >
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="drop-lab-stage">
+            <div className="drop-lab-orbit" aria-hidden="true">
+              {activeDropLabMode.palette.map((color, index) => (
+                <span key={color} style={{ '--swatch': color, '--spin-step': index }} />
               ))}
             </div>
-            <div className="locker-door locker-door-left" aria-hidden="true">
-              <span className="locker-hinges"><i /><i /><i /></span>
-              <span className="locker-vent locker-vent-top" />
-              <span className="locker-handle" />
-              <span className="locker-vent locker-vent-bottom" />
+            <div className="drop-lab-product">
+              <img src={activeDropLabProduct.image} alt={activeDropLabProduct.name} loading="lazy" decoding="async" />
             </div>
-            <div className="locker-door locker-door-right" aria-hidden="true">
-              <span className="locker-hinges"><i /><i /><i /></span>
-              <span className="locker-vent locker-vent-top" />
-              <span className="locker-handle" />
-              <span className="locker-vent locker-vent-bottom" />
-            </div>
+            <div className="drop-lab-scan" aria-hidden="true" />
+          </div>
+
+          <div className="drop-lab-kit">
+            {activeDropLabMode.kit.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
           </div>
         </div>
 
-        <aside className="locker-recommendation tryon-animate">
-          <p className="drop-finder-label">Best Pick Today</p>
-          <div className="locker-preview">
-            <img src={activeLockerItem.image} alt={activeLockerItem.name} />
+        <aside className="drop-lab-result tryon-animate">
+          <p className="drop-finder-label">Current Formula</p>
+          <h3>{activeDropLabProduct.name}</h3>
+          <p>{activeDropLabMode.headline}</p>
+          <div className="tryon-product-price">Rs. {activeDropLabProduct.price}.00</div>
+          <p className="drop-lab-brief">{activeDropLabMode.brief}</p>
+          <div className="drop-lab-palette" aria-label="Recommended palette">
+            {activeDropLabMode.palette.map((color) => (
+              <span key={color} style={{ background: color }} />
+            ))}
           </div>
-          <h3>{activeLockerItem.name}</h3>
-          <div className="tryon-product-price">Rs. {activeLockerItem.price}.00</div>
-          <div className="locker-metrics">
-            <div><span>Style Match</span><strong>{activeLockerItem.score}</strong></div>
-            <div><span>Community Score</span><strong>{activeLockerItem.community}</strong></div>
-            <div><span>Stock Level</span><strong>{activeLockerItem.stock}</strong></div>
-            <div><span>Buy Priority</span><strong>{activeLockerItem.priority}</strong></div>
-          </div>
-          <div className="locker-progress-list">
-            {[
-              ['Style Match', 92],
-              ['Community Popularity', 88],
-              ['Limited Stock Score', 81],
-            ].map(([label, value]) => (
+          <div className="locker-progress-list drop-lab-score-list">
+            {activeDropLabMode.stats.map(([label, value]) => (
               <div className="locker-progress" key={label}>
                 <div><span>{label}</span><strong>{value}%</strong></div>
                 <i style={{ '--value': `${value}%` }} />
               </div>
             ))}
           </div>
-          <Link className="tryon-cart-btn drop-finder-link" to={`/products/${activeLockerItem.id}`}>
-            View Product →
+          <button type="button" className="tryon-cart-btn drop-lab-cart" onClick={handleDropLabAddToCart}>
+            Add Lab Pick To Bag
+          </button>
+          <Link className="drop-lab-secondary-link" to={`/products/${activeDropLabProduct.id}`}>
+            Inspect product
           </Link>
         </aside>
       </section>
@@ -893,3 +907,4 @@ export default function Home() {
     </>
   );
 }
+

@@ -13,8 +13,9 @@
 
 .site-footer-top {
   display: grid;
-  grid-template-columns: minmax(260px, 2fr) repeat(2, minmax(150px, 0.7fr));
+  grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(140px, 0.55fr));
   gap: 3rem;
+  align-items: start;
   max-width: 1400px;
   margin: 0 auto 3rem;
 }
@@ -134,7 +135,11 @@
   }
 
   .site-footer-top {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .site-footer-top > div:first-child {
+    grid-column: 1 / -1;
   }
 
   .site-footer-top > div:first-child {

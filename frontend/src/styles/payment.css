@@ -66,7 +66,7 @@
 
 .payment-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 430px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
   gap: 24px;
   align-items: start;
 }
@@ -103,6 +103,7 @@
 
 .payment-terminal,
 .payment-summary {
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 22px;
   background:
@@ -226,6 +227,7 @@
 .payment-card-preview strong {
   font-size: clamp(1.35rem, 2vw, 2.1rem);
   letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
 }
 
 .payment-card-preview div:last-child {
@@ -589,6 +591,8 @@
   .payment-steps {
     flex-wrap: wrap;
     justify-content: flex-start;
+    gap: 0.7rem 1rem;
+    font-size: 0.92rem;
   }
 
   .payment-steps i {
@@ -601,7 +605,8 @@
 
   .payment-terminal,
   .payment-summary {
-    padding: 20px;
+    padding: 18px;
+    border-radius: 16px;
   }
 
   .payment-method-grid,
@@ -616,5 +621,54 @@
 
   .payment-summary-item p {
     grid-column: 2;
+    white-space: normal;
+  }
+
+  .payment-card-preview {
+    min-height: 240px;
+    border-radius: 18px;
+  }
+
+  .payment-card-preview div:last-child {
+    flex-direction: column;
+  }
+
+  .payment-cod-panel {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .payment-grand-total {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .payment-confirm-btn {
+    font-size: 1.25rem;
+  }
+
+  .payment-toast {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 390px) {
+  .astravia-payment-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .payment-terminal,
+  .payment-summary {
+    padding: 14px;
+  }
+
+  .payment-title-block h1 {
+    font-size: clamp(3.6rem, 18vw, 4.7rem);
   }
 }

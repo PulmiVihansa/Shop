@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import api from '../services/api.js';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
+import { resolveImageList } from '../utils/imageUrl.js';
+import { getAvailableSizes } from '../utils/availableSizes.js';
 
 const EMPTY_FALLBACK = [];
 
@@ -16,6 +19,7 @@ const toList = (value) => {
 
 const normalize = (product) => {
   const { tags, badge, badgeText, backgroundClass, bgClass, imageClass, ...safeProduct } = product;
+  const sizeStock = product.sizeStock && typeof product.sizeStock === 'object' ? product.sizeStock : {};
 
   return {
     ...safeProduct,
@@ -26,66 +30,30 @@ const normalize = (product) => {
     category: product.category || '',
     colors: toList(product.colors || product.swatches || product.colours),
     swatches: toList(product.colors || product.swatches || product.colours),
-    sizes: toList(product.sizes),
-    images: toList(product.images),
-    categoryLabel: product.categoryLabel || product.category || 'Atelier',
+    sizes: getAvailableSizes({ sizes: toList(product.sizes), sizeStock }),
+    sizeStock,
+    images: resolveImageList(toList(product.images || product.image)),
+    image: resolveImageList(toList(product.images || product.image))[0] || '',
+    categoryLabel: product.categoryLabel || product.category || 'Astravia',
   };
 };
 
 export default function useProducts({ fallback = EMPTY_FALLBACK, collection = 'men', category, query } = {}) {
   const fallbackProducts = useMemo(() => fallback.map(normalize), [fallback]);
-  const [products, setProducts] = useState(fallbackProducts);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const queryResult = useQuery({
+    queryKey: ['products', 'search', { collection, category, query: query || '' }],
+    queryFn: () => fetchProducts({ source: 'search', collection, category, q: query || undefined }),
+    placeholderData: fallbackProducts,
+    ...productsQueryDefaults,
+  });
 
-  useEffect(() => {
-    let active = true;
+  const products = useMemo(
+    () => (Array.isArray(queryResult.data) ? queryResult.data.map(normalize) : fallbackProducts),
+    [fallbackProducts, queryResult.data]
+  );
 
-    async function loadProducts() {
-      setLoading(true);
-      setError('');
-      try {
-        const params = {
-          collection,
-          category,
-          q: query || undefined,
-        };
-        const response = await api.get('/products', {
-          params,
-        });
-        if (active) {
-          const nextProducts = Array.isArray(response.data) ? response.data.map(normalize) : [];
-          if (import.meta.env.DEV) {
-            console.debug('[useProducts] response', {
-              params,
-              count: nextProducts.length,
-              sample: nextProducts[0]
-                ? {
-                    id: nextProducts[0].id,
-                    collection: nextProducts[0].collection,
-                    category: nextProducts[0].category,
-                  }
-                : null,
-            });
-          }
-          setProducts(nextProducts);
-        }
-      } catch (err) {
-        if (active) {
-          setError(err?.response?.data?.message || 'Unable to load products');
-          setProducts(fallbackProducts);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    loadProducts();
-
-    return () => {
-      active = false;
-    };
-  }, [collection, category, fallbackProducts, query]);
+  const loading = queryResult.isLoading && !products.length;
+  const error = queryResult.error?.response?.data?.message || queryResult.error?.message || '';
 
   return useMemo(() => ({ products, loading, error }), [products, loading, error]);
 }

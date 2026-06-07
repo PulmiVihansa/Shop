@@ -1,17 +1,47 @@
-import { useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FiMenu, FiX } from 'react-icons/fi';
 import { useQueryClient } from '@tanstack/react-query';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { prefetchCollectionProducts } from '../hooks/useCollectionProducts.js';
 import { prefetchSalesProducts } from '../services/salesQueries.js';
 
 export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
   const warmSales = useCallback(() => prefetchSalesProducts(queryClient), [queryClient]);
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  const navLinks = [
+    { to: '/collection', label: 'Collection', warm: prefetchCollectionProducts },
+    { to: '/giftvoucher', label: 'Gift Vouchers' },
+    { to: '/sales', label: 'Sale', warm: warmSales },
+    { to: '/contact', label: 'Contact Us' },
+  ];
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle('mobile-menu-lock', mobileMenuOpen);
+    return () => document.body.classList.remove('mobile-menu-lock');
+  }, [mobileMenuOpen]);
+
+  const openAccount = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    navigate('/account');
+  };
 
   return (
     <>
@@ -21,40 +51,33 @@ export default function Header() {
             <img src="/models/logo.png" alt="Astravia" />
           </Link>
           <div className="nm">
-            <Link
-              to="/collection"
-              className="nl"
-              onMouseEnter={prefetchCollectionProducts}
-              onFocus={prefetchCollectionProducts}
-              onPointerDown={prefetchCollectionProducts}
-              onClick={prefetchCollectionProducts}
-            >
-              Collection
-            </Link>
-            <Link to="/giftvoucher" className="nl">
-              Gift Vouchers
-            </Link>
-            <Link
-              to="/sales"
-              className="nl"
-              onMouseEnter={warmSales}
-              onFocus={warmSales}
-              onPointerDown={warmSales}
-              onClick={warmSales}
-            >
-              Sale
-            </Link>
-            <Link to="/contact" className="nl">
-              Contact Us
-            </Link>
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="nl"
+                onMouseEnter={link.warm}
+                onFocus={link.warm}
+                onPointerDown={link.warm}
+                onClick={link.warm}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
           <div className="nr" aria-label="Utility navigation">
-            <Link to="/login" className="ib" aria-label="Account">
+            <button
+              type="button"
+              className={`ib ${isAuthenticated ? 'account-icon-auth' : ''}`}
+              aria-label={isAuthenticated ? 'Open account page' : 'Sign in'}
+              onClick={openAccount}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-            </Link>
+              {isAuthenticated && <span className="account-dot" aria-hidden="true" />}
+            </button>
             <Link to="/wishlist" className="ib" aria-label="Wishlist">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
@@ -74,9 +97,72 @@ export default function Header() {
               </svg>
               <span className="bag-n">{summary.count}</span>
             </button>
+            <button
+              type="button"
+              className="ib menu-toggle"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-controls="mobile-navigation"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((open) => !open)}
+            >
+              {mobileMenuOpen ? <FiX aria-hidden="true" /> : <FiMenu aria-hidden="true" />}
+            </button>
           </div>
         </div>
       </nav>
+
+      <div
+        className={`mobile-menu-backdrop ${mobileMenuOpen ? 'is-open' : ''}`}
+        onClick={closeMobileMenu}
+        aria-hidden={!mobileMenuOpen}
+      />
+      <aside
+        id="mobile-navigation"
+        className={`mobile-nav-panel ${mobileMenuOpen ? 'is-open' : ''}`}
+        aria-hidden={!mobileMenuOpen}
+      >
+        <div className="mobile-nav-head">
+          <span>Menu</span>
+          <button type="button" onClick={closeMobileMenu} aria-label="Close menu">
+            <FiX aria-hidden="true" />
+          </button>
+        </div>
+        <div className="mobile-nav-links">
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onMouseEnter={link.warm}
+              onFocus={link.warm}
+              onPointerDown={link.warm}
+              onClick={link.warm}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+        <div className="mobile-nav-actions">
+          <button
+            type="button"
+            onClick={() => {
+              closeMobileMenu();
+              openAccount();
+            }}
+          >
+            {isAuthenticated ? 'My Account' : 'Sign In'}
+          </button>
+          <Link to="/wishlist" onClick={closeMobileMenu}>Wishlist</Link>
+          <button
+            type="button"
+            onClick={() => {
+              closeMobileMenu();
+              openCart();
+            }}
+          >
+            Bag ({summary.count})
+          </button>
+        </div>
+      </aside>
 
       <div
         className={`cart-backdrop ${isOpen ? 'is-open' : ''}`}

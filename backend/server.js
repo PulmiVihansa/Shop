@@ -21,6 +21,7 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const virtualTryOnRoutes = require('./routes/virtualTryOnRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const featuredProductRoutes = require('./routes/featuredProductRoutes');
+const giftVoucherRoutes = require('./routes/giftVoucherRoutes');
 
 // Load environment variables.
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -36,22 +37,60 @@ devLog('[server] environment bootstrap', {
 });
 
 const app = express();
+const allowedOrigins = String(process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:5180')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+const staticCacheOptions = {
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0,
+  etag: true,
+  immutable: process.env.NODE_ENV === 'production',
+  setHeaders: (res, filePath) => {
+    if (filePath.toLowerCase().endsWith('.avif')) {
+      res.setHeader('Content-Type', 'image/avif');
+    }
+    res.setHeader('Vary', 'Accept-Encoding');
+  }
+};
+
+const cachePublicRead = (seconds) => (req, res, next) => {
+  if (req.method === 'GET' && !req.headers.authorization) {
+    res.setHeader('Cache-Control', `public, max-age=${seconds}, stale-while-revalidate=${seconds * 2}`);
+  }
+  next();
+};
 
 // Connect to PostgreSQL.
 connectDB();
 configurePassport();
 
 // Global middleware.
-app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
+    return callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(passport.initialize());
-app.use('/uploads/invoices', express.static(path.join(__dirname, 'uploads', 'invoices')));
-app.use('/storage/invoices', express.static(path.join(__dirname, 'storage', 'invoices')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), staticCacheOptions));
+app.use('/uploads/invoices', express.static(path.join(__dirname, 'uploads', 'invoices'), staticCacheOptions));
+app.use('/storage/invoices', express.static(path.join(__dirname, 'storage', 'invoices'), staticCacheOptions));
 
 // API routes.
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
+app.use('/api/products', cachePublicRead(120), productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/finance', financeRoutes);
@@ -64,12 +103,21 @@ app.use('/api/content', contentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/virtual-tryon', virtualTryOnRoutes);
-app.use('/api/sales', salesRoutes);
-app.use('/api/featured-products', featuredProductRoutes);
+app.use('/api/sales', cachePublicRead(120), salesRoutes);
+app.use('/api/featured-products', cachePublicRead(120), featuredProductRoutes);
+app.use('/api/gift-vouchers', giftVoucherRoutes);
 
 // Health check route.
 app.get('/', (req, res) => {
   res.json({ message: 'Shop API is running' });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'astravia-api',
+    storage: global.useMemoryStore ? 'memory' : 'postgres',
+  });
 });
 
 app.use((err, req, res, next) => {

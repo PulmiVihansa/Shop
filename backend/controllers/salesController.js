@@ -20,6 +20,17 @@ const calculateDiscount = (originalPrice, salePrice) => {
 };
 
 const getProductImage = (product) => product?.images?.[0] || product?.image || '';
+const saleProductSelect = {
+  id: true,
+  name: true,
+  price: true,
+  category: true,
+  colors: true,
+  images: true,
+  sizes: true,
+  sizeStock: true,
+  stock: true,
+};
 
 const serializeSale = (campaign) => {
   const product = campaign.product || {};
@@ -84,7 +95,7 @@ const getSales = async (req, res) => {
         startDate: { lte: now },
         endDate: { gte: now },
       },
-      include: { product: true },
+      include: { product: { select: saleProductSelect } },
       orderBy: [{ createdAt: 'desc' }],
     });
 
@@ -102,7 +113,7 @@ const getAdminSales = async (req, res) => {
     }
 
     const campaigns = await prisma.saleCampaign.findMany({
-      include: { product: true },
+      include: { product: { select: saleProductSelect } },
       orderBy: [{ createdAt: 'desc' }],
     });
 
@@ -141,7 +152,7 @@ const createSale = async (req, res) => {
 
     const campaign = await prisma.saleCampaign.create({
       data: payload,
-      include: { product: true },
+      include: { product: { select: saleProductSelect } },
     });
     return res.status(201).json(serializeSale(campaign));
   } catch (error) {
@@ -171,7 +182,7 @@ const updateSale = async (req, res) => {
     const campaign = await prisma.saleCampaign.update({
       where: { id: req.params.id },
       data: payload,
-      include: { product: true },
+      include: { product: { select: saleProductSelect } },
     });
     return res.json(serializeSale(campaign));
   } catch (error) {

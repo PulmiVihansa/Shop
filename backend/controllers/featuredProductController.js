@@ -2,6 +2,17 @@ const prisma = require('../config/prisma');
 const { store, createId, seedProducts } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
 
+const featuredProductSelect = {
+  id: true,
+  name: true,
+  price: true,
+  description: true,
+  category: true,
+  colors: true,
+  images: true,
+  sizes: true,
+};
+
 const serializeFeatured = (entry, index = 0) => {
   const product = entry.product || {};
   const image = product.images?.[0] || product.image || '';
@@ -42,7 +53,7 @@ const getFeaturedProducts = async (req, res) => {
 
     const featured = await prisma.featuredProduct.findMany({
       where: { isActive: true },
-      include: { product: true },
+      include: { product: { select: featuredProductSelect } },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }],
       take: 5,
     });
@@ -67,7 +78,7 @@ const getAdminFeaturedProducts = async (req, res) => {
     }
 
     const featured = await prisma.featuredProduct.findMany({
-      include: { product: true },
+      include: { product: { select: featuredProductSelect } },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }],
     });
     return res.json(featured.map(serializeFeatured));
@@ -115,7 +126,7 @@ const saveFeaturedProduct = async (req, res) => {
         isActive: payload.isActive,
       },
       create: payload,
-      include: { product: true },
+      include: { product: { select: featuredProductSelect } },
     });
     return res.status(201).json(serializeFeatured(featured));
   } catch (error) {
@@ -141,7 +152,7 @@ const updateFeaturedProduct = async (req, res) => {
     const featured = await prisma.featuredProduct.update({
       where: { id: req.params.id },
       data: payload,
-      include: { product: true },
+      include: { product: { select: featuredProductSelect } },
     });
     return res.json(serializeFeatured(featured));
   } catch (error) {

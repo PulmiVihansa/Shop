@@ -16,9 +16,18 @@ const footerColumns = [
     title: 'Help',
     links: [
       ['Track Order', '/orders/track'],
+      ['Shipping', '/shipping'],
       ['Returns', '/returns'],
       ['FAQ', '/faq'],
       ['Support', '/support'],
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      ['Privacy', '/privacy'],
+      ['Terms', '/terms'],
+      ['Contact', '/contact'],
     ],
   },
 ];
@@ -66,8 +75,8 @@ export default function Footer() {
       </div>
 
       <div className="site-footer-bottom">
-        <span>© 2026 ASTRAVIA. Made in Sri Lanka</span>
-        <span>Visa · Mastercard · Cash on Delivery · Bank Transfer</span>
+        <span>&copy; 2026 ASTRAVIA. Made in Sri Lanka</span>
+        <span>Visa &middot; Mastercard &middot; Cash on Delivery &middot; Bank Transfer</span>
       </div>
     </footer>
   );

@@ -2,47 +2,42 @@ import { useEffect } from 'react';
 import '../styles/about.css';
 
 const marqueeItems = [
-  'Handcrafted in Paris',
-  'Est. 2014',
-  'Slow fashion',
-  'Natural fibres only',
-  'Zero waste cutting',
-  'Lifetime repair guarantee',
+  'Designed in Sri Lanka',
+  'Premium streetwear',
+  'Limited drops',
+  'Heavyweight cotton',
+  'Oversized fits',
+  'Built for everyday movement',
 ];
 
 const timelineItems = [
   {
-    year: '2014',
-    title: 'The Atelier Opens',
-    body: 'A 40m2 workshop. One machine. Two chairs. Twelve pieces. Sold out in eleven days, word of mouth only.',
+    year: '2024',
+    title: 'Astravia Begins',
+    body: 'Astravia starts with a simple idea: graphic streetwear that feels premium, local, and unapologetically direct.',
   },
   {
-    year: '2016',
-    title: 'Lifetime Repair Introduced',
-    body: 'The first fashion house in France to offer unconditional, perpetual repair. No charge. No questions asked. Ever.',
-  },
-  {
-    year: '2019',
-    title: 'Zero-Waste & B Corp',
-    body: 'Zero-waste pattern cutting adopted. First B Corp certification awarded. Carbon footprint reduced by 40% in twelve months.',
-  },
-  {
-    year: '2022',
-    title: 'Atelier Goes Digital',
-    body: 'Atelier.com launches. First digital collection ships to 34 countries in the opening week - still 12 pieces per silhouette.',
+    year: '2025',
+    title: 'First Core Tees',
+    body: 'The first oversized tee blocks are refined for weight, drape, print placement, and Sri Lankan weather.',
   },
   {
     year: '2026',
-    title: 'Spring / Summer 2026',
-    body: 'Twelve artisans. One workshop. Same door-on-sawhorses cutting table. The conviction has not changed by a stitch.',
+    title: 'Online Store Launch',
+    body: 'Astravia launches online with product drops, gift vouchers, sale rooms, account tools, and digital order support.',
+  },
+  {
+    year: 'Next',
+    title: 'More Drops, Cleaner Systems',
+    body: 'The next chapter is sharper stock control, better visuals, faster fulfilment, and a tighter drop calendar.',
   },
 ];
 
 const values = [
   {
-    num: '01 - Sustainability',
-    name: 'Make less.\nMake better.',
-    body: "Every fibre sourced within 200km of our atelier. Zero waste cutting. Batches of twelve. Not because it's good marketing - because it's the only honest way to make clothes.",
+    num: '01 - Fit',
+    name: 'Oversized.\nIntentional.',
+    body: "Every Astravia piece starts with the silhouette: relaxed shoulders, clean length, enough weight to hold shape, and enough movement for daily wear.",
     svg: (
       <svg className="vic" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
@@ -51,9 +46,9 @@ const values = [
     ),
   },
   {
-    num: '02 - Craftsmanship',
-    name: 'Slow hands.\nLasting work.',
-    body: 'Every seam in every Atelier garment is set twice. Two tailors work each piece - one for the body, one for the finish. This takes longer. It also means your garment will outlast a decade.',
+    num: '02 - Graphics',
+    name: 'Raw ideas.\nClean execution.',
+    body: 'The artwork is made to say something fast. Strong contrast, street-level energy, and prints that feel part of the garment instead of decoration pasted on top.',
     svg: (
       <svg className="vic" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
@@ -61,9 +56,9 @@ const values = [
     ),
   },
   {
-    num: '03 - Longevity',
-    name: 'Designed to\nlast forever.',
-    body: 'We repair everything we make, forever, at no charge. Because the moment a brand stops standing behind its work, it has admitted that the work was not worth standing behind.',
+    num: '03 - Trust',
+    name: 'Real stock.\nReal support.',
+    body: 'Clear sizing, visible availability, practical returns, and order support matter as much as the drop itself. A real brand earns repeat customers after checkout.',
     svg: (
       <svg className="vic" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -74,38 +69,38 @@ const values = [
 
 const teamMembers = [
   {
-    name: 'Margaux Leconte',
-    role: 'Co-Founder & Creative Director',
-    tag: 'Co-Founder',
-    bio: 'Trained at Ecole de la Chambre Syndicale. Fifteen years of pattern-cutting before Atelier. Still the first person in the workshop each morning.',
+    name: 'Creative Direction',
+    role: 'Brand, drops, and product language',
+    tag: 'Direction',
+    bio: 'Sets the visual tone for Astravia: bold graphics, tight edits, and a product line that feels direct from first scroll to final package.',
     className: 'bm1',
   },
   {
-    name: 'Theo Leconte',
-    role: 'Co-Founder & Head of Sourcing',
-    tag: 'Co-Founder',
-    bio: 'Former textile researcher. Knows every mill within 200km of Paris. Visits each one in person, every season, without exception.',
+    name: 'Product Operations',
+    role: 'Stock, fulfilment, and quality checks',
+    tag: 'Ops',
+    bio: 'Keeps product data, sizes, stock, and dispatch details accurate so the online store reflects what customers can actually buy.',
     className: 'bm2',
   },
   {
-    name: 'Isabelle Roux',
-    role: 'Head Tailor',
-    tag: 'Head Tailor',
-    bio: 'Thirty-two years of tailoring. Trained under three couture houses before joining Atelier in 2016. Author of our double-set seam standard.',
+    name: 'Customer Care',
+    role: 'Sizing, returns, and order support',
+    tag: 'Support',
+    bio: 'Answers the questions that decide whether someone checks out: fit, delivery, payments, exchanges, and where their order is.',
     className: 'bm3',
   },
   {
-    name: 'Noah Girard',
-    role: 'Sustainability & B Corp Lead',
-    tag: 'Sustainability',
-    bio: 'Environmental scientist turned fashion advocate. Designed our zero-waste system. Reduced our carbon footprint by 62% in five years.',
+    name: 'Content & Community',
+    role: 'Campaigns, social, and launch moments',
+    tag: 'Community',
+    bio: 'Turns drops into moments with product photography, launch copy, short-form content, and customer feedback loops.',
     className: 'bm4',
   },
 ];
 
 export default function About() {
   useEffect(() => {
-    document.title = 'ATELIER - Our Story';
+    document.title = 'Astravia | Our Story';
     const items = document.querySelectorAll('.about-page .ti');
     if (!items.length) return undefined;
     const observer = new IntersectionObserver(
@@ -128,10 +123,10 @@ export default function About() {
       <section className="hero">
         <div className="hero-l">
           <div className="yr-bg" aria-hidden="true">
-            2014
+            2026
           </div>
           <div className="hero-txt">
-            <div className="eyebrow">Est. Paris, 2014</div>
+            <div className="eyebrow">Sri Lankan streetwear</div>
             <h1 className="hero-h1">
               Our
               <br />
@@ -139,26 +134,25 @@ export default function About() {
             </h1>
             <div className="hero-stats">
               <div>
-                <span className="sv">12</span>
-                <span className="sl">Artisans</span>
+                <span className="sv">LKR</span>
+                <span className="sl">Local pricing</span>
               </div>
               <div>
-                <span className="sv">200km</span>
-                <span className="sl">Sourcing radius</span>
+                <span className="sv">24/7</span>
+                <span className="sl">Online store</span>
               </div>
               <div>
-                <span className="sv">0%</span>
-                <span className="sl">Waste</span>
+                <span className="sv">2026</span>
+                <span className="sl">Drop season</span>
               </div>
             </div>
           </div>
         </div>
         <div className="hero-r">
           <blockquote className="hero-quote">
-            "We did not set out to build a brand. We set out to make clothes that would last longer than the season
-            they were designed for."
+            "Astravia is for people who want their clothes to feel sharp before they say a word."
           </blockquote>
-          <p className="hero-attr">Margaux Leconte, Co-Founder</p>
+          <p className="hero-attr">Astravia Studio</p>
         </div>
       </section>
 
@@ -176,38 +170,36 @@ export default function About() {
         <div>
           <div className="sec-ey">Where it began</div>
           <h2 className="orig-h">
-            A small atelier.
-            <br />A <em>singular</em> idea.
+            Local energy.
+            <br />A <em>cleaner</em> drop.
           </h2>
           <div className="orig-body">
             <p>
-              In the autumn of 2014, Margaux and Theo Leconte rented a 40-square-metre workshop on the Rue du Faubourg
-              Saint-Honore with one sewing machine, two chairs, and a conviction that fashion had forgotten how to be
-              patient.
+              Astravia is a premium streetwear project built around men&apos;s oversized graphic tees, limited drops,
+              and a buying experience that feels direct from product page to delivery.
             </p>
             <blockquote className="pull">
-              "We wanted to make twelve things beautifully - not a thousand things adequately."
+              "Break rules, not style."
             </blockquote>
             <p>
-              Their first collection was twelve pieces. Each was cut by hand from fabric sourced within two hours of
-              Paris. Each seam was set twice. The collection sold out in eleven days - not through advertising, but
-              through word of mouth between people who understood what they were holding.
+              The brand language is raw, graphic, and minimal where it needs to be. Product pages should show the fit,
+              stock, care details, price, and checkout path clearly, because trust is part of the design.
             </p>
             <p>
-              A decade later, we still produce twelve pieces per silhouette, per season. The workshop is larger. The
-              team is twelve strong. The conviction has not changed by a stitch.
+              This store is the foundation: collection pages, sale drops, gift vouchers, account tools, order tracking,
+              invoices, and admin workflows that can grow with the brand.
             </p>
           </div>
         </div>
         <div className="img-stack">
           <div className="img-main">
-            <span className="img-lbl">The original atelier, 2014</span>
+            <span className="img-lbl">Astravia launch direction</span>
           </div>
           <div className="img-fl">
-            <span className="img-fl-l">First collection</span>
+            <span className="img-fl-l">First online drop</span>
           </div>
           <p className="img-cap">
-            Margaux and Theo at their first cutting table - a door laid across two sawhorses. They still use it.
+            The first launch focuses on clean product data, strong visuals, dependable stock, and a checkout flow people can trust.
           </p>
         </div>
       </section>
@@ -258,11 +250,10 @@ export default function About() {
       <section className="mfst">
         <div className="mfst-lbl">Our manifesto</div>
         <p className="mfst-txt">
-          "The best garment you will ever own is one you <em>never need to replace</em>. Our job is to make sure you
-          never need to."
+            "A real streetwear store is not just the look. It is stock that is accurate, support that replies, and a checkout that works every time."
         </p>
-        <p className="mfst-sig">Margaux Leconte</p>
-        <p className="mfst-role">Co-Founder & Creative Director, Atelier</p>
+        <p className="mfst-sig">Astravia</p>
+        <p className="mfst-role">Premium streetwear, Sri Lanka</p>
       </section>
 
       <section className="team">
@@ -273,8 +264,8 @@ export default function About() {
             behind the pieces
           </h2>
           <p className="team-d">
-            Twelve artisans. One workshop. No hierarchy - every hand that touches your garment has final say over the
-            quality of their work. Hover to learn more.
+            A compact launch team can still feel premium when the product data, visuals, service, and fulfilment are
+            handled with care. Hover to learn more.
           </p>
         </div>
         <div className="tgrid">

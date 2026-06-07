@@ -4,14 +4,15 @@ const { withId } = require('../utils/dbFormat');
 const { getFinanceDashboard } = require('../services/financeService');
 const { formatTransaction } = require('./transactionController');
 
-const summarizeFinance = (orders, expenses) => {
-  const revenue = orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
+const summarizeFinance = (orders, expenses, totals = {}) => {
+  const revenue = totals.revenue ?? orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
   const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const breakdown = expenses.reduce((acc, expense) => {
+  const breakdown = totals.breakdown ?? expenses.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + Number(expense.amount || 0);
     return acc;
   }, {});
-  return { ...getFinanceDashboard(), revenue, expenses: expenseTotal, profit: revenue - expenseTotal, breakdown };
+  const totalExpenses = totals.expenses ?? expenseTotal;
+  return { ...getFinanceDashboard(), revenue, expenses: totalExpenses, profit: revenue - totalExpenses, breakdown };
 };
 
 const getFinanceSummary = async (req, res) => {
@@ -26,17 +27,32 @@ const getFinanceSummary = async (req, res) => {
     }
 
     const where = req.query.category ? { category: req.query.category } : {};
-    const [orders, expenses, transactions] = await Promise.all([
-      prisma.order.findMany(),
-      prisma.expense.findMany({ where, orderBy: { date: 'desc' } }),
+    const limit = Math.min(Math.max(Number(req.query.limit || 200), 1), 500);
+    const [orderTotals, expenseTotals, expenseBreakdown, expenses, transactions] = await Promise.all([
+      prisma.order.aggregate({ _sum: { totalAmount: true } }),
+      prisma.expense.aggregate({ where, _sum: { amount: true } }),
+      prisma.expense.groupBy({
+        by: ['category'],
+        where,
+        _sum: { amount: true }
+      }),
+      prisma.expense.findMany({ where, orderBy: { date: 'desc' }, take: limit }),
       prisma.transaction.findMany({
         include: { order: true, customer: true },
         orderBy: { createdAt: 'desc' },
         take: 6
       })
     ]);
+    const breakdown = expenseBreakdown.reduce((acc, item) => {
+      acc[item.category] = Number(item._sum.amount || 0);
+      return acc;
+    }, {});
     res.json({
-      ...summarizeFinance(orders, expenses),
+      ...summarizeFinance([], expenses, {
+        revenue: Number(orderTotals._sum.totalAmount || 0),
+        expenses: Number(expenseTotals._sum.amount || 0),
+        breakdown
+      }),
       recentTransactions: transactions.map(formatTransaction),
       expenseItems: expenses.map(withId)
     });

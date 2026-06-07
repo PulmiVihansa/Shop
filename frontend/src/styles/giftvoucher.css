@@ -556,6 +556,10 @@
   color: #fff;
 }
 
+.voucher-delivery-toggle button:disabled {
+  opacity: 0.55;
+}
+
 .voucher-order-summary {
   position: sticky;
   top: 96px;
