@@ -57,6 +57,7 @@ export default function Payment() {
   };
 
   const buildOrderPayload = () => ({
+    orderType: isVoucherPayment ? 'voucher' : checkout.orderType,
     items,
     subtotal,
     shippingCost: shipping,
@@ -66,6 +67,7 @@ export default function Payment() {
     customerName: checkout.customerName || 'Ravindu Perera',
     customerEmail: checkout.customerEmail || 'yourmail@gmail.com',
     phone: checkout.phone || '+94 77 123 4567',
+    voucher: isVoucherPayment ? checkout.voucher : undefined,
     address: checkout.address || {
       fullName: checkout.customerName || 'Ravindu Perera',
       line1: '123, Galle Road',
@@ -241,7 +243,7 @@ export default function Payment() {
           {isVoucherPayment && checkout.voucher && (
             <div className="payment-voucher-note">
               <span>{checkout.voucher.design}</span>
-              <strong>{checkout.voucher.code}</strong>
+              <strong>{checkout.voucher.code || 'Generated after payment'}</strong>
               <p>
                 {checkout.voucher.delivery === 'email'
                   ? `Email delivery to ${checkout.voucher.recipient?.email || checkout.voucher.recipient?.name}`

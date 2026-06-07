@@ -2,6 +2,7 @@ const prisma = require('../config/prisma');
 const { store, seedBusinessData } = require('../data/memoryStore');
 const { ensureCustomerIds } = require('../utils/customerId');
 const { withoutPassword, normalizeOrder } = require('../utils/dbFormat');
+const { sendAdminEmpty, sendAdminList } = require('../utils/adminApiResponse');
 
 const customerSummary = (user, orders) => {
   const userId = user._id || user.id;
@@ -24,10 +25,12 @@ const customerSummary = (user, orders) => {
 };
 
 const getUsers = async (req, res) => {
+  const endpoint = req.originalUrl?.includes('/customers') ? 'GET /api/customers' : 'GET /api/users';
   try {
     if (global.useMemoryStore) {
       await seedBusinessData();
-      return res.json(store.users.map((user) => customerSummary(user, store.orders)));
+      const data = store.users.map((user) => customerSummary(user, store.orders));
+      return sendAdminList(res, endpoint, data, { customers: data, users: data });
     }
 
     await ensureCustomerIds(prisma);
@@ -39,9 +42,11 @@ const getUsers = async (req, res) => {
         orderBy: { createdAt: 'desc' }
       })
     ]);
-    res.json(users.map((user) => customerSummary(withoutPassword(user), orders.map(normalizeOrder))));
+    const normalizedOrders = orders.map(normalizeOrder);
+    const data = users.map((user) => customerSummary(withoutPassword(user), normalizedOrders));
+    return sendAdminList(res, endpoint, data, { customers: data, users: data });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch users', error: error.message });
+    return sendAdminEmpty(res, endpoint, error);
   }
 };
 

@@ -176,6 +176,43 @@ model Expense {
   @@index([date])
 }
 
+model FinanceTransaction {
+  id            String   @id @default(cuid())
+  transactionId String   @unique
+  category      String
+  type          String
+  amount        Float
+  status        String   @default("Completed")
+  reference     String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category, createdAt])
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+model GiftVoucher {
+  id             String    @id @default(cuid())
+  voucherCode    String    @unique
+  amount         Float
+  recipientName  String
+  recipientEmail String
+  senderEmail    String
+  message        String    @default("")
+  status         String    @default("ACTIVE")
+  pdfUrl         String    @default("")
+  purchasedAt    DateTime  @default(now())
+  redeemedAt     DateTime?
+  orderId        String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, purchasedAt])
+  @@index([recipientEmail])
+  @@index([senderEmail])
+}
+
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique

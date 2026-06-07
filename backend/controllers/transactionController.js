@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
+const { sendAdminEmpty, sendAdminList } = require('../utils/adminApiResponse');
 
 const formatTransaction = (transaction) => {
   if (!transaction) return transaction;
@@ -21,9 +22,11 @@ const formatTransaction = (transaction) => {
 };
 
 const getTransactions = async (req, res) => {
+  const endpoint = 'GET /api/transactions';
   try {
     if (global.useMemoryStore) {
-      return res.json((store.transactions || []).map(formatTransaction));
+      const data = (store.transactions || []).map(formatTransaction);
+      return sendAdminList(res, endpoint, data, { transactions: data });
     }
 
     const transactions = await prisma.transaction.findMany({
@@ -33,9 +36,10 @@ const getTransactions = async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(transactions.map(formatTransaction));
+    const data = transactions.map(formatTransaction);
+    return sendAdminList(res, endpoint, data, { transactions: data });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch transactions', error: error.message });
+    return sendAdminEmpty(res, endpoint, error);
   }
 };
 

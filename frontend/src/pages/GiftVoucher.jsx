@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { getErrorMessage } from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/giftvoucher.css';
 
 const amounts = [2500, 5000, 10000, 20000];
@@ -39,109 +39,41 @@ const formatValidUntil = () => {
   return `${day} ${month} ${date.getFullYear()}`;
 };
 
-const codeForAmount = (value) => {
-  const thousands = Math.round(Number(value) / 1000);
-  return `ASTRAVIA${thousands}K`;
-};
-
 export default function GiftVoucher() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [amount, setAmount] = useState(5000);
   const [design, setDesign] = useState('classic');
   const [delivery, setDelivery] = useState('email');
+  const [senderEmail, setSenderEmail] = useState(user?.email || '');
   const [recipient, setRecipient] = useState({
     name: '',
     email: '',
     message: '',
   });
-  const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
-  const [deliveryAction, setDeliveryAction] = useState('');
-  const voucherCode = useMemo(() => codeForAmount(amount), [amount]);
   const validUntil = useMemo(() => formatValidUntil(), []);
   const selectedDesign = voucherDesigns.find((item) => item.id === design) ?? voucherDesigns[0];
-
-  const copyCode = async () => {
-    await navigator.clipboard?.writeText(voucherCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  };
 
   const showToast = (message) => {
     setToast(message);
     window.setTimeout(() => setToast(''), 2600);
   };
 
-  const voucherPayload = () => ({
-    amount,
-    code: voucherCode,
-    design: selectedDesign.name,
-    validUntil,
-    recipient: {
-      name: recipient.name.trim(),
-      email: recipient.email.trim(),
-      message: recipient.message.trim(),
-    },
-  });
-
-  const validateRecipientName = () => {
-    if (!recipient.name.trim()) {
-      showToast('Add the recipient name first.');
-      return false;
-    }
-    return true;
-  };
-
-  const validateRecipientEmail = () => {
-    if (!validateRecipientName()) return false;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email.trim())) {
-      showToast('Add a valid recipient email first.');
-      return false;
-    }
-    return true;
-  };
-
-  const downloadVoucherPdf = async () => {
-    if (!validateRecipientName() || deliveryAction) return;
-    setDeliveryAction('download');
-    try {
-      const response = await api.post('/gift-vouchers/download', voucherPayload(), { responseType: 'blob' });
-      const blobUrl = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `Astravia-${voucherCode}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(blobUrl);
-      showToast('Voucher PDF downloaded.');
-    } catch (error) {
-      showToast(getErrorMessage(error));
-    } finally {
-      setDeliveryAction('');
-    }
-  };
-
-  const emailVoucherPdf = async () => {
-    if (!validateRecipientEmail() || deliveryAction) return;
-    setDeliveryAction('email');
-    try {
-      await api.post('/gift-vouchers/email', voucherPayload());
-      showToast(`Voucher sent to ${recipient.email.trim()}.`);
-    } catch (error) {
-      showToast(getErrorMessage(error));
-    } finally {
-      setDeliveryAction('');
-    }
-  };
+  const paymentRequiredToast = () => showToast('Please complete voucher payment first.');
 
   const buyVoucher = () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail.trim())) {
+      showToast('Add a valid buyer email before checkout.');
+      return;
+    }
+
     if (!recipient.name.trim()) {
       showToast('Add the recipient name before checkout.');
       return;
     }
 
-    if (delivery === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email.trim())) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email.trim())) {
       showToast('Add a valid recipient email for delivery.');
       return;
     }
@@ -157,7 +89,7 @@ export default function GiftVoucher() {
             name: `${selectedDesign.name} Gift Voucher`,
             image: '/models/logo.png',
             color: delivery === 'email' ? 'Email Delivery' : 'PDF Download',
-            size: voucherCode,
+            size: 'Generated after payment',
             quantity: 1,
             price: amount,
           },
@@ -166,12 +98,14 @@ export default function GiftVoucher() {
         shipping: 0,
         discount: 0,
         total: amount,
+        customerName: user?.name || 'Astravia Customer',
+        customerEmail: senderEmail.trim(),
         voucher: {
           amount,
-          code: voucherCode,
           design: selectedDesign.name,
           delivery,
           validUntil,
+          senderEmail: senderEmail.trim(),
           recipient: {
             name: recipient.name.trim(),
             email: recipient.email.trim(),
@@ -214,9 +148,9 @@ export default function GiftVoucher() {
             <div className="voucher-bottom-info">
               <div className="voucher-code-box">
                 <span>Voucher Code</span>
-                <button type="button" onClick={copyCode} aria-label="Copy voucher code">
-                  {voucherCode}
-                  <em>{copied ? 'Copied' : 'Copy'}</em>
+                <button type="button" onClick={paymentRequiredToast} aria-label="Voucher code available after payment">
+                  Generated after payment
+                  <em>Locked</em>
                 </button>
               </div>
               <div className="voucher-valid-box">
@@ -284,6 +218,15 @@ export default function GiftVoucher() {
               </div>
               <div className="voucher-recipient-form">
                 <label>
+                  Buyer Email
+                  <input
+                    type="email"
+                    value={senderEmail}
+                    onChange={(event) => setSenderEmail(event.target.value)}
+                    placeholder="your@email.com"
+                  />
+                </label>
+                <label>
                   Recipient Name
                   <input
                     type="text"
@@ -322,24 +265,22 @@ export default function GiftVoucher() {
                 <button
                   type="button"
                   className={delivery === 'email' ? 'active' : ''}
-                  disabled={Boolean(deliveryAction)}
                   onClick={() => {
                     setDelivery('email');
-                    emailVoucherPdf();
+                    paymentRequiredToast();
                   }}
                 >
-                  {deliveryAction === 'email' ? 'Sending...' : 'Email Delivery'}
+                  Email Delivery
                 </button>
                 <button
                   type="button"
                   className={delivery === 'pdf' ? 'active' : ''}
-                  disabled={Boolean(deliveryAction)}
                   onClick={() => {
                     setDelivery('pdf');
-                    downloadVoucherPdf();
+                    paymentRequiredToast();
                   }}
                 >
-                  {deliveryAction === 'download' ? 'Preparing...' : 'PDF Download'}
+                  PDF Download
                 </button>
               </div>
             </section>
@@ -363,7 +304,7 @@ export default function GiftVoucher() {
               </div>
               <div>
                 <dt>Code</dt>
-                <dd>{voucherCode}</dd>
+                <dd>Generated after payment</dd>
               </div>
             </dl>
             <button className="buy-gift-card summary-buy-button" type="button" onClick={buyVoucher}>Complete Purchase</button>

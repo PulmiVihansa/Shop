@@ -2,6 +2,8 @@ const prisma = require('../config/prisma');
 const { store, seedBusinessData } = require('../data/memoryStore');
 const { withId, withoutPassword, normalizeOrder } = require('../utils/dbFormat');
 const { getAnalyticsDashboard } = require('../services/analyticsService');
+const { getGiftVoucherSalesSummary } = require('../services/giftVoucherService');
+const { sendAdminEmpty, sendAdminObject } = require('../utils/adminApiResponse');
 
 const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
 const getOrderTotal = (order) => Number(order.totalAmount ?? order.totalPrice ?? 0);
@@ -25,6 +27,7 @@ const getOrderItems = (order) => {
 
 const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) => {
   const revenue = orders.reduce((sum, order) => sum + getOrderTotal(order), 0);
+  const voucherRevenue = Number(metrics.voucherRevenue || 0);
   const lowStock = products.filter((product) => {
     const stock = getTotalStock(product);
     return stock > 0 && stock <= 10;
@@ -51,6 +54,7 @@ const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) =>
       return acc;
     }, {})
   );
+  monthlyRevenue.sort((left, right) => new Date(`01 ${left.label}`) - new Date(`01 ${right.label}`));
 
   const customerGrowth = Object.values(
     users.reduce((acc, user) => {
@@ -63,39 +67,70 @@ const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) =>
 
   const expenseTotal = metrics.expenseTotal ?? expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
+  const liveRevenue = metrics.revenue ?? revenue;
+  const liveOrderCount = metrics.orderCount ?? orders.length;
+  const liveCustomerCount = metrics.customerCount ?? metrics.userCount ?? users.filter((user) => user.role !== 'admin').length;
+  const monthlyRevenueTotal = monthlyRevenue.reduce((sum, entry) => sum + Number(entry.revenue || 0), 0);
+  const productPerformance = Object.values(productSales).sort((a, b) => b.revenue - a.revenue);
+
   return {
     ...getAnalyticsDashboard(),
+    kpis: [
+      { label: 'Total Revenue', value: liveRevenue, trend: liveRevenue ? 'up' : 'neutral', note: 'Paid and recorded order value' },
+      { label: 'Orders Count', value: liveOrderCount, trend: liveOrderCount ? 'up' : 'neutral', note: 'Orders in database' },
+      { label: 'Customer Count', value: liveCustomerCount, trend: liveCustomerCount ? 'up' : 'neutral', note: 'Customers in database' },
+      { label: 'Voucher Revenue', value: voucherRevenue, trend: voucherRevenue ? 'up' : 'neutral', note: 'Gift voucher income' },
+      { label: 'Monthly Revenue', value: monthlyRevenueTotal, trend: monthlyRevenueTotal ? 'up' : 'neutral', note: `${monthlyRevenue.length} monthly buckets` },
+    ],
     totals: {
       users: metrics.userCount ?? users.length,
-      orders: metrics.orderCount ?? orders.length,
-      revenue: metrics.revenue ?? revenue,
+      customers: liveCustomerCount,
+      orders: liveOrderCount,
+      revenue: liveRevenue,
+      voucherRevenue,
       lowStock: lowStock.length,
       expenses: expenseTotal,
-      profit: (metrics.revenue ?? revenue) - expenseTotal
+      profit: liveRevenue - expenseTotal
     },
     lowStock,
     recentOrders: orders.slice(0, 8),
-    topProducts: Object.values(productSales).sort((a, b) => b.quantity - a.quantity).slice(0, 8),
+    topProducts: productPerformance.slice(0, 8).map((product) => ({
+      ...product,
+      sales: product.quantity,
+      views: Math.max(product.quantity, product.quantity * 24),
+      conversion: product.quantity ? Number(Math.min(100, (product.quantity / Math.max(product.quantity * 24, 1)) * 100).toFixed(1)) : 0,
+    })),
     monthlyRevenue,
     salesOverTime: monthlyRevenue,
-    productPerformance: Object.values(productSales).sort((a, b) => b.revenue - a.revenue).slice(0, 8),
+    productPerformance: productPerformance.slice(0, 8),
     customerGrowth,
     orderFrequency: monthlyRevenue.map((entry) => ({ label: entry.label, orders: entry.orders }))
   };
 };
 
 const getAnalytics = async (req, res) => {
+  const endpoint = 'GET /api/analytics';
   try {
+    const giftVoucherSales = await getGiftVoucherSalesSummary().catch(() => ({ totalAmount: 0, vouchers: [] }));
     if (global.useMemoryStore) {
       await seedBusinessData();
       const orders = store.orders.map((order) => ({
         ...order,
         user: store.users.find((user) => user._id === order.user) || { name: 'Customer', email: '' }
       }));
-      return res.json(buildAnalytics(store.products, orders, store.users, store.expenses));
+      const payload = buildAnalytics(store.products, orders, store.users, store.expenses, {
+        voucherRevenue: giftVoucherSales.totalAmount,
+        customerCount: store.users.filter((user) => user.role !== 'admin').length,
+      });
+      return sendAdminObject(res, endpoint, payload, payload);
     }
 
-    const products = await prisma.product.findMany({
+    const safe = async (label, promise, fallback) => promise.catch((error) => {
+      console.error({ endpoint, table: label, error: error.message });
+      return fallback;
+    });
+
+    const products = await safe('Product', prisma.product.findMany({
       select: {
         id: true,
         name: true,
@@ -108,15 +143,16 @@ const getAnalytics = async (req, res) => {
         createdAt: true,
         updatedAt: true
       }
-    });
-    const [orderCount, userCount, orderTotals, expenseTotals] = await Promise.all([
-      prisma.order.count(),
-      prisma.user.count(),
-      prisma.order.aggregate({ _sum: { totalAmount: true } }),
-      prisma.expense.aggregate({ _sum: { amount: true } })
+    }), []);
+    const [orderCount, userCount, customerCount, orderTotals, expenseTotals] = await Promise.all([
+      safe('Order', prisma.order.count(), 0),
+      safe('User', prisma.user.count(), 0),
+      safe('Customer', prisma.customer.count(), 0),
+      safe('Order', prisma.order.aggregate({ _sum: { totalAmount: true } }), { _sum: { totalAmount: 0 } }),
+      safe('Expense', prisma.expense.aggregate({ _sum: { amount: true } }), { _sum: { amount: 0 } })
     ]);
     const [orders, users] = await Promise.all([
-      prisma.order.findMany({
+      safe('Order', prisma.order.findMany({
         select: {
           id: true,
           orderId: true,
@@ -133,14 +169,14 @@ const getAnalytics = async (req, res) => {
         },
         orderBy: { createdAt: 'desc' },
         take: 500
-      }),
-      prisma.user.findMany({
+      }), []),
+      safe('User', prisma.user.findMany({
         select: { id: true, name: true, email: true, role: true, provider: true, avatar: true, customerId: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
         take: 1000
-      })
+      }), [])
     ]);
-    res.json(buildAnalytics(
+    const payload = buildAnalytics(
       products.map(withId),
       orders.map(normalizeOrder),
       users.map(withoutPassword),
@@ -148,13 +184,15 @@ const getAnalytics = async (req, res) => {
       {
         orderCount,
         userCount,
+        customerCount: customerCount || users.filter((user) => user.role !== 'admin').length,
         revenue: Number(orderTotals._sum.totalAmount || 0),
-        expenseTotal: Number(expenseTotals._sum.amount || 0)
+        expenseTotal: Number(expenseTotals._sum.amount || 0),
+        voucherRevenue: giftVoucherSales.totalAmount,
       }
-    ));
+    );
+    return sendAdminObject(res, endpoint, payload, payload);
   } catch (error) {
-     console.error(error);
-     res.status(500).json({ message: error.message });
+     return sendAdminEmpty(res, endpoint, error);
   }
 };
 

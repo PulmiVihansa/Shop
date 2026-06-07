@@ -5,6 +5,8 @@ const store = {
   products: [],
   orders: [],
   transactions: [],
+  financeTransactions: [],
+  giftVouchers: [],
   invoices: [],
   expenses: [],
   bulkOrderRequests: [],

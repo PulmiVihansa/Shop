@@ -5,12 +5,19 @@ const {
   getInvoiceById,
   getInvoiceDashboard,
 } = require('../services/invoiceService');
+const { sendAdminEmpty, sendAdminObject } = require('../utils/adminApiResponse');
 
 const getInvoices = async (req, res) => {
+  const endpoint = 'GET /api/invoices';
   try {
-    res.json(await getInvoiceDashboard(req.query));
+    const dashboard = await getInvoiceDashboard(req.query);
+    return sendAdminObject(res, endpoint, dashboard, {
+      invoices: dashboard.invoices || [],
+      summary: dashboard.summary || [],
+      pagination: dashboard.pagination || {},
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch invoices', error: error.message });
+    return sendAdminEmpty(res, endpoint, error, []);
   }
 };
 

@@ -223,6 +223,76 @@
   border-color: #ff1b32;
 }
 
+.confirmation-voucher-card {
+  margin-top: 26px;
+  padding: 20px;
+  border: 1px solid rgba(255, 31, 61, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 31, 61, 0.08);
+}
+
+.confirmation-voucher-card > span {
+  display: block;
+  color: #ff1f3d;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.confirmation-voucher-card h2 {
+  margin: 8px 0 6px;
+  color: #fff;
+  font-size: clamp(1.35rem, 3vw, 2.2rem);
+  overflow-wrap: anywhere;
+}
+
+.confirmation-voucher-card p {
+  margin: 0 0 16px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.confirmation-voucher-card div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.confirmation-voucher-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background: #ff1f3d;
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.confirmation-voucher-card button + button {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.confirmation-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 30;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 31, 61, 0.38);
+  border-radius: 8px;
+  background: rgba(14, 14, 14, 0.96);
+  color: #fff;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+}
+
 .confirmation-receipt {
   position: sticky;
   top: 96px;

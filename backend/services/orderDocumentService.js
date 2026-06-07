@@ -129,50 +129,47 @@ const createTransactionAndInvoice = async (db, order, details = {}) => {
     data: { transactionId: transactionRecord.id }
   });
 
-  let invoice = existingTransaction?.invoice || null;
-  if (['PAID', 'REFUNDED'].includes(paymentStatus)) {
-    const subtotal = Number(details.subtotal ?? order.price ?? 0);
-    const shipping = Number(details.shipping ?? order.shippingCost ?? 0);
-    const discount = Number(details.discount ?? 0);
-    const tax = Number(details.tax ?? 0);
-    const grandTotal = Number(details.grandTotal ?? order.totalAmount ?? subtotal + shipping + tax - discount);
-    const customer = details.customer || order.customer || await db.customer.findUnique({ where: { id: order.customerId } });
-    const address = details.customerAddress || order.address || {};
+  const subtotal = Number(details.subtotal ?? order.price ?? 0);
+  const shipping = Number(details.shipping ?? order.shippingCost ?? 0);
+  const discount = Number(details.discount ?? 0);
+  const tax = Number(details.tax ?? 0);
+  const grandTotal = Number(details.grandTotal ?? order.totalAmount ?? subtotal + shipping + tax - discount);
+  const customer = details.customer || order.customer || await db.customer.findUnique({ where: { id: order.customerId } });
+  const address = details.customerAddress || order.address || {};
 
-    invoice = await db.invoice.upsert({
-      where: { orderId: order.id },
-      update: {
-        transactionId: transactionRecord.id,
-        customerId: order.customerId,
-        customerName: customer?.name || details.customerName || '',
-        customerEmail: customer?.email || details.customerEmail || '',
-        customerPhone: customer?.phone || details.customerPhone || '',
-        customerAddress: address,
-        subtotal,
-        shipping,
-        discount,
-        tax,
-        grandTotal,
-        status: invoiceStatusForPayment(paymentStatus)
-      },
-      create: {
-        invoiceId: await getNextInvoiceId(db, 1001),
-        orderId: order.id,
-        transactionId: transactionRecord.id,
-        customerId: order.customerId,
-        customerName: customer?.name || details.customerName || '',
-        customerEmail: customer?.email || details.customerEmail || '',
-        customerPhone: customer?.phone || details.customerPhone || '',
-        customerAddress: address,
-        subtotal,
-        shipping,
-        discount,
-        tax,
-        grandTotal,
-        status: invoiceStatusForPayment(paymentStatus)
-      }
-    });
-  }
+  const invoice = await db.invoice.upsert({
+    where: { orderId: order.id },
+    update: {
+      transactionId: transactionRecord.id,
+      customerId: order.customerId,
+      customerName: customer?.name || details.customerName || '',
+      customerEmail: customer?.email || details.customerEmail || '',
+      customerPhone: customer?.phone || details.customerPhone || '',
+      customerAddress: address,
+      subtotal,
+      shipping,
+      discount,
+      tax,
+      grandTotal,
+      status: invoiceStatusForPayment(paymentStatus)
+    },
+    create: {
+      invoiceId: await getNextInvoiceId(db, 1001),
+      orderId: order.id,
+      transactionId: transactionRecord.id,
+      customerId: order.customerId,
+      customerName: customer?.name || details.customerName || '',
+      customerEmail: customer?.email || details.customerEmail || '',
+      customerPhone: customer?.phone || details.customerPhone || '',
+      customerAddress: address,
+      subtotal,
+      shipping,
+      discount,
+      tax,
+      grandTotal,
+      status: invoiceStatusForPayment(paymentStatus)
+    }
+  });
 
   return { transaction: transactionRecord, invoice };
 };

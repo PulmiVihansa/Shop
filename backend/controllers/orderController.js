@@ -2,12 +2,14 @@ const prisma = require('../config/prisma');
 const { store, createId } = require('../data/memoryStore');
 const { getPaymentSettingsDoc } = require('./paymentSettingsController');
 const { normalizeOrder } = require('../utils/dbFormat');
+const { sendAdminEmpty, sendAdminList } = require('../utils/adminApiResponse');
 const {
   getNextPublicId,
   ensureCustomerForOrder,
   createTransactionAndInvoice
 } = require('../services/orderDocumentService');
 const { generateInvoiceForOrder } = require('../services/invoiceService');
+const { fulfillGiftVoucherForOrder } = require('../services/giftVoucherService');
 
 const ORDER_STATUS_ALLOWED = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_STATUS_ALLOWED = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
@@ -204,7 +206,7 @@ const createOrder = async (req, res) => {
         : null;
 
     if (global.useMemoryStore) {
-      const transactionId = paymentSucceeded ? createMemoryTransactionId() : '';
+      const transactionId = createMemoryTransactionId();
       const order = {
         _id: createId(),
         user: userId,
@@ -224,43 +226,43 @@ const createOrder = async (req, res) => {
         updatedAt: new Date()
       };
       store.orders.unshift(order);
+      store.transactions = store.transactions || [];
+      store.invoices = store.invoices || [];
+      const transaction = {
+        _id: createId(),
+        transactionId,
+        orderId: order._id,
+        orderReference: order.orderId,
+        customerId: order.customerId,
+        customer: customerName,
+        amount: totalAmount,
+        paymentMethod,
+        paymentStatus,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      const invoice = {
+        _id: createId(),
+        invoiceId: `INV-${new Date().getFullYear()}-${String(1001 + store.invoices.length).padStart(4, '0')}`,
+        orderId: order._id,
+        orderReference: order.orderId,
+        transactionId,
+        customerId: order.customerId,
+        customer: customerName,
+        email: customerEmail,
+        subtotal,
+        shipping: shippingCost,
+        tax: 0,
+        grandTotal: totalAmount,
+        status: paymentSucceeded ? 'Paid' : 'Pending',
+        products: items,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      store.transactions.unshift(transaction);
+      store.invoices.unshift(invoice);
+      order.invoiceId = invoice.invoiceId;
       if (paymentSucceeded) {
-        store.transactions = store.transactions || [];
-        store.invoices = store.invoices || [];
-        const transaction = {
-          _id: createId(),
-          transactionId,
-          orderId: order._id,
-          orderReference: order.orderId,
-          customerId: order.customerId,
-          customer: customerName,
-          amount: totalAmount,
-          paymentMethod,
-          paymentStatus,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        const invoice = {
-          _id: createId(),
-          invoiceId: `INV-${new Date().getFullYear()}-${String(1001 + store.invoices.length).padStart(4, '0')}`,
-          orderId: order._id,
-          orderReference: order.orderId,
-          transactionId,
-          customerId: order.customerId,
-          customer: customerName,
-          email: customerEmail,
-          subtotal,
-          shipping: shippingCost,
-          tax: 0,
-          grandTotal: totalAmount,
-          status: 'Paid',
-          products: items,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        store.transactions.unshift(transaction);
-        store.invoices.unshift(invoice);
-        order.invoiceId = invoice.invoiceId;
         await generateInvoiceForOrder(order._id, { paymentStatus: 'PAID', sendEmail: false }).catch(() => {});
       }
       return res.status(201).json({ ...normalizeOrder(order), paymentRequest });
@@ -280,17 +282,17 @@ const createOrder = async (req, res) => {
         }
       });
 
-      if (paymentSucceeded) {
-        await createTransactionAndInvoice(tx, createdOrder, {
-          paymentMethod,
-          paymentStatus,
-          amount: totalAmount,
-          subtotal,
-          shipping: shippingCost,
-          tax: 0,
-          grandTotal: totalAmount
-        });
-      }
+      await createTransactionAndInvoice(tx, createdOrder, {
+        paymentMethod,
+        paymentStatus,
+        amount: totalAmount,
+        subtotal,
+        shipping: shippingCost,
+        tax: 0,
+        grandTotal: totalAmount,
+        customer,
+        customerAddress: address
+      });
 
       return tx.order.findUnique({
         where: { id: createdOrder.id },
@@ -310,6 +312,14 @@ const createOrder = async (req, res) => {
     }
     return res.status(201).json({ ...normalizeOrder(order), paymentRequest });
   } catch (error) {
+    console.error({
+      endpoint: 'POST /api/orders',
+      error: error.message,
+      userId: req.user?._id || req.user?.id || null,
+      itemCount: Array.isArray(req.body.items) ? req.body.items.length : 0,
+      paymentMethod: req.body.paymentMethod || req.body.payment?.method || null,
+      totalAmount: req.body.totalAmount,
+    });
     return res.status(400).json({ message: 'Failed to create order', error: error.message });
   }
 };
@@ -338,13 +348,15 @@ const getUserOrders = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
+  const endpoint = 'GET /api/orders';
   try {
     if (global.useMemoryStore) {
       const orders = store.orders.map((order) => ({
         ...order,
         user: store.users.find((user) => user._id === order.user) || { name: 'Customer', email: '' }
       }));
-      return res.json(orders.map(normalizeOrder));
+      const data = orders.map(normalizeOrder);
+      return sendAdminList(res, endpoint, data, { orders: data });
     }
 
     const orders = await prisma.order.findMany({
@@ -357,9 +369,10 @@ const getAllOrders = async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    return res.json(orders.map(normalizeOrder));
+    const data = orders.map(normalizeOrder);
+    return sendAdminList(res, endpoint, data, { orders: data });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch orders', error: error.message });
+    return sendAdminEmpty(res, endpoint, error);
   }
 };
 
@@ -414,6 +427,11 @@ const updateOrderPaymentStatus = async (req, res) => {
         status: paymentStatus.toLowerCase()
       };
       order.updatedAt = new Date();
+      if (paymentStatus === 'PAID') {
+        await fulfillGiftVoucherForOrder(order).catch((voucherError) => {
+          console.warn('[voucher] status-change fulfillment failed', voucherError.message);
+        });
+      }
       return res.json(normalizeOrder(order));
     }
 
@@ -460,6 +478,11 @@ const updateOrderPaymentStatus = async (req, res) => {
       });
     });
     if (paymentStatus === 'PAID' || paymentStatus === 'REFUNDED') {
+      if (paymentStatus === 'PAID') {
+        await fulfillGiftVoucherForOrder(order.id).catch((voucherError) => {
+          console.warn('[voucher] status-change fulfillment failed', voucherError.message);
+        });
+      }
       await generateInvoiceForOrder(order.id, { paymentStatus, sendEmail: false }).catch((invoiceError) => {
         console.warn('[invoice] status-change generation failed', invoiceError.message);
       });

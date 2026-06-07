@@ -1,18 +1,20 @@
 const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
+const { sendAdminEmpty, sendAdminObject } = require('../utils/adminApiResponse');
 
 const getSettings = async (req, res) => {
+  const endpoint = 'GET /api/settings';
   try {
     if (global.useMemoryStore) {
-      return res.json(store.siteSettings);
+      return sendAdminObject(res, endpoint, store.siteSettings);
     }
 
     const existing = await prisma.siteSettings.findFirst();
     const settings = existing || await prisma.siteSettings.create({ data: {} });
-    res.json(withId(settings));
+    return sendAdminObject(res, endpoint, withId(settings));
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch settings', error: error.message });
+    return sendAdminEmpty(res, endpoint, error);
   }
 };
 

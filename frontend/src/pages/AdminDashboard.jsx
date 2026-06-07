@@ -47,6 +47,29 @@ const adminBaseDataCache = {
 };
 const financeDataCache = new Map();
 
+const unwrapApiData = (payload, fallback) => {
+  if (payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'data')) {
+    return payload.data ?? fallback;
+  }
+  return payload ?? fallback;
+};
+
+const unwrapApiArray = (payload, fallback = []) => {
+  const data = unwrapApiData(payload, payload);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(payload?.orders)) return payload.orders;
+  if (Array.isArray(payload?.customers)) return payload.customers;
+  if (Array.isArray(payload?.users)) return payload.users;
+  if (Array.isArray(payload?.transactions)) return payload.transactions;
+  if (Array.isArray(payload?.invoices)) return payload.invoices;
+  return fallback;
+};
+
+const unwrapApiObject = (payload, fallback = {}) => {
+  const data = unwrapApiData(payload, payload);
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : fallback;
+};
+
 const fetchAdminDashboardData = (expenseFilter, { force = false } = {}) => {
   const financeKey = expenseFilter || 'all';
   const isBaseFresh = adminBaseDataCache.data && Date.now() - adminBaseDataCache.fetchedAt < ADMIN_DATA_CACHE_MS;
@@ -55,50 +78,53 @@ const fetchAdminDashboardData = (expenseFilter, { force = false } = {}) => {
 
   const basePromise = !force && isBaseFresh
     ? Promise.resolve(adminBaseDataCache.data)
-    : (!force && adminBaseDataCache.promise) || Promise.allSettled([
-    api.get('/products'),
-    api.get('/orders'),
-    api.get('/users'),
-    api.get('/analytics'),
-    api.get('/bulk-orders'),
-    api.get('/bulk-orders/customers'),
-    api.get('/transactions'),
-    api.get('/invoices', { params: { limit: 1000 } }),
-    api.get('/settings/payment'),
-    api.get('/content/homepage'),
-    api.get('/content/banners'),
-    api.get('/settings'),
-    api.get('/sales/admin'),
-    api.get('/featured-products/admin'),
-  ]).then((results) => {
-    const getResult = (index, fallback) => {
-      const result = results[index];
-      if (result.status === 'fulfilled') return result.value.data;
-      console.error(result.reason);
-      return fallback;
+    : (!force && adminBaseDataCache.promise) || (async () => {
+    const fetchOne = async (label, request, fallback) => {
+      try {
+        const response = await request();
+        return response.data;
+      } catch (error) {
+        console.error(`[admin:${label}]`, error);
+        return fallback;
+      }
     };
 
+    const productResult = await fetchOne('products', () => api.get('/products'), []);
+    const orderResult = await fetchOne('orders', () => api.get('/orders'), []);
+    const customerResult = await fetchOne('customers', () => api.get('/customers'), []);
+    const analyticsResult = await fetchOne('analytics', () => api.get('/analytics'), null);
+    const bulkResult = await fetchOne('bulk-orders', () => api.get('/bulk-orders'), { summary: [], orders: [] });
+    const bulkCustomerResult = await fetchOne('bulk-customers', () => api.get('/bulk-orders/customers'), []);
+    const transactionResult = await fetchOne('transactions', () => api.get('/transactions'), []);
+    const invoiceResult = await fetchOne('invoices', () => api.get('/invoices', { params: { limit: 1000 } }), { summary: [], invoices: [] });
+    const paymentSettingsResult = await fetchOne('payment-settings', () => api.get('/settings/payment'), {});
+    const homepageResult = await fetchOne('homepage', () => api.get('/content/homepage'), null);
+    const bannerResult = await fetchOne('banners', () => api.get('/content/banners'), []);
+    const settingsResult = await fetchOne('settings', () => api.get('/settings'), {});
+    const salesResult = await fetchOne('sales', () => api.get('/sales/admin'), []);
+    const featuredResult = await fetchOne('featured-products', () => api.get('/featured-products/admin'), []);
+
     const data = {
-      productData: getResult(0, []),
-      orderData: getResult(1, []),
-      userData: getResult(2, []),
-      analyticsData: getResult(3, null),
-      bulkData: getResult(4, { summary: [], orders: [] }),
-      bulkCustomerData: getResult(5, []),
-      transactionData: getResult(6, []),
-      invoiceData: getResult(7, { summary: [], invoices: [] }),
-      paymentSettingsData: getResult(8, {}),
-      homepageData: getResult(9, null),
-      bannerData: getResult(10, []),
-      settingsData: getResult(11, {}),
-      salesData: getResult(12, []),
-      featuredData: getResult(13, []),
+      productData: unwrapApiArray(productResult),
+      orderData: unwrapApiArray(orderResult),
+      userData: unwrapApiArray(customerResult),
+      analyticsData: unwrapApiObject(analyticsResult, null),
+      bulkData: unwrapApiObject(bulkResult, { summary: [], orders: [] }),
+      bulkCustomerData: unwrapApiArray(bulkCustomerResult),
+      transactionData: unwrapApiArray(transactionResult),
+      invoiceData: unwrapApiObject(invoiceResult, { summary: [], invoices: [] }),
+      paymentSettingsData: unwrapApiObject(paymentSettingsResult),
+      homepageData: unwrapApiObject(homepageResult, null),
+      bannerData: unwrapApiArray(bannerResult),
+      settingsData: unwrapApiObject(settingsResult),
+      salesData: unwrapApiArray(salesResult),
+      featuredData: unwrapApiArray(featuredResult),
     };
 
     adminBaseDataCache.data = data;
     adminBaseDataCache.fetchedAt = Date.now();
     return data;
-  }).finally(() => {
+  })().finally(() => {
     adminBaseDataCache.promise = null;
   });
 
@@ -106,31 +132,35 @@ const fetchAdminDashboardData = (expenseFilter, { force = false } = {}) => {
     adminBaseDataCache.promise = basePromise;
   }
 
-  const financePromise = !force && isFinanceFresh
-    ? Promise.resolve(financeEntry.data)
-    : (!force && financeEntry?.promise) || api
-      .get('/finance', { params: { category: expenseFilter === 'all' ? undefined : expenseFilter } })
-      .then((response) => {
-        const data = response.data;
-        financeDataCache.set(financeKey, { data, fetchedAt: Date.now(), promise: null });
-        return data;
-      })
-      .catch((error) => {
-        console.error(error);
-        return null;
+  const getFinanceData = () => {
+    const financePromise = !force && isFinanceFresh
+      ? Promise.resolve(financeEntry.data)
+      : (!force && financeEntry?.promise) || api
+        .get('/finance', { params: { category: expenseFilter === 'all' ? undefined : expenseFilter } })
+        .then((response) => {
+          const data = unwrapApiObject(response.data, response.data);
+          financeDataCache.set(financeKey, { data, fetchedAt: Date.now(), promise: null });
+          return data;
+        })
+        .catch((error) => {
+          console.error('[admin:finance]', error);
+          return null;
+        });
+
+    if (!force && !isFinanceFresh) {
+      financeDataCache.set(financeKey, {
+        data: financeEntry?.data || null,
+        fetchedAt: financeEntry?.fetchedAt || 0,
+        promise: financePromise,
       });
+    }
 
-  if (!force && !isFinanceFresh) {
-    financeDataCache.set(financeKey, {
-      data: financeEntry?.data || null,
-      fetchedAt: financeEntry?.fetchedAt || 0,
-      promise: financePromise,
-    });
-  }
+    return financePromise;
+  };
 
-  return Promise.all([basePromise, financePromise]).then(([baseData, financeData]) => ({
+  return basePromise.then(async (baseData) => ({
     ...baseData,
-    financeData,
+    financeData: await getFinanceData(),
   }));
 };
 const buildInvoiceEmailMessage = (invoice) => [
@@ -1091,7 +1121,7 @@ export default function AdminDashboard() {
       }
       if (status === 'Approved') {
         const customersRes = await api.get('/bulk-orders/customers');
-        setBulkCustomers(customersRes.data);
+        setBulkCustomers(unwrapApiArray(customersRes.data));
       }
       showBulkStatusToast((response.data.messages || []).map((item) => `? ${item}`));
     } catch (err) {
@@ -1115,7 +1145,7 @@ export default function AdminDashboard() {
         setSelectedBulkOrder(null);
       }
       const customersRes = await api.get('/bulk-orders/customers');
-      setBulkCustomers(customersRes.data);
+      setBulkCustomers(unwrapApiArray(customersRes.data));
       showBulkStatusToast(['? Bulk order deleted']);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -2869,6 +2899,35 @@ export default function AdminDashboard() {
         />
       </section>
       <section className="erp-card"><div className="admin-section-head"><span>Performance</span><h2>Best Revenue Products</h2></div><DataTable columns={[{ key: 'product', label: 'Product' }, { key: 'orders', label: 'Orders' }, { key: 'revenue', label: 'Revenue' }, { key: 'profit', label: 'Profit' }]} rows={(finance?.bestProducts || []).map((item) => ({ id: item.product, ...item, revenue: money(item.revenue), profit: money(item.profit) }))} /></section>
+      <section className="erp-card">
+        <div className="admin-section-head"><span>Gift Voucher Sales</span><h2>Gift Voucher Sales</h2></div>
+        <div className="erp-metrics">
+          <PremiumMetricCard item={{ label: 'Voucher Revenue', value: finance?.giftVoucherSales?.totalAmount || 0, trend: 'up' }} />
+          <PremiumMetricCard item={{ label: 'Vouchers Sold', value: finance?.giftVoucherSales?.totalSales || 0, trend: 'up' }} />
+          <PremiumMetricCard item={{ label: 'Active Vouchers', value: finance?.giftVoucherSales?.activeCount || 0, trend: 'up' }} />
+          <PremiumMetricCard item={{ label: 'Redeemed Vouchers', value: finance?.giftVoucherSales?.redeemedCount || 0, trend: 'up' }} />
+        </div>
+        <DataTable
+          columns={[
+            { key: 'voucherCode', label: 'Voucher Code' },
+            { key: 'recipientName', label: 'Recipient' },
+            { key: 'senderEmail', label: 'Buyer Email' },
+            { key: 'amount', label: 'Amount' },
+            { key: 'status', label: 'Status', render: (row) => <StatusPill status={row.status} /> },
+            { key: 'purchasedAt', label: 'Purchased' },
+          ]}
+          rows={(finance?.giftVoucherSales?.vouchers || []).map((voucher) => ({
+            id: voucher.id || voucher._id || voucher.voucherCode,
+            voucherCode: voucher.voucherCode,
+            recipientName: voucher.recipientName,
+            senderEmail: voucher.senderEmail,
+            amount: money(voucher.amount),
+            status: voucher.status,
+            purchasedAt: formatDate(voucher.purchasedAt),
+          }))}
+          empty="No gift voucher sales yet."
+        />
+      </section>
       <section className="erp-card"><div className="admin-section-head"><span>Ledger</span><h2>Recent Transactions</h2></div><DataTable columns={[{ key: 'transactionId', label: 'Transaction ID' }, { key: 'customer', label: 'Customer' }, { key: 'amount', label: 'Amount' }, { key: 'paymentStatus', label: 'Payment Status', render: (row) => <StatusPill status={row.paymentStatus} /> }, { key: 'date', label: 'Date' }]} rows={(finance?.recentTransactions || []).map((item) => ({ id: item.transactionId || item.id, ...item, amount: money(item.amount), date: formatDate(item.date || item.createdAt) }))} /></section>
       <section className="finance-analytics-section">
         <div className="admin-section-head"><span></span><h2>Executive Analytics</h2></div>

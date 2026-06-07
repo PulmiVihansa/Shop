@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { store, createId } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
+const { sendAdminEmpty, sendAdminList, sendAdminObject } = require('../utils/adminApiResponse');
 
 const BULK_ORDER_STATUSES = ['Pending', 'Approved', 'Production', 'Completed', 'Cancelled'];
 
@@ -151,16 +152,18 @@ const createCustomerForOrder = async (order, updatedOrderData = {}) => {
 };
 
 const getBulkOrders = async (req, res) => {
+  const endpoint = 'GET /api/bulk-orders';
   try {
     if (global.useMemoryStore) {
-      return res.json(buildDashboard(store.bulkOrderRequests.map(normalizeOrder)));
+      const dashboard = buildDashboard(store.bulkOrderRequests.map(normalizeOrder));
+      return sendAdminObject(res, endpoint, dashboard, dashboard);
     }
 
     const orders = await prisma.bulkOrderRequest.findMany({ orderBy: { createdAt: 'desc' } });
-    return res.json(buildDashboard(orders.map(normalizeOrder)));
+    const dashboard = buildDashboard(orders.map(normalizeOrder));
+    return sendAdminObject(res, endpoint, dashboard, dashboard);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: error.message || 'Unable to load bulk orders' });
+    return sendAdminEmpty(res, endpoint, error);
   }
 };
 
@@ -284,36 +287,42 @@ const deleteBulkOrder = async (req, res) => {
 };
 
 const getBulkCustomers = async (req, res) => {
-  if (global.useMemoryStore) {
-    const orders = store.bulkOrderRequests.map(normalizeOrder);
-    return res.json(store.bulkCustomers.map((customer) => buildCustomerAnalytics(customer, orders)));
+  const endpoint = 'GET /api/bulk-orders/customers';
+  try {
+    if (global.useMemoryStore) {
+      const orders = store.bulkOrderRequests.map(normalizeOrder);
+      const data = store.bulkCustomers.map((customer) => buildCustomerAnalytics(customer, orders));
+      return sendAdminList(res, endpoint, data, { customers: data });
+    }
+
+    const customers = await prisma.bulkCustomer.findMany({
+      include: { orders: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const formatted = customers.map((customer) => {
+      const orders = (customer.orders || []).map(normalizeOrder);
+      const revenue = orders.reduce((sum, order) => sum + Number(order.orderValue || 0), 0);
+      const lastOrder = orders
+        .map((order) => order.createdAt)
+        .filter(Boolean)
+        .sort((left, right) => new Date(right) - new Date(left))[0] || null;
+      const { orders: relatedOrders, ...customerData } = customer;
+
+      return {
+        ...withId(customerData),
+        company: customer.companyName,
+        name: customer.contactPerson,
+        orders: relatedOrders.length,
+        revenue,
+        lastOrder,
+      };
+    });
+
+    return sendAdminList(res, endpoint, formatted, { customers: formatted });
+  } catch (error) {
+    return sendAdminEmpty(res, endpoint, error);
   }
-
-  const customers = await prisma.bulkCustomer.findMany({
-    include: { orders: true },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const formatted = customers.map((customer) => {
-    const orders = (customer.orders || []).map(normalizeOrder);
-    const revenue = orders.reduce((sum, order) => sum + Number(order.orderValue || 0), 0);
-    const lastOrder = orders
-      .map((order) => order.createdAt)
-      .filter(Boolean)
-      .sort((left, right) => new Date(right) - new Date(left))[0] || null;
-    const { orders: relatedOrders, ...customerData } = customer;
-
-    return {
-      ...withId(customerData),
-      company: customer.companyName,
-      name: customer.contactPerson,
-      orders: relatedOrders.length,
-      revenue,
-      lastOrder,
-    };
-  });
-
-  res.json(formatted);
 };
 
 module.exports = { getBulkOrders, createBulkOrderRequest, getBulkCustomers, updateBulkOrder, deleteBulkOrder };

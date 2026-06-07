@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FiArrowRight, FiCheck, FiClipboard, FiHome, FiPackage, FiShield, FiTruck } from 'react-icons/fi';
-import api from '../services/api.js';
+import { FiArrowRight, FiCheck, FiClipboard, FiDownload, FiHome, FiMail, FiPackage, FiShield, FiTruck } from 'react-icons/fi';
+import api, { getErrorMessage } from '../services/api.js';
 import '../styles/order-success.css';
 
 const fallbackOrder = {
@@ -23,6 +23,10 @@ export default function OrderSuccess() {
   const location = useLocation();
   const { state, search } = location;
   const [remoteOrder, setRemoteOrder] = useState(null);
+  const [remoteVoucher, setRemoteVoucher] = useState(null);
+  const [voucherAction, setVoucherAction] = useState('');
+  const [voucherLookupTick, setVoucherLookupTick] = useState(0);
+  const [toast, setToast] = useState('');
   const queryOrderId = useMemo(() => {
     const params = new URLSearchParams(search);
     return params.get('order_id') || params.get('orderId') || '';
@@ -32,6 +36,12 @@ export default function OrderSuccess() {
   const transactionId = order.transactionId || order.payment?.reference || '';
   const items = order.items?.length ? order.items : fallbackOrder.items;
   const total = order.totalAmount ?? order.totalPrice ?? items.reduce((sum, item) => sum + Number(item.price || 0) * (item.quantity || 1), 0);
+  const giftVoucher = remoteVoucher || order.giftVoucher || order.voucher || null;
+
+  const showToast = (message) => {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 2600);
+  };
 
   useEffect(() => {
     if (!queryOrderId || state?.order) return;
@@ -47,6 +57,67 @@ export default function OrderSuccess() {
       active = false;
     };
   }, [queryOrderId, state?.order]);
+
+  useEffect(() => {
+    if (!queryOrderId || giftVoucher || String(order.paymentStatus || order.payment?.status || '').toLowerCase() !== 'paid') return;
+    let active = true;
+    let retryTimer = null;
+    api.get(`/gift-vouchers/order/${encodeURIComponent(queryOrderId)}`)
+      .then((response) => {
+        if (active) setRemoteVoucher(response.data);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRemoteVoucher(null);
+        if (voucherLookupTick < 5) {
+          retryTimer = window.setTimeout(() => setVoucherLookupTick((value) => value + 1), 1800);
+        }
+      });
+    return () => {
+      active = false;
+      if (retryTimer) window.clearTimeout(retryTimer);
+    };
+  }, [giftVoucher, order.payment?.status, order.paymentStatus, queryOrderId, voucherLookupTick]);
+
+  const downloadVoucherPdf = async () => {
+    if (!giftVoucher?.id || voucherAction) {
+      showToast('Please complete voucher payment first.');
+      return;
+    }
+    setVoucherAction('download');
+    try {
+      const response = await api.get(`/gift-vouchers/${encodeURIComponent(giftVoucher.id)}/download`, { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Astravia-${giftVoucher.voucherCode}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+      showToast('Voucher PDF downloaded.');
+    } catch (error) {
+      showToast(getErrorMessage(error));
+    } finally {
+      setVoucherAction('');
+    }
+  };
+
+  const resendVoucherEmail = async () => {
+    if (!giftVoucher?.id || voucherAction) {
+      showToast('Please complete voucher payment first.');
+      return;
+    }
+    setVoucherAction('email');
+    try {
+      await api.post(`/gift-vouchers/${encodeURIComponent(giftVoucher.id)}/email`);
+      showToast('Voucher email sent.');
+    } catch (error) {
+      showToast(getErrorMessage(error));
+    } finally {
+      setVoucherAction('');
+    }
+  };
 
   return (
     <section className="astravia-confirmation-page">
@@ -108,6 +179,24 @@ export default function OrderSuccess() {
               Back Home
             </Link>
           </div>
+
+          {giftVoucher && (
+            <div className="confirmation-voucher-card">
+              <span>Gift Voucher Active</span>
+              <h2>{giftVoucher.voucherCode}</h2>
+              <p>{giftVoucher.recipientName} - {formatPrice(giftVoucher.amount)}</p>
+              <div>
+                <button type="button" onClick={downloadVoucherPdf}>
+                  <FiDownload aria-hidden="true" />
+                  {voucherAction === 'download' ? 'Preparing...' : 'Download PDF'}
+                </button>
+                <button type="button" onClick={resendVoucherEmail}>
+                  <FiMail aria-hidden="true" />
+                  {voucherAction === 'email' ? 'Sending...' : 'Resend Email'}
+                </button>
+              </div>
+            </div>
+          )}
         </main>
 
         <aside className="confirmation-receipt confirmation-animate">
@@ -159,6 +248,7 @@ export default function OrderSuccess() {
           ))}
         </section>
       </div>
+      {toast && <div className="confirmation-toast">{toast}</div>}
     </section>
   );
 }

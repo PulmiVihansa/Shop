@@ -10,6 +10,11 @@ const {
   createTransactionAndInvoice,
 } = require('../services/orderDocumentService');
 const { generateInvoiceForOrder } = require('../services/invoiceService');
+const {
+  fulfillGiftVoucherForOrder,
+  findVoucherByOrderId,
+  normalizeVoucherIntent,
+} = require('../services/giftVoucherService');
 
 const PAYHERE_SANDBOX_URL = 'https://sandbox.payhere.lk/pay/checkout';
 const PAYHERE_PRODUCTION_URL = 'https://www.payhere.lk/pay/checkout';
@@ -101,21 +106,33 @@ const reduceStock = async (items) => {
 
 const buildOrderData = (req, settings) => {
   const items = normalizeItems(req.body);
+  const isVoucherOrder = req.body.orderType === 'voucher' || Boolean(req.body.voucher);
+  const voucherIntent = isVoucherOrder
+    ? normalizeVoucherIntent({
+        ...(req.body.voucher || {}),
+        senderEmail: req.body.voucher?.senderEmail || req.body.customerEmail || req.user?.email,
+      })
+    : null;
   const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
   const shippingCost = Math.max(0, toNumber(req.body.shippingCost, toNumber(req.body.shipping, subtotal > 25000 || subtotal === 0 ? 0 : 650)));
   const totalAmount = Math.max(0, toNumber(req.body.totalAmount, toNumber(req.body.total, subtotal + shippingCost)));
-  const address = req.body.address || {};
+  const address = {
+    ...(req.body.address || {}),
+    ...(voucherIntent ? { giftVoucher: voucherIntent, orderType: 'voucher' } : {}),
+  };
   const customerName = toText(req.body.customerName, toText(address.fullName, toText(req.user?.name, 'Customer')));
-  const customerEmail = toText(req.body.customerEmail, toText(req.user?.email, ''));
+  const customerEmail = toText(req.body.customerEmail, toText(voucherIntent?.senderEmail, toText(req.user?.email, '')));
   const phone = toText(req.body.phone, toText(address.phone, ''));
 
   if (!items.length || !items[0].name) throw new Error('Order must include at least one product');
   if (!customerName || !customerEmail) throw new Error('Customer name and email are required');
+  if (isVoucherOrder && (!voucherIntent || totalAmount !== voucherIntent.amount)) throw new Error('Voucher payment amount is invalid');
   if (!settings.enableOnlinePayment) throw new Error('Online payment is currently disabled');
   if (!settings.merchantId || !settings.merchantSecret) throw new Error('PayHere merchant credentials are not configured');
 
   return {
     items,
+    voucherIntent,
     subtotal,
     shippingCost,
     totalAmount,
@@ -200,6 +217,16 @@ const createPayHerePayment = async (req, res) => {
             items: data.items,
           },
         });
+        await createTransactionAndInvoice(tx, createdOrder, {
+          paymentMethod: 'ONLINE',
+          paymentStatus: 'PENDING',
+          amount: data.totalAmount,
+          subtotal: data.subtotal,
+          shipping: data.shippingCost,
+          grandTotal: data.totalAmount,
+          customer,
+          customerAddress: data.address,
+        });
         return tx.order.findUnique({
           where: { id: createdOrder.id },
           include: { customer: true, user: { select: { id: true, name: true, email: true, customerId: true } }, transaction: true, transactionRecord: true, invoice: true },
@@ -283,6 +310,9 @@ const updateMemoryPayment = async ({ order, paid, failed, providerReference, met
   }
 
   if (paid) {
+    await fulfillGiftVoucherForOrder(order).catch((voucherError) => {
+      console.warn('[voucher] PayHere fulfillment failed', voucherError.message);
+    });
     await generateInvoiceForOrder(order._id, { paymentStatus: 'PAID', sendEmail: true }).catch((invoiceError) => {
       console.warn('[invoice] PayHere email generation failed', invoiceError.message);
     });
@@ -350,6 +380,9 @@ const handlePayHereNotify = async (req, res) => {
           customerAddress: order.address,
         });
       });
+      await fulfillGiftVoucherForOrder(order.id).catch((voucherError) => {
+        console.warn('[voucher] PayHere fulfillment failed', voucherError.message);
+      });
       await generateInvoiceForOrder(order.id, { paymentStatus: 'PAID', sendEmail: true }).catch((invoiceError) => {
         console.warn('[invoice] PayHere email generation failed', invoiceError.message);
       });
@@ -384,7 +417,8 @@ const getPaymentOrder = async (req, res) => {
     if (global.useMemoryStore) {
       const order = store.orders.find((entry) => entry._id === id || entry.id === id || entry.orderId === id);
       if (!order) return res.status(404).json({ message: 'Order not found' });
-      return res.json(normalizeOrder(order));
+      const voucher = await findVoucherByOrderId(order._id || order.id || order.orderId);
+      return res.json({ ...normalizeOrder(order), giftVoucher: voucher });
     }
 
     const order = await prisma.order.findFirst({
@@ -392,7 +426,8 @@ const getPaymentOrder = async (req, res) => {
       include: { customer: true, user: { select: { id: true, name: true, email: true, customerId: true } }, transaction: true, transactionRecord: true, invoice: true },
     });
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    return res.json(normalizeOrder(order));
+    const voucher = await findVoucherByOrderId(order.id);
+    return res.json({ ...normalizeOrder(order), giftVoucher: voucher });
   } catch (error) {
     return res.status(400).json({ message: 'Failed to fetch payment order', error: error.message });
   }

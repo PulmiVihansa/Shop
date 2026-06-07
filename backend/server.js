@@ -88,12 +88,14 @@ app.use(passport.initialize());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), staticCacheOptions));
 app.use('/uploads/invoices', express.static(path.join(__dirname, 'uploads', 'invoices'), staticCacheOptions));
 app.use('/storage/invoices', express.static(path.join(__dirname, 'storage', 'invoices'), staticCacheOptions));
+app.use('/storage/gift-vouchers', express.static(path.join(__dirname, 'storage', 'gift-vouchers'), staticCacheOptions));
 
 // API routes.
 app.use('/api/auth', authRoutes);
 app.use('/api/products', cachePublicRead(120), productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/customers', userRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bulk-orders', bulkOrderRoutes);

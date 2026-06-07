@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { store } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
+const { sendAdminEmpty, sendAdminObject } = require('../utils/adminApiResponse');
 
 const sanitize = (settings) => ({
   paymentProvider: settings.paymentProvider || 'PayHere',
@@ -35,11 +36,12 @@ const getPaymentSettingsDoc = async () => {
 };
 
 const getPaymentSettings = async (req, res) => {
+  const endpoint = 'GET /api/settings/payment';
   try {
     const settings = await getPaymentSettingsDoc();
-    res.json(sanitize(settings));
+    return sendAdminObject(res, endpoint, sanitize(settings));
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch payment settings', error: error.message });
+    return sendAdminEmpty(res, endpoint, error);
   }
 };
 

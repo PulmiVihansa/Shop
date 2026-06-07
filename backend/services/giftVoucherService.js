@@ -1,5 +1,12 @@
 const crypto = require('crypto');
+const fs = require('fs/promises');
+const path = require('path');
 const nodemailer = require('nodemailer');
+const prisma = require('../config/prisma');
+const { store, createId } = require('../data/memoryStore');
+
+const voucherStorageDir = path.join(__dirname, '..', 'storage', 'gift-vouchers');
+const paymentRequiredMessage = 'Please complete voucher payment first.';
 
 const money = (value) => `LKR ${Number(value || 0).toLocaleString('en-US', {
   minimumFractionDigits: 2,
@@ -18,6 +25,10 @@ const cleanText = (value, fallback = '') => {
   if (value === null || value === undefined) return fallback;
   return String(value).trim() || fallback;
 };
+
+const publicVoucherPdfUrl = (voucherCode) => `/storage/gift-vouchers/Astravia-${voucherCode}.pdf`;
+
+const normalizeEmail = (value) => cleanText(value).toLowerCase();
 
 const normalizeVoucher = (payload = {}) => {
   const amount = Math.max(0, Number(payload.amount || 0));
@@ -41,6 +52,30 @@ const normalizeVoucher = (payload = {}) => {
       email: recipientEmail,
       message,
     },
+  };
+};
+
+const normalizeVoucherIntent = (payload = {}) => {
+  const recipient = payload.recipient || {};
+  const amount = Math.max(0, Number(payload.amount || 0));
+  const recipientName = cleanText(recipient.name || payload.recipientName);
+  const recipientEmail = normalizeEmail(recipient.email || payload.recipientEmail);
+  const senderEmail = normalizeEmail(payload.senderEmail || payload.buyerEmail || payload.customerEmail);
+
+  if (!amount) throw new Error('Voucher amount is required');
+  if (!recipientName) throw new Error('Recipient name is required');
+  if (!recipientEmail) throw new Error('Recipient email is required');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) throw new Error('Recipient email is invalid');
+  if (!senderEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) throw new Error('Buyer email is required');
+
+  return {
+    amount,
+    design: cleanText(payload.design, 'Classic Red'),
+    validUntil: cleanText(payload.validUntil, 'One year from purchase'),
+    recipientName,
+    recipientEmail,
+    senderEmail,
+    message: cleanText(recipient.message || payload.message),
   };
 };
 
@@ -246,6 +281,317 @@ const createTransport = () => {
   });
 };
 
+const buildEmailHtml = ({ title, lead, voucher, includeMessage = false }) => `
+  <div style="font-family:Arial,sans-serif;background:#050505;color:#f7f2ea;padding:28px;">
+    <h1 style="margin:0 0 12px;color:#fff;">${escapeHtml(title)}</h1>
+    <p style="color:#ff1f3d;font-size:24px;font-weight:800;">${escapeHtml(money(voucher.amount))}</p>
+    <p>${escapeHtml(lead)}</p>
+    ${includeMessage && voucher.message ? `<p style="padding:14px 0;border-top:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);">${escapeHtml(voucher.message)}</p>` : ''}
+    <p><strong>Voucher code:</strong> ${escapeHtml(voucher.voucherCode)}</p>
+    <p><strong>Recipient:</strong> ${escapeHtml(voucher.recipientName)}</p>
+    <p style="color:#aaa;">Your PDF voucher is attached.</p>
+  </div>
+`;
+
+const sendVoucherPurchaseEmails = async ({ voucher, pdfBuffer, pdfPath }) => {
+  const transporter = createTransport();
+  const from = process.env.VOUCHER_FROM_EMAIL || process.env.SMTP_FROM || `Astravia <${process.env.SMTP_USER || process.env.GMAIL_USER}>`;
+  const attachment = {
+    filename: `Astravia-${voucher.voucherCode}.pdf`,
+    contentType: 'application/pdf',
+    ...(pdfPath ? { path: pdfPath } : { content: pdfBuffer }),
+  };
+
+  const buyerResult = await transporter.sendMail({
+    from,
+    to: voucher.senderEmail,
+    subject: 'Your Astravia Gift Voucher',
+    text: [
+      'Thank you for purchasing an Astravia gift voucher.',
+      `Value: ${money(voucher.amount)}`,
+      `Code: ${voucher.voucherCode}`,
+      `Recipient: ${voucher.recipientName}`,
+      '',
+      'Your PDF voucher is attached.',
+    ].join('\n'),
+    html: buildEmailHtml({
+      title: 'Your Astravia Gift Voucher',
+      lead: 'Thank you for purchasing an Astravia gift voucher.',
+      voucher,
+    }),
+    attachments: [attachment],
+  });
+
+  const recipientResult = await transporter.sendMail({
+    from,
+    to: voucher.recipientEmail,
+    subject: "You've Received an Astravia Gift Voucher",
+    text: [
+      `Hi ${voucher.recipientName},`,
+      '',
+      'You have received an Astravia gift voucher.',
+      voucher.message ? `Message: ${voucher.message}` : '',
+      `Value: ${money(voucher.amount)}`,
+      `Code: ${voucher.voucherCode}`,
+      '',
+      'Your PDF voucher is attached.',
+    ].filter(Boolean).join('\n'),
+    html: buildEmailHtml({
+      title: "You've Received an Astravia Gift Voucher",
+      lead: `Hi ${voucher.recipientName}, you have received an Astravia gift voucher.`,
+      voucher,
+      includeMessage: true,
+    }),
+    attachments: [attachment],
+  });
+
+  return {
+    buyer: { accepted: buyerResult.accepted || [], messageId: buyerResult.messageId },
+    recipient: { accepted: recipientResult.accepted || [], messageId: recipientResult.messageId },
+  };
+};
+
+const orderVoucherIntent = (order = {}) => {
+  const address = order.address || {};
+  const direct = address.giftVoucher || address.voucher || order.giftVoucher || order.voucher;
+  if (direct) return direct;
+  const items = Array.isArray(order.items) ? order.items : [];
+  const voucherItem = items.find((item) => String(item.product || item.productId || '').startsWith('gift-voucher'));
+  if (!voucherItem) return null;
+  return {
+    amount: voucherItem.price,
+    design: String(voucherItem.name || 'Astravia Gift Voucher').replace(/\s*Gift Voucher$/i, '') || 'Classic Red',
+    recipient: voucherItem.recipient || address.recipient || {},
+    senderEmail: order.customerEmail || order.customer?.email || order.user?.email,
+  };
+};
+
+const codeExists = async (code) => {
+  if (global.useMemoryStore) {
+    return (store.giftVouchers || []).some((voucher) => voucher.voucherCode === code);
+  }
+  const rows = await prisma.$queryRaw`SELECT "id" FROM "GiftVoucher" WHERE "voucherCode" = ${code} LIMIT 1`;
+  return rows.length > 0;
+};
+
+const generateUniqueVoucherCode = async () => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const code = `ASTRAVIA-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    if (!(await codeExists(code))) return code;
+  }
+  return `ASTRAVIA-${Date.now().toString(36).toUpperCase()}`;
+};
+
+const toPublicVoucher = (voucher) => {
+  if (!voucher) return null;
+  return {
+    id: voucher.id || voucher._id,
+    _id: voucher.id || voucher._id,
+    voucherCode: voucher.voucherCode,
+    amount: Number(voucher.amount || 0),
+    recipientName: voucher.recipientName,
+    recipientEmail: voucher.recipientEmail,
+    senderEmail: voucher.senderEmail,
+    message: voucher.message || '',
+    status: voucher.status || 'ACTIVE',
+    pdfUrl: voucher.pdfUrl || '',
+    purchasedAt: voucher.purchasedAt || voucher.createdAt,
+    redeemedAt: voucher.redeemedAt || null,
+    orderId: voucher.orderId || '',
+  };
+};
+
+const findVoucherByOrderId = async (orderId) => {
+  if (!orderId) return null;
+  if (global.useMemoryStore) {
+    return toPublicVoucher((store.giftVouchers || []).find((voucher) => String(voucher.orderId || '') === String(orderId)));
+  }
+  const rows = await prisma.$queryRaw`SELECT * FROM "GiftVoucher" WHERE "orderId" = ${orderId} LIMIT 1`;
+  return toPublicVoucher(rows[0]);
+};
+
+const findActiveVoucher = async ({ id, voucherCode }) => {
+  if (global.useMemoryStore) {
+    const voucher = (store.giftVouchers || []).find((entry) => (
+      (id && String(entry._id || entry.id) === String(id)) ||
+      (voucherCode && entry.voucherCode === voucherCode)
+    ));
+    return voucher?.status === 'ACTIVE' ? toPublicVoucher(voucher) : null;
+  }
+  if (id) {
+    const rows = await prisma.$queryRaw`SELECT * FROM "GiftVoucher" WHERE "id" = ${id} AND "status" = 'ACTIVE' LIMIT 1`;
+    return toPublicVoucher(rows[0]);
+  }
+  if (voucherCode) {
+    const rows = await prisma.$queryRaw`SELECT * FROM "GiftVoucher" WHERE "voucherCode" = ${voucherCode} AND "status" = 'ACTIVE' LIMIT 1`;
+    return toPublicVoucher(rows[0]);
+  }
+  return null;
+};
+
+const getAllGiftVoucherSales = async () => {
+  if (global.useMemoryStore) {
+    return (store.giftVouchers || []).map(toPublicVoucher);
+  }
+  try {
+    const rows = await prisma.$queryRaw`SELECT * FROM "GiftVoucher" ORDER BY "purchasedAt" DESC`;
+    return rows.map(toPublicVoucher);
+  } catch (error) {
+    console.error({ endpoint: 'GiftVoucher sales query', table: 'GiftVoucher', error: error.message });
+    return [];
+  }
+};
+
+const getGiftVoucherSalesSummary = async () => {
+  const vouchers = await getAllGiftVoucherSales();
+  const totalAmount = vouchers.reduce((sum, voucher) => sum + Number(voucher.amount || 0), 0);
+  return {
+    totalAmount,
+    totalSales: vouchers.length,
+    activeCount: vouchers.filter((voucher) => voucher.status === 'ACTIVE').length,
+    redeemedCount: vouchers.filter((voucher) => voucher.status === 'REDEEMED' || voucher.redeemedAt).length,
+    vouchers,
+  };
+};
+
+const insertFinanceTransaction = async ({ amount, reference }) => {
+  const transactionId = `FIN-GV-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+  const now = new Date();
+  if (global.useMemoryStore) {
+    store.financeTransactions = store.financeTransactions || [];
+    const transaction = {
+      _id: createId(),
+      transactionId,
+      category: 'Gift Voucher',
+      type: 'Income',
+      amount: Number(amount || 0),
+      status: 'Completed',
+      reference,
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.financeTransactions.unshift(transaction);
+    return transaction;
+  }
+
+  const id = createId();
+  await prisma.$executeRaw`
+    INSERT INTO "FinanceTransaction" ("id", "transactionId", "category", "type", "amount", "status", "reference", "createdAt", "updatedAt")
+    VALUES (${id}, ${transactionId}, 'Gift Voucher', 'Income', ${Number(amount || 0)}, 'Completed', ${reference || ''}, ${now}, ${now})
+    ON CONFLICT ("transactionId") DO NOTHING
+  `;
+  return { id, transactionId, category: 'Gift Voucher', type: 'Income', amount: Number(amount || 0), status: 'Completed', reference };
+};
+
+const saveVoucherPdf = async (voucher) => {
+  const payload = {
+    amount: voucher.amount,
+    code: voucher.voucherCode,
+    design: voucher.design || 'Classic Red',
+    validUntil: voucher.validUntil || 'One year from purchase',
+    recipient: {
+      name: voucher.recipientName,
+      email: voucher.recipientEmail,
+      message: voucher.message,
+    },
+  };
+  const pdfBuffer = await renderVoucherPdf(payload);
+  await fs.mkdir(voucherStorageDir, { recursive: true });
+  const filename = `Astravia-${voucher.voucherCode}.pdf`;
+  const pdfPath = path.join(voucherStorageDir, filename);
+  await fs.writeFile(pdfPath, pdfBuffer);
+  return { pdfBuffer, pdfPath, pdfUrl: publicVoucherPdfUrl(voucher.voucherCode) };
+};
+
+const createGiftVoucherRecord = async ({ voucher, orderId }) => {
+  const now = new Date();
+  if (global.useMemoryStore) {
+    store.giftVouchers = store.giftVouchers || [];
+    const existing = store.giftVouchers.find((entry) => String(entry.orderId || '') === String(orderId));
+    if (existing) return toPublicVoucher(existing);
+    const record = {
+      _id: createId(),
+      ...voucher,
+      status: 'ACTIVE',
+      orderId,
+      purchasedAt: now,
+      redeemedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.giftVouchers.unshift(record);
+    return toPublicVoucher(record);
+  }
+
+  const id = createId();
+  await prisma.$executeRaw`
+    INSERT INTO "GiftVoucher" (
+      "id", "voucherCode", "amount", "recipientName", "recipientEmail", "senderEmail", "message", "status", "pdfUrl", "purchasedAt", "redeemedAt", "orderId", "createdAt", "updatedAt"
+    )
+    VALUES (
+      ${id}, ${voucher.voucherCode}, ${Number(voucher.amount || 0)}, ${voucher.recipientName}, ${voucher.recipientEmail}, ${voucher.senderEmail}, ${voucher.message || ''}, 'ACTIVE', ${voucher.pdfUrl || ''}, ${now}, NULL, ${orderId || null}, ${now}, ${now}
+    )
+    ON CONFLICT ("orderId") DO NOTHING
+  `;
+  return findVoucherByOrderId(orderId);
+};
+
+const fulfillGiftVoucherForOrder = async (orderInput) => {
+  let order = orderInput;
+  if (!order || typeof orderInput === 'string') {
+    if (global.useMemoryStore) {
+      order = store.orders.find((entry) => String(entry._id || entry.id || entry.orderId) === String(orderInput));
+    } else {
+      order = await prisma.order.findFirst({
+        where: { OR: [{ id: String(orderInput) }, { orderId: String(orderInput) }] },
+        include: { customer: true, user: { select: { id: true, name: true, email: true, customerId: true } } },
+      });
+    }
+  }
+
+  if (!order) throw new Error('Voucher order not found');
+  const orderKey = order.id || order._id || order.orderId;
+  const existing = await findVoucherByOrderId(orderKey);
+  if (existing?.status === 'ACTIVE') return existing;
+
+  const intent = orderVoucherIntent(order);
+  if (!intent) return null;
+
+  const normalized = normalizeVoucherIntent({
+    ...intent,
+    senderEmail: intent.senderEmail || order.customerEmail || order.customer?.email || order.user?.email,
+  });
+  const voucherCode = await generateUniqueVoucherCode();
+  const draftVoucher = {
+    ...normalized,
+    voucherCode,
+    status: 'ACTIVE',
+    orderId: orderKey,
+  };
+  const { pdfBuffer, pdfPath, pdfUrl } = await saveVoucherPdf(draftVoucher);
+  const voucher = await createGiftVoucherRecord({ voucher: { ...draftVoucher, pdfUrl }, orderId: orderKey });
+  await insertFinanceTransaction({ amount: voucher.amount, reference: voucher.voucherCode });
+  await sendVoucherPurchaseEmails({ voucher, pdfBuffer, pdfPath });
+  return voucher;
+};
+
+const getVoucherPdf = async (voucher) => {
+  if (!voucher || voucher.status !== 'ACTIVE') throw new Error(paymentRequiredMessage);
+  const localPath = voucher.pdfUrl
+    ? path.join(__dirname, '..', voucher.pdfUrl.replace(/^\//, '').replace(/\//g, path.sep))
+    : path.join(voucherStorageDir, `Astravia-${voucher.voucherCode}.pdf`);
+  try {
+    return await fs.readFile(localPath);
+  } catch {
+    const { pdfBuffer } = await saveVoucherPdf({
+      ...voucher,
+      design: 'Classic Red',
+      validUntil: 'One year from purchase',
+    });
+    return pdfBuffer;
+  }
+};
+
 const sendVoucherEmail = async (payload) => {
   const voucher = normalizeVoucher(payload);
   if (!voucher.recipient.email) throw new Error('Recipient email is required');
@@ -292,7 +638,16 @@ const sendVoucherEmail = async (payload) => {
 };
 
 module.exports = {
+  paymentRequiredMessage,
   normalizeVoucher,
+  normalizeVoucherIntent,
   renderVoucherPdf,
   sendVoucherEmail,
+  sendVoucherPurchaseEmails,
+  fulfillGiftVoucherForOrder,
+  findActiveVoucher,
+  findVoucherByOrderId,
+  getAllGiftVoucherSales,
+  getGiftVoucherSalesSummary,
+  getVoucherPdf,
 };
