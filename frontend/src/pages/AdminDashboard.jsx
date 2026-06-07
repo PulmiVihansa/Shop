@@ -93,32 +93,22 @@ const fetchAdminDashboardData = (expenseFilter, { force = false } = {}) => {
     const orderResult = await fetchOne('orders', () => api.get('/orders'), []);
     const customerResult = await fetchOne('customers', () => api.get('/customers'), []);
     const analyticsResult = await fetchOne('analytics', () => api.get('/analytics'), null);
-    const bulkResult = await fetchOne('bulk-orders', () => api.get('/bulk-orders'), { summary: [], orders: [] });
-    const bulkCustomerResult = await fetchOne('bulk-customers', () => api.get('/bulk-orders/customers'), []);
     const transactionResult = await fetchOne('transactions', () => api.get('/transactions'), []);
     const invoiceResult = await fetchOne('invoices', () => api.get('/invoices', { params: { limit: 1000 } }), { summary: [], invoices: [] });
     const paymentSettingsResult = await fetchOne('payment-settings', () => api.get('/settings/payment'), {});
-    const homepageResult = await fetchOne('homepage', () => api.get('/content/homepage'), null);
-    const bannerResult = await fetchOne('banners', () => api.get('/content/banners'), []);
     const settingsResult = await fetchOne('settings', () => api.get('/settings'), {});
     const salesResult = await fetchOne('sales', () => api.get('/sales/admin'), []);
-    const featuredResult = await fetchOne('featured-products', () => api.get('/featured-products/admin'), []);
 
     const data = {
       productData: unwrapApiArray(productResult),
       orderData: unwrapApiArray(orderResult),
       userData: unwrapApiArray(customerResult),
       analyticsData: unwrapApiObject(analyticsResult, null),
-      bulkData: unwrapApiObject(bulkResult, { summary: [], orders: [] }),
-      bulkCustomerData: unwrapApiArray(bulkCustomerResult),
       transactionData: unwrapApiArray(transactionResult),
       invoiceData: unwrapApiObject(invoiceResult, { summary: [], invoices: [] }),
       paymentSettingsData: unwrapApiObject(paymentSettingsResult),
-      homepageData: unwrapApiObject(homepageResult, null),
-      bannerData: unwrapApiArray(bannerResult),
       settingsData: unwrapApiObject(settingsResult),
       salesData: unwrapApiArray(salesResult),
-      featuredData: unwrapApiArray(featuredResult),
     };
 
     adminBaseDataCache.data = data;
@@ -277,11 +267,6 @@ const emptySaleForm = () => ({
   endDate: todayInputValue(),
   isActive: true,
 });
-const emptyFeaturedForm = () => ({
-  productId: '',
-  displayOrder: 0,
-  isActive: true,
-});
 const toInputDate = (value) => {
   if (!value) return todayInputValue();
   const date = new Date(value);
@@ -298,11 +283,8 @@ const menuItems = [
   'Inventory',
   'Finance',
   'Analytics',
-  'Marketing',
-  'Bulk Orders',
   'Transactions',
   'Invoices',
-  'CMS',
   'Settings',
 ];
 
@@ -664,133 +646,6 @@ function StatusPill({ status }) {
   return <span className={`erp-status ${String(status || '').toLowerCase().replace(/\s+/g, '-')}`}>{status}</span>;
 }
 
-const BULK_ORDER_STATUSES = ['Pending', 'Approved', 'Production', 'Completed', 'Cancelled'];
-
-const BULK_ORDER_STATUS_META = {
-  Pending: { className: 'bulk-status-pending', label: 'Pending', note: 'Awaiting review' },
-  Approved: { className: 'bulk-status-approved', label: 'Approved', note: 'Confirmed by sales' },
-  Production: { className: 'bulk-status-production', label: 'Production', note: 'In manufacturing' },
-  Completed: { className: 'bulk-status-completed', label: 'Completed', note: 'Delivered and closed' },
-  Cancelled: { className: 'bulk-status-cancelled', label: 'Cancelled', note: 'Removed from pipeline' },
-};
-
-const normalizeBulkStatus = (status) => (BULK_ORDER_STATUSES.includes(status) ? status : 'Pending');
-
-const getBulkStatusMeta = (status) => BULK_ORDER_STATUS_META[normalizeBulkStatus(status)];
-
-const getBulkCompany = (order = {}) => order.companyName || order.company || '-';
-const getBulkProducts = (order = {}) => {
-  if (Array.isArray(order.products) && order.products.length) return order.products;
-  if (Array.isArray(order.requestedProducts) && order.requestedProducts.length) return order.requestedProducts;
-  return String(order.products || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-const getBulkOrderValue = (order = {}) => Number(order.orderValue ?? order.budget ?? 0);
-const getBulkDate = (order = {}) => order.createdAt || order.date || order.updatedAt || '';
-
-const buildBulkMonthlyRevenue = (orders = []) => {
-  const revenueByMonth = new Map();
-
-  orders.forEach((order) => {
-    const date = new Date(getBulkDate(order) || Date.now());
-    if (Number.isNaN(date.getTime())) return;
-    const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
-    const label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    const existing = revenueByMonth.get(key) || { key, label, revenue: 0 };
-    existing.revenue += getBulkOrderValue(order);
-    revenueByMonth.set(key, existing);
-  });
-
-  return Array.from(revenueByMonth.values()).sort((left, right) => left.key.localeCompare(right.key));
-};
-
-const buildBulkStatusMix = (orders = []) => BULK_ORDER_STATUSES.map((status) => ({
-  label: status,
-  value: orders.filter((order) => normalizeBulkStatus(order.status) === status).length,
-})).filter((item) => item.value > 0);
-
-const buildTopWholesaleClients = (orders = []) => {
-  const byCompany = new Map();
-
-  orders.forEach((order) => {
-    const company = String(getBulkCompany(order) || 'Unknown Client').trim() || 'Unknown Client';
-    const current = byCompany.get(company) || {
-      id: company,
-      company,
-      contactPerson: order.contactPerson || '-',
-      email: order.email || '',
-      orders: 0,
-      quantity: 0,
-      revenue: 0,
-      lastOrder: '',
-    };
-
-    current.orders += 1;
-    current.quantity += Number(order.quantity || 0);
-    current.revenue += getBulkOrderValue(order);
-    current.contactPerson = current.contactPerson === '-' ? (order.contactPerson || '-') : current.contactPerson;
-    current.email = current.email || order.email || '';
-
-    const orderDate = getBulkDate(order);
-    if (!current.lastOrder || String(orderDate) > String(current.lastOrder)) {
-      current.lastOrder = orderDate;
-    }
-
-    byCompany.set(company, current);
-  });
-
-  return Array.from(byCompany.values())
-    .sort((left, right) => right.revenue - left.revenue)
-    .slice(0, 5)
-    .map((item) => ({
-      ...item,
-      initials: getInitials(item.company, item.email),
-      avgOrder: item.orders ? item.revenue / item.orders : 0,
-    }));
-};
-
-const buildBulkCustomerRecords = (customers = []) => {
-  return customers
-    .map((customer) => {
-      const company = customer.companyName || customer.company || '-';
-      const stats = {
-        orders: Number(customer.orders || 0),
-        revenue: Number(customer.revenue || 0),
-      };
-      const lastOrder = customer.lastOrder || '';
-      const status = stats.revenue >= 2000000 || Number(customer.discount || 0) >= 15
-        ? 'VIP'
-        : stats.orders > 0
-          ? 'Active'
-          : 'Inactive';
-
-      return {
-        id: customer.id || customer._id,
-        name: customer.contactPerson || customer.name || '-',
-        company,
-        contactPerson: customer.contactPerson || customer.name || '-',
-        phone: customer.phone || '-',
-        email: customer.email || '-',
-        discount: Number(customer.discount || 0),
-        orders: stats.orders,
-        revenue: stats.revenue,
-        lastOrder,
-        status,
-        notes: customer.notes || '',
-        initials: getInitials(company, customer.email),
-      };
-    })
-    .sort((left, right) => right.revenue - left.revenue || right.orders - left.orders);
-};
-
-const bulkCustomerStatusClass = {
-  VIP: 'bulk-customer-vip',
-  Active: 'bulk-customer-active',
-  Inactive: 'bulk-customer-inactive',
-};
-
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -800,16 +655,9 @@ export default function AdminDashboard() {
   const [customers, setCustomers] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [finance, setFinance] = useState(null);
-  const [bulkOrders, setBulkOrders] = useState({ summary: [], orders: [] });
   const [transactions, setTransactions] = useState([]);
   const [invoices, setInvoices] = useState({ summary: [], invoices: [] });
-  const [bulkCustomers, setBulkCustomers] = useState([]);
   const [saleCampaigns, setSaleCampaigns] = useState([]);
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [homepageContent, setHomepageContent] = useState(null);
-  const [banners, setBanners] = useState([]);
-  const [pageEditor, setPageEditor] = useState({ pageName: 'about', content: '' });
-  const [bannerForm, setBannerForm] = useState({ title: '', imageUrl: '', link: '', isActive: true });
   const [settings, setSettings] = useState({
     paymentProvider: 'PayHere',
     merchantId: '',
@@ -822,7 +670,6 @@ export default function AdminDashboard() {
   });
   const [productForm, setProductForm] = useState(makeEmptyProduct);
   const [saleForm, setSaleForm] = useState(emptySaleForm);
-  const [featuredForm, setFeaturedForm] = useState(emptyFeaturedForm);
   const [expenseForm, setExpenseForm] = useState(emptyExpense);
   const [expenseFilter, setExpenseFilter] = useState('all');
   const [dashboardRange, setDashboardRange] = useState('30d');
@@ -840,15 +687,12 @@ export default function AdminDashboard() {
   });
   const [editingId, setEditingId] = useState(null);
   const [editingSaleId, setEditingSaleId] = useState(null);
-  const [editingFeaturedId, setEditingFeaturedId] = useState(null);
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedExpense, setSelectedExpense] = useState(null);
-  const [selectedBulkOrder, setSelectedBulkOrder] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [emailComposer, setEmailComposer] = useState(null);
-  const [selectedBulkCustomer, setSelectedBulkCustomer] = useState(null);
   const [invoiceFilters, setInvoiceFilters] = useState({ search: '', status: 'all', sort: 'desc', page: 1, pageSize: 8 });
   const [invoiceActionId, setInvoiceActionId] = useState('');
   const [settingsSearch, setSettingsSearch] = useState('');
@@ -862,8 +706,6 @@ export default function AdminDashboard() {
     setSelectedCustomer(null);
     setSelectedOrder(null);
     setSelectedExpense(null);
-    setSelectedBulkOrder(null);
-    setSelectedBulkCustomer(null);
     setSelectedInvoice(null);
     setEmailComposer(null);
     setProductPreview(null);
@@ -881,16 +723,11 @@ export default function AdminDashboard() {
       userData,
       analyticsData,
       financeData,
-      bulkData,
-      bulkCustomerData,
       transactionData,
       invoiceData,
       paymentSettingsData,
-      homepageData,
-      bannerData,
       settingsData,
       salesData,
-      featuredData,
     } = await fetchAdminDashboardData(expenseFilter, { force });
 
     if (!mountedRef.current) return;
@@ -900,15 +737,10 @@ export default function AdminDashboard() {
     setCustomers(Array.isArray(userData) ? userData : []);
     setAnalytics(analyticsData);
     setFinance(financeData);
-    setBulkOrders(bulkData || { summary: [], orders: [] });
-    setBulkCustomers(Array.isArray(bulkCustomerData) ? bulkCustomerData : []);
     setTransactions(Array.isArray(transactionData) ? transactionData : []);
     setInvoices(invoiceData || { summary: [], invoices: [] });
     setSettings((prev) => ({ ...prev, ...settingsData, ...paymentSettingsData, merchantSecret: '' }));
-    setHomepageContent(homepageData);
-    setBanners(Array.isArray(bannerData) ? bannerData : []);
     setSaleCampaigns(Array.isArray(salesData) ? salesData : []);
-    setFeaturedProducts(Array.isArray(featuredData) ? featuredData : []);
   }, [expenseFilter]);
 
   useEffect(() => {
@@ -940,7 +772,7 @@ export default function AdminDashboard() {
         });
       });
     });
-  }, [active, products, orders, customers, finance, bulkOrders, transactions, invoices, bulkCustomers, saleCampaigns, featuredProducts]);
+  }, [active, products, orders, customers, finance, transactions, invoices, saleCampaigns]);
 
   useEffect(() => {
     if (!message) return;
@@ -1016,26 +848,6 @@ export default function AdminDashboard() {
   const collectionMix = finance?.revenueByCollection || [];
   const bestSellingSizes = useMemo(() => buildSizePerformance(orders), [orders]);
   const topCustomers = useMemo(() => buildTopCustomers(orders), [orders]);
-  const bulkOrderRecords = bulkOrders?.orders || [];
-  const bulkPipelineSummary = useMemo(() => {
-    const totalBudget = bulkOrderRecords.reduce((sum, order) => sum + getBulkOrderValue(order), 0);
-
-    return BULK_ORDER_STATUSES.map((status) => {
-      const items = bulkOrderRecords.filter((order) => normalizeBulkStatus(order.status) === status);
-      const revenue = items.reduce((sum, order) => sum + getBulkOrderValue(order), 0);
-      return {
-        ...getBulkStatusMeta(status),
-        status,
-        count: items.length,
-        revenue,
-        share: totalBudget ? Math.round((revenue / totalBudget) * 100) : 0,
-      };
-    });
-  }, [bulkOrderRecords]);
-  const bulkAverageOrderValue = useMemo(() => {
-    const totalBudget = bulkOrderRecords.reduce((sum, order) => sum + getBulkOrderValue(order), 0);
-    return bulkOrderRecords.length ? totalBudget / bulkOrderRecords.length : 0;
-  }, [bulkOrderRecords]);
   const invoiceRecords = useMemo(() => invoices?.invoices || [], [invoices]);
   const filteredInvoices = useMemo(() => {
     const search = invoiceFilters.search.trim().toLowerCase();
@@ -1064,122 +876,6 @@ export default function AdminDashboard() {
     const start = (invoicePage - 1) * invoiceFilters.pageSize;
     return filteredInvoices.slice(start, start + invoiceFilters.pageSize);
   }, [filteredInvoices, invoiceFilters.pageSize, invoicePage]);
-  const bulkMonthlyRevenue = useMemo(() => buildBulkMonthlyRevenue(bulkOrderRecords), [bulkOrderRecords]);
-  const bulkStatusMix = useMemo(() => buildBulkStatusMix(bulkOrderRecords), [bulkOrderRecords]);
-  const topWholesaleClients = useMemo(() => buildTopWholesaleClients(bulkOrderRecords), [bulkOrderRecords]);
-  const topKpiCards = useMemo(() => {
-    const pending = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Pending').length;
-    const approved = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Approved').length;
-    const production = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Production').length;
-    const completed = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Completed').length;
-    const cancelled = bulkOrderRecords.filter((o) => normalizeBulkStatus(o.status) === 'Cancelled').length;
-    const totalRevenue = bulkOrderRecords.reduce((sum, o) => sum + getBulkOrderValue(o), 0);
-
-    // map status->share from bulkPipelineSummary if available
-    const shareMap = (bulkPipelineSummary || []).reduce((acc, s) => { acc[s.status] = s.share || 0; return acc; }, {});
-
-    // revenue trend: compare last two months in bulkMonthlyRevenue
-    let revenueTrend = 0;
-    if ((bulkMonthlyRevenue || []).length >= 2) {
-      const last = bulkMonthlyRevenue[bulkMonthlyRevenue.length - 1].revenue || 0;
-      const prev = bulkMonthlyRevenue[bulkMonthlyRevenue.length - 2].revenue || 0;
-      revenueTrend = prev ? Math.round(((last - prev) / Math.abs(prev)) * 100) : 0;
-    }
-
-    const make = (label, val, className, trend) => ({ label, value: val, className, trend });
-
-    return [
-      make('Pending Requests', pending, 'bulk-kpi-pending', shareMap['Pending'] || 0),
-      make('Approved Orders', approved, 'bulk-kpi-approved', shareMap['Approved'] || 0),
-      make('Production Orders', production, 'bulk-kpi-production', shareMap['Production'] || 0),
-      make('Completed Orders', completed, 'bulk-kpi-completed', shareMap['Completed'] || 0),
-      make('Cancelled Orders', cancelled, 'bulk-kpi-cancelled', shareMap['Cancelled'] || 0),
-      make('Bulk Revenue', compactMoney(totalRevenue), 'bulk-kpi-revenue', revenueTrend),
-    ];
-  }, [bulkOrderRecords, bulkPipelineSummary, bulkMonthlyRevenue]);
-
-  const showBulkStatusToast = (messages) => {
-    const list = Array.isArray(messages) && messages.length ? messages : ['Status updated successfully'];
-    list.slice(0, 3).forEach((item) => {
-      const text = String(item || '').replace(/^\\?\s*/, '').trim();
-      toast.success(text || 'Status updated successfully');
-    });
-  };
-
-  const updateBulkOrderPipeline = async (orderId, status) => {
-    setError('');
-    setMessage('');
-    try {
-      const response = await api.put(`/bulk-orders/${orderId}/status`, { status });
-      const updatedOrder = response.data.order || response.data;
-      setBulkOrders((prev) => ({
-        ...prev,
-        orders: (prev.orders || []).map((order) => (order.id === orderId ? updatedOrder : order)),
-      }));
-      if ((selectedBulkOrder?.id || '') === orderId) {
-        setSelectedBulkOrder(updatedOrder);
-      }
-      if (status === 'Approved') {
-        const customersRes = await api.get('/bulk-orders/customers');
-        setBulkCustomers(unwrapApiArray(customersRes.data));
-      }
-      showBulkStatusToast((response.data.messages || []).map((item) => `? ${item}`));
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  };
-
-  const deleteBulkOrder = async (orderId) => {
-    const confirmed = window.confirm('Delete this bulk order request?');
-    if (!confirmed) return;
-
-    setError('');
-    setMessage('');
-    try {
-      await api.delete(`/bulk-orders/${orderId}`);
-      setBulkOrders((prev) => ({
-        ...prev,
-        orders: (prev.orders || []).filter((order) => order.id !== orderId),
-      }));
-      if ((selectedBulkOrder?.id || '') === orderId) {
-        setSelectedBulkOrder(null);
-      }
-      const customersRes = await api.get('/bulk-orders/customers');
-      setBulkCustomers(unwrapApiArray(customersRes.data));
-      showBulkStatusToast(['? Bulk order deleted']);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  };
-
-    // Premium custom status selector component
-    function StatusSelector({ order }) {
-      const [open, setOpen] = useState(false);
-      const current = normalizeBulkStatus(order.status);
-      const statusMeta = getBulkStatusMeta(order.status);
-
-      const toggle = (e) => { e.stopPropagation && e.stopPropagation(); setOpen((v) => !v); };
-      const choose = async (e, s) => { e.stopPropagation && e.stopPropagation(); await updateBulkOrderPipeline(order.id, s); setOpen(false); };
-
-      return (
-        <div className="custom-status-selector" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className={`status-btn ${statusMeta.className}`} onClick={toggle} aria-haspopup="listbox" aria-expanded={open}>
-            <span className="status-label">{current}</span>
-            <span className="status-caret">▾</span>
-          </button>
-          {open && (
-            <ul className="status-menu" role="listbox">
-              {BULK_ORDER_STATUSES.map((s) => (
-                <li key={s} role="option" aria-selected={s === current} className={`status-option ${s === current ? 'active' : ''}`} onClick={(e) => choose(e, s)}>
-                  <span className="status-label">{s}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      );
-    }
-
   const productReviews = parseReviewList(productForm.reviews);
   const productReviewStats = getReviewStats(productReviews);
   const productMetaKeywords = [productForm.name, productForm.category, 'Men'].filter(Boolean);
@@ -1441,63 +1137,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const submitFeaturedProduct = async (event) => {
-    event.preventDefault();
-    setError('');
-    setMessage('');
-    try {
-      if (editingFeaturedId) {
-        await api.put(`/featured-products/${editingFeaturedId}`, featuredForm);
-        setMessage('Featured product updated');
-      } else {
-        await api.post('/featured-products', featuredForm);
-        setMessage('Featured product saved');
-      }
-      setFeaturedForm(emptyFeaturedForm());
-      setEditingFeaturedId(null);
-      await loadAdminData();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  };
-
-  const editFeaturedProduct = (featured) => {
-    changeAdminSection('Marketing');
-    setEditingFeaturedId(featured.id || featured._id);
-    setFeaturedForm({
-      productId: featured.productId || featured.product?.id || featured.product?._id || '',
-      displayOrder: Number(featured.displayOrder || 0),
-      isActive: Boolean(featured.isActive),
-    });
-  };
-
-  const deleteFeaturedProduct = async (id) => {
-    setError('');
-    setMessage('');
-    try {
-      await api.delete(`/featured-products/${id}`);
-      if (editingFeaturedId === id) {
-        setEditingFeaturedId(null);
-        setFeaturedForm(emptyFeaturedForm());
-      }
-      setMessage('Featured product removed');
-      await loadAdminData();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  };
-
-  const toggleFeaturedProduct = async (featured) => {
-    const id = featured.id || featured._id;
-    try {
-      await api.put(`/featured-products/${id}`, { ...featured, isActive: !featured.isActive });
-      setMessage(featured.isActive ? 'Featured product disabled' : 'Featured product enabled');
-      await loadAdminData();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  };
-
   const updateStatus = async (id, status) => {
     try {
       const response = await api.put(`/orders/${id}/status`, { status });
@@ -1686,52 +1325,6 @@ export default function AdminDashboard() {
   const handleSettingsSubmit = async (event, sectionId) => {
     event.preventDefault();
     await saveSettingsSection(sectionId);
-  };
-
-  const saveHomepage = async (event) => {
-    event.preventDefault();
-    const response = await api.put('/content/homepage', homepageContent);
-    setHomepageContent(response.data);
-    setMessage('Homepage content saved');
-  };
-
-  const uploadCmsImage = async (file, callback) => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const response = await api.post('/content/upload', { image: reader.result });
-      callback(response.data.url);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const saveBanner = async (event) => {
-    event.preventDefault();
-    await api.post('/content/banners', bannerForm);
-    setBannerForm({ title: '', imageUrl: '', link: '', isActive: true });
-    await loadAdminData();
-    setMessage('Banner saved');
-  };
-
-  const toggleBanner = async (banner) => {
-    await api.put(`/content/banners/${banner._id}`, { ...banner, isActive: !banner.isActive });
-    await loadAdminData();
-  };
-
-  const deleteBanner = async (id) => {
-    await api.delete(`/content/banners/${id}`);
-    await loadAdminData();
-  };
-
-  const loadPageContent = async (pageName) => {
-    const response = await api.get(`/content/page/${pageName}`);
-    setPageEditor({ pageName, content: response.data.content || '' });
-  };
-
-  const savePageContent = async (event) => {
-    event.preventDefault();
-    const response = await api.put(`/content/page/${pageEditor.pageName}`, { content: pageEditor.content });
-    setPageEditor({ pageName: response.data.pageName, content: response.data.content || '' });
-    setMessage('Page content saved');
   };
 
   const filteredProducts = useMemo(() => {
@@ -2572,54 +2165,6 @@ export default function AdminDashboard() {
     </>
   );
 
-  const renderMarketing = () => (
-    <>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Marketing</span><h2>Featured Products</h2></div>
-        <form className="admin-form compact admin-featured-form" onSubmit={submitFeaturedProduct}>
-          <label>
-            Product
-            <select value={featuredForm.productId} onChange={(e) => setFeaturedForm((prev) => ({ ...prev, productId: e.target.value }))} required>
-              <option value="">Select product</option>
-              {products.map((product) => (
-                <option key={product.id || product._id} value={product.id || product._id}>{product.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>Display Order<input type="number" min="0" value={featuredForm.displayOrder} onChange={(e) => setFeaturedForm((prev) => ({ ...prev, displayOrder: e.target.value }))} /></label>
-          <label className="admin-check"><input type="checkbox" checked={featuredForm.isActive} onChange={(e) => setFeaturedForm((prev) => ({ ...prev, isActive: e.target.checked }))} /> Featured On Home</label>
-          <button className="admin-primary" type="submit">{editingFeaturedId ? 'Update Featured Product' : 'Save Featured Product'}</button>
-        </form>
-      </section>
-
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Home Display</span><h2>Featured Product Order</h2></div>
-        <DataTable
-          empty="No featured products selected."
-          columns={[
-            { key: 'image', label: 'Image', render: (row) => <div className="admin-mini-image">{row.image ? <img src={resolveImageUrl(row.image)} alt={row.productName} /> : <span>No Image</span>}</div> },
-            { key: 'productName', label: 'Product' },
-            { key: 'category', label: 'Category' },
-            { key: 'price', label: 'Price' },
-            { key: 'displayOrder', label: 'Display Order' },
-            { key: 'isActive', label: 'Enabled' },
-            { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button onClick={() => editFeaturedProduct(row.raw)}>Edit</button><button onClick={() => toggleFeaturedProduct(row.raw)}>{row.raw.isActive ? 'Disable' : 'Enable'}</button><button onClick={() => deleteFeaturedProduct(row.id)}>Remove</button></div> },
-          ]}
-          rows={featuredProducts.map((featured) => ({
-            id: featured.id || featured._id,
-            raw: featured,
-            image: resolveImageUrl(featured.image || featured.product?.images?.[0] || ''),
-            productName: featured.productName || featured.product?.name || '-',
-            category: featured.category || featured.product?.category || '-',
-            price: money(featured.price || featured.product?.price),
-            displayOrder: featured.displayOrder,
-            isActive: featured.isActive ? 'Yes' : 'No',
-          }))}
-        />
-      </section>
-    </>
-  );
-
   const renderOrders = () => (
     <>
       <div className="admin-order-metrics">
@@ -3052,233 +2597,6 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const renderBulkOrders = () => (
-    <div className="erp-page bulk-dashboard">
-      
-        
-        <div className="bulk-hero-grid">
-          <div>
-            <div className="top-kpi-grid">
-              {topKpiCards.map((card) => (
-                <article key={card.label} className={`premium-metric-card bulk-kpi-card ${card.className}`}>
-                  <span>{card.label}</span>
-                  <strong>{card.value}</strong>
-                  {typeof card.trend !== 'undefined' && (
-                    <small className={`bulk-kpi-trend ${card.trend >= 0 ? 'up' : 'down'}`}>{card.trend >= 0 ? 'Up' : 'Down'} {Math.abs(card.trend)}%</small>
-                  )}
-                </article>
-              ))}
-            </div>
-            {/* pipeline badges removed per design — kept data and charts elsewhere */}
-          </div>
-        </div>
-      
-
-      <section className="erp-card bulk-orders-table-card">
-        <div className="admin-section-head">
-          <span></span>
-          <h2>Bulk Orders</h2>
-        </div>
-        <div className="admin-table-wrap">
-          <table className="admin-table erp-click-table bulk-orders-table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Contact Person</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Quantity</th>
-                <th>Order Value</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bulkOrderRecords.map((order) => {
-                const email = order.email || '-';
-                return (
-                  <tr key={order.id} onClick={() => setSelectedBulkOrder(order)}>
-                    <td>
-                      <div className="bulk-client-cell">
-                        <span className="bulk-client-avatar">{getInitials(getBulkCompany(order), order.email)}</span>
-                        <div>
-                          <strong>{getBulkCompany(order)}</strong>
-                          <p>{getBulkProducts(order).join(' · ') || 'Custom wholesale order'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <strong>{order.contactPerson}</strong>
-                    </td>
-                    <td className="bulk-email-cell" title={email}>
-                      <span className="bulk-email-text">{email}</span>
-                    </td>
-                    <td>{order.phone || '-'}</td>
-                    <td>{order.quantity}</td>
-                    <td>{money(getBulkOrderValue(order))}</td>
-                    <td>
-                      <StatusSelector order={order} />
-                    </td>
-                    <td>{formatDate(getBulkDate(order))}</td>
-                    <td>
-                      <div className="bulk-row-actions">
-                        <button className="admin-action admin-action-open" type="button" title="View details" onClick={(event) => { event.stopPropagation(); setSelectedBulkOrder(order); }}>
-                          View Details
-                        </button>
-                        <button className="admin-action bulk-action-delete" type="button" title="Delete request" onClick={(event) => { event.stopPropagation(); deleteBulkOrder(order.id); }}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="erp-card bulk-table-card">
-        <div className="admin-section-head"><span>Wholesale CRM</span><h2>Bulk Customer Records</h2></div>
-        <DataTable
-          columns={[
-            { key: 'company', label: 'Company' },
-            { key: 'contactPerson', label: 'Contact Person' },
-            {
-              key: 'email',
-              label: 'Email',
-              className: 'bulk-data-email',
-              render: (row) => <span className="bulk-email-text" title={row.email}>{row.email}</span>,
-            },
-            { key: 'phone', label: 'Phone' },
-            { key: 'orders', label: 'Orders' },
-            { key: 'revenue', label: 'Revenue' },
-            { key: 'lastOrder', label: 'Last Order' },
-            { key: 'actions', label: 'Actions', render: (row) => (
-              <div className="admin-actions">
-                <button className="admin-action admin-action-open" onClick={() => setSelectedBulkCustomer(row)}>View</button>
-              </div>
-            ) },
-          ]}
-          rows={buildBulkCustomerRecords(bulkCustomers || []).map((customer) => ({
-            id: customer.id || `${customer.email}-${customer.company}`,
-            company: customer.company,
-            contactPerson: customer.contactPerson,
-            email: customer.email,
-            phone: customer.phone,
-            orders: customer.orders,
-            revenue: compactMoney(customer.revenue),
-            lastOrder: formatDate(customer.lastOrder),
-            notes: customer.notes || '',
-          }))}
-          empty="No wholesale customer records yet."
-        />
-      </section>
-
-      {selectedBulkCustomer && (
-        <aside
-          className="erp-drawer bulk-customer-drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="bulk-customer-title"
-          aria-describedby="bulk-customer-description"
-          onKeyDown={(e) => { if (e.key === 'Escape') setSelectedBulkCustomer(null); }}
-        >
-          <button className="admin-close" onClick={() => setSelectedBulkCustomer(null)}>Close</button>
-          <h3 id="bulk-customer-title">{selectedBulkCustomer.company}</h3>
-          <span id="bulk-customer-description" className="sr-only">{selectedBulkCustomer.email}</span>
-          <p>{selectedBulkCustomer.company} · {selectedBulkCustomer.email}</p>
-          <div className="erp-detail-grid">
-            <span>Phone<strong>{selectedBulkCustomer.phone}</strong></span>
-            <span>Orders<strong>{selectedBulkCustomer.orders}</strong></span>
-            <span>Revenue<strong>{selectedBulkCustomer.revenue}</strong></span>
-            <span>Last Order<strong>{selectedBulkCustomer.lastOrder}</strong></span>
-          </div>
-          <h4>Notes</h4>
-          <p>{selectedBulkCustomer.notes || 'No notes available.'}</p>
-        </aside>
-      )}
-
-      <section className="finance-analytics-section">
-        <div className="admin-section-head">
-          <span>Wholesale Analytics</span>
-          
-        </div>
-        <div className="finance-chart-suite bulk-chart-suite">
-          <section className="erp-card glass finance-chart-card finance-line-card bulk-chart-card">
-            <div className="admin-section-head"><span>Revenue Analytics</span><h2>Monthly Bulk Revenue</h2></div>
-            <PremiumLineChart data={bulkMonthlyRevenue} valueKey="revenue" tone="revenue" />
-          </section>
-          <section className="erp-card finance-chart-card bulk-chart-card">
-            <div className="admin-section-head"><span>Order Pipeline</span><h2>Orders by Status</h2></div>
-            <PremiumDonutChart data={bulkStatusMix} />
-          </section>
-        </div>
-      </section>
-
-      
-
-      <section className="erp-card bulk-table-card">
-        <div className="admin-section-head"><span>Key Accounts</span><h2>Top Wholesale Clients</h2></div>
-        <DataTable
-          columns={[
-            {
-              key: 'company',
-              label: 'Client',
-              render: (row) => (
-                <div className="analytics-customer-cell bulk-client-cell">
-                  <span className="bulk-client-avatar">{row.initials}</span>
-                  <div>
-                    <strong>{row.company}</strong>
-                    <p>{row.contactPerson}</p>
-                  </div>
-                </div>
-              ),
-            },
-            { key: 'orders', label: 'Orders' },
-            { key: 'quantity', label: 'Quantity' },
-            { key: 'revenue', label: 'Revenue' },
-            { key: 'avgOrder', label: 'Avg. Order' },
-            { key: 'lastOrder', label: 'Last Order' },
-          ]}
-          rows={topWholesaleClients.map((client) => ({
-            id: client.id,
-            ...client,
-            revenue: compactMoney(client.revenue),
-            avgOrder: compactMoney(client.avgOrder),
-            lastOrder: formatDate(client.lastOrder),
-          }))}
-          empty="No wholesale clients yet."
-        />
-      </section>
-
-      {selectedBulkOrder && (
-        <aside className="erp-drawer bulk-drawer">
-          <button className="admin-close" onClick={() => setSelectedBulkOrder(null)}>Close</button>
-          <h3>{getBulkCompany(selectedBulkOrder)}</h3>
-          <p>{selectedBulkOrder.contactPerson} · {selectedBulkOrder.email}</p>
-          <div className="erp-detail-grid">
-            <span>Phone<strong>{selectedBulkOrder.phone}</strong></span>
-            <span>Email<strong>{selectedBulkOrder.email}</strong></span>
-            <span>Quantity<strong>{selectedBulkOrder.quantity}</strong></span>
-            <span>Order Value<strong>{money(getBulkOrderValue(selectedBulkOrder))}</strong></span>
-            <span>Created Date<strong>{formatDate(getBulkDate(selectedBulkOrder))}</strong></span>
-            <span>Status<strong>{normalizeBulkStatus(selectedBulkOrder.status)}</strong></span>
-          </div>
-          <div className="bulk-drawer-status">
-            <span>Pipeline Status</span>
-            <StatusSelector order={selectedBulkOrder} />
-          </div>
-          <h4>Products</h4>
-          <p>{getBulkProducts(selectedBulkOrder).join(', ') || 'No products supplied.'}</p>
-          <h4>Message</h4>
-          <p>{selectedBulkOrder.message || selectedBulkOrder.notes || 'No message supplied.'}</p>
-        </aside>
-      )}
-    </div>
-  );
-
   const renderTransactions = () => (
     <div className="erp-page">
       <section className="erp-card">
@@ -3532,70 +2850,6 @@ export default function AdminDashboard() {
       </div>
     );
   };
-
-  const renderCMS = () => (
-    <>
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Homepage</span><h2>Homepage Editor</h2></div>
-        {homepageContent && (
-          <form className="admin-form" onSubmit={saveHomepage}>
-            <label>Hero Title<textarea value={homepageContent.heroTitle || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, heroTitle: e.target.value }))} /></label>
-            <label>Hero Subtitle<textarea value={homepageContent.heroSubtitle || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, heroSubtitle: e.target.value }))} /></label>
-            <label>Button Text<input value={homepageContent.buttonText || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, buttonText: e.target.value }))} /></label>
-            <label>Button Link<input value={homepageContent.buttonLink || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, buttonLink: e.target.value }))} /></label>
-            <label>Section Title<input value={homepageContent.section2Title || ''} onChange={(e) => setHomepageContent((prev) => ({ ...prev, section2Title: e.target.value }))} /></label>
-            <label>Featured Categories<input value={(homepageContent.featuredCategories || []).join(', ')} onChange={(e) => setHomepageContent((prev) => ({ ...prev, featuredCategories: (e.target.value || '').split(',').map((item) => item.trim()).filter(Boolean) }))} /></label>
-            <div className="admin-image-manager">
-              <div className="admin-image-head"><span>Hero Images</span></div>
-              <div className="admin-image-list">
-                {[
-                  ['heroImage', 'Primary hero image'],
-                  ['heroImageSecondary', 'Secondary hero image'],
-                  ['section2Image', 'Section image'],
-                ].map(([key, label]) => (
-                  <div className="admin-image-row" key={key}>
-                    <div className="admin-image-preview">{homepageContent[key] ? <img src={homepageContent[key]} alt={label} /> : <span>Image</span>}</div>
-                    <input value={homepageContent[key] || ''} placeholder={label} onChange={(e) => setHomepageContent((prev) => ({ ...prev, [key]: e.target.value }))} />
-                    <label className="admin-upload-inline">Upload<input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadCmsImage(e.target.files[0], (url) => setHomepageContent((prev) => ({ ...prev, [key]: url })))} /></label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button className="admin-primary" type="submit">Save Homepage</button>
-          </form>
-        )}
-      </section>
-
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Banners</span><h2>Banner Manager</h2></div>
-        <form className="admin-form compact" onSubmit={saveBanner}>
-          <label>Title<input value={bannerForm.title} onChange={(e) => setBannerForm((prev) => ({ ...prev, title: e.target.value }))} /></label>
-          <label>Image URL<input value={bannerForm.imageUrl} onChange={(e) => setBannerForm((prev) => ({ ...prev, imageUrl: e.target.value }))} /></label>
-          <label>Link<input value={bannerForm.link} onChange={(e) => setBannerForm((prev) => ({ ...prev, link: e.target.value }))} /></label>
-          <label className="admin-check"><input type="checkbox" checked={bannerForm.isActive} onChange={(e) => setBannerForm((prev) => ({ ...prev, isActive: e.target.checked }))} /> Active</label>
-          <button className="admin-primary" type="submit">Add Banner</button>
-        </form>
-        <DataTable
-          columns={[
-            { key: 'title', label: 'Title' },
-            { key: 'link', label: 'Link' },
-            { key: 'active', label: 'Active' },
-            { key: 'actions', label: 'Actions', render: (row) => <div className="admin-actions"><button onClick={() => toggleBanner(row.raw)}>{row.raw.isActive ? 'Disable' : 'Enable'}</button><button onClick={() => deleteBanner(row.id)}>Delete</button></div> },
-          ]}
-          rows={banners.map((banner) => ({ id: banner._id, raw: banner, title: banner.title, link: banner.link || '-', active: banner.isActive ? 'Yes' : 'No' }))}
-        />
-      </section>
-
-      <section className="admin-panel">
-        <div className="admin-section-head"><span>Pages</span><h2>Pages Editor</h2></div>
-        <form className="admin-form" onSubmit={savePageContent}>
-          <label>Page<select value={pageEditor.pageName} onChange={(e) => loadPageContent(e.target.value)}><option value="about">About</option><option value="contact">Contact</option><option value="returns">Returns</option><option value="sizeguide">Size Guide</option></select></label>
-          <label className="wide">Content<textarea value={pageEditor.content} onChange={(e) => setPageEditor((prev) => ({ ...prev, content: e.target.value }))} /></label>
-          <button className="admin-primary" type="submit">Save Page</button>
-        </form>
-      </section>
-    </>
-  );
 
   const renderSettings = () => {
     const providerOptions = ['PayHere', 'Stripe', 'PayPal', 'Direct Bank Transfer'];
@@ -3927,11 +3181,8 @@ export default function AdminDashboard() {
     if (active === 'Inventory') return renderInventory();
     if (active === 'Finance') return renderFinance();
     if (active === 'Analytics') return renderAnalytics();
-    if (active === 'Marketing') return renderMarketing();
-    if (active === 'Bulk Orders') return renderBulkOrders();
     if (active === 'Transactions') return renderTransactions();
     if (active === 'Invoices') return renderInvoices();
-    if (active === 'CMS') return renderCMS();
     if (active === 'Settings') return renderSettings();
     return renderDashboard();
   };
@@ -3965,3 +3216,7 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+
+
+

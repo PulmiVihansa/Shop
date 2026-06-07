@@ -98,6 +98,9 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/admin/bulk-orders" element={<Navigate to="/admin" replace />} />
+        <Route path="/admin/marketing" element={<Navigate to="/admin" replace />} />
+        <Route path="/admin/cms" element={<Navigate to="/admin" replace />} />
         <Route
           path="/admin/*"
           element={

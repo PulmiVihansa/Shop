@@ -29,10 +29,7 @@ async function test() {
       '/users',
       '/analytics',
       '/finance',
-      '/bulk-orders/customers',
       '/settings/payment',
-      '/content/homepage',
-      '/content/banners',
       '/settings'
     ];
 
