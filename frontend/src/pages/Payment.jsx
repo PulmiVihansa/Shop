@@ -1,14 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { FiArrowLeft, FiArrowRight, FiCheck, FiCreditCard, FiLock, FiShield, FiSmartphone, FiTruck } from 'react-icons/fi';
 import api, { getErrorMessage } from '../services/api.js';
+import { fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
+import { salesProductsQuery } from '../services/salesQueries.js';
+import { isSaleItem, itemMetaText, pricingTotals, resolvePricedItems } from '../utils/pricing.js';
 import '../styles/payment.css';
-
-const fallbackItems = [
-  { productId: 'chaos-tee', name: 'Chaos Tee', image: '/models/Tshirt8.png', color: 'Black', size: 'M', quantity: 1, price: 2490 },
-  { productId: 'rebuild-tee', name: 'Rebuild Tee', image: '/models/Tshirt5.png', color: 'Stone', size: 'M', quantity: 1, price: 2145 },
-  { productId: 'phantom-tee', name: 'Phantom Tee', image: '/models/Tshirt11.png', color: 'Black', size: 'L', quantity: 1, price: 3056 },
-];
 
 const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -22,12 +20,26 @@ export default function Payment() {
   const [saveCard, setSaveCard] = useState(true);
   const [toast, setToast] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const productsQuery = useQuery({
+    queryKey: ['products', 'payment-pricing'],
+    queryFn: () => fetchProducts({ source: 'payment-pricing', limit: 500 }),
+    enabled: !isVoucherPayment,
+    ...productsQueryDefaults,
+  });
+  const salesQuery = useQuery({
+    ...salesProductsQuery,
+    enabled: !isVoucherPayment,
+  });
 
-  const items = checkout.items?.length ? checkout.items : fallbackItems;
-  const subtotal = checkout.subtotal ?? items.reduce((total, item) => total + Number(item.price || 0) * (item.quantity || 1), 0);
+  const items = isVoucherPayment
+    ? (checkout.items || [])
+    : resolvePricedItems(checkout.items || [], productsQuery.data || [], salesQuery.data || []);
   const shipping = checkout.shipping ?? (isVoucherPayment ? 0 : 250);
-  const discount = checkout.discount ?? (isVoucherPayment ? 0 : Math.round(subtotal * 0.2));
-  const total = checkout.total ?? subtotal + shipping - discount;
+  const totals = pricingTotals(items, shipping);
+  const subtotal = isVoucherPayment ? Number(checkout.subtotal || 0) : totals.subtotal;
+  const discount = isVoucherPayment ? 0 : totals.discount;
+  const total = isVoucherPayment ? Number(checkout.total || subtotal + shipping) : totals.total;
+  const pricingReady = isVoucherPayment || (!productsQuery.isLoading && !salesQuery.isLoading);
 
   const maskedCard = useMemo(() => {
     const digits = card.number.replace(/\D/g, '');
@@ -80,6 +92,14 @@ export default function Payment() {
 
   const confirmPayment = async () => {
     if (submitting) return;
+    if (!pricingReady) {
+      showToast('Refreshing product prices. Try again in a moment.');
+      return;
+    }
+    if (!isVoucherPayment && !items.length) {
+      showToast('Add a product before payment.');
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = buildOrderPayload();
@@ -253,13 +273,16 @@ export default function Payment() {
           )}
           <div className="payment-summary-items">
             {items.map((item) => (
-              <div className="payment-summary-item" key={`${item.productId}-${item.size || 'M'}`}>
+              <div className="payment-summary-item" key={`${item.productId}-${item.size || 'One Size'}`}>
                 <img src={item.image} alt={item.name} />
                 <div>
                   <strong>{item.name}</strong>
-                  <span>{item.color || 'Black'} / {item.size || 'M'} / Qty {item.quantity || 1}</span>
+                  <span>{itemMetaText(item)} {itemMetaText(item) ? '/ ' : ''}Qty {item.quantity || 1}</span>
                 </div>
-                <p>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</p>
+                <p className="astravia-price-stack">
+                  <span className={isSaleItem(item) ? 'sale-price' : 'normal-price'}>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</span>
+                  {isSaleItem(item) && <span className="original-price">{formatPrice(Number(item.originalPrice || 0) * (item.quantity || 1))}</span>}
+                </p>
               </div>
             ))}
           </div>
@@ -267,7 +290,6 @@ export default function Payment() {
           <div className="payment-lines">
             <p><span>Subtotal</span><strong>{formatPrice(subtotal)}</strong></p>
             <p><span>Shipping</span><strong>{formatPrice(shipping)}</strong></p>
-            <p><span>Discount</span><strong>- {formatPrice(discount)}</strong></p>
           </div>
 
           <div className="payment-grand-total">
@@ -275,7 +297,7 @@ export default function Payment() {
             <strong>{formatPrice(total)}</strong>
           </div>
 
-          <button type="button" className="payment-confirm-btn" onClick={confirmPayment}>
+          <button type="button" className="payment-confirm-btn" onClick={confirmPayment} disabled={!pricingReady || submitting || (!isVoucherPayment && !items.length)}>
             {method === 'card' ? 'Pay Securely' : 'Place COD Order'}
             <FiArrowRight aria-hidden="true" />
           </button>

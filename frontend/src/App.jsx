@@ -12,6 +12,7 @@ export default function App() {
   const isHome = location.pathname === '/';
   const isLogin = location.pathname === '/login';
   const isSignup = location.pathname === '/signup';
+  const isPasswordAuth = location.pathname === '/forgot-password' || location.pathname.startsWith('/reset-password/');
   const isAccount = location.pathname === '/account';
   const isWishlist = location.pathname === '/wishlist';
   const isContact = location.pathname === '/contact';
@@ -113,6 +114,7 @@ export default function App() {
             isContact ||
             isLogin ||
             isSignup ||
+            isPasswordAuth ||
             isAccount ||
             isWishlist ||
             isSizeGuide ||
@@ -129,7 +131,7 @@ export default function App() {
         >
           <AppRoutes />
         </main>
-        {!isLogin && !isSignup && !isCheckout && !isPayment && !isAdmin && <Footer />}
+        {!isLogin && !isSignup && !isPasswordAuth && !isCheckout && !isPayment && !isAdmin && <Footer />}
       </div>
     </CartProvider>
   );

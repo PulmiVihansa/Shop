@@ -1,53 +1,156 @@
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+const monthLabel = (value) => {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+};
 
-const getFinanceDashboard = () => ({
-  summary: [
-    { label: 'Total Revenue', value: 18475000, growth: 18.4, trend: 'up' },
-    { label: 'Net Profit', value: 6725000, growth: 11.2, trend: 'up' },
-    { label: 'Expenses', value: 4380000, growth: -4.8, trend: 'down' },
-    { label: 'Profit Margin', value: 36.4, suffix: '%', growth: 6.1, trend: 'up' }
-  ],
-  cashFlow: [
-    { label: 'Cash Inflow', value: 18475000, trend: 'up', growth: 18.4 },
-    { label: 'Cash Outflow', value: 4380000, trend: 'down', growth: -4.8 },
-    { label: 'Net Cash Flow', value: 14095000, trend: 'up', growth: 13.6 }
-  ],
-  monthlyTarget: {
-    revenueGoal: 20000000,
-    currentRevenue: 18475000,
-    completion: 92,
-    remaining: 1525000
-  },
-  financialInsights: [
-    { label: 'Best Month', value: 'May 2026' },
-    { label: 'Top Category', value: 'Graphic Tees' },
-    { label: 'Top Product', value: 'Astravia Noir Graphic Tee' },
-    { label: 'Growth', value: '+18.4%' }
-  ],
-  revenueSources: [
-    { label: 'Website Orders', value: 82 },
-    { label: 'Bulk Orders', value: 11 },
-    { label: 'Gift Vouchers', value: 7 }
-  ],
-  monthlyRevenue: months.map((label, index) => ({ label, revenue: [2100000, 2600000, 2950000, 3400000, 3650000, 4175000][index] })),
-  monthlyProfit: months.map((label, index) => ({ label, profit: [720000, 960000, 1040000, 1210000, 1325000, 1470000][index] })),
-  revenueByCollection: [
-    { label: 'Graphic Tees', value: 9800000 },
-    { label: 'Oversized Tees', value: 5450000 },
-    { label: 'Hoodies', value: 3225000 }
-  ],
-  bestProducts: [
-    { product: 'Astravia Noir Graphic Tee', orders: 82, revenue: 3977000, profit: 1511000 },
-    { product: 'Linen Oxford Shirt', orders: 74, revenue: 1554000, profit: 642000 },
-    { product: 'Gold Mark Hoodie', orders: 68, revenue: 1190000, profit: 514000 },
-    { product: 'Noir Technical Jacket', orders: 31, revenue: 1844500, profit: 703000 }
-  ],
-  recentTransactions: [
-    { transactionId: 'TXN-1001', customer: 'Maya Perera', amount: 485000, paymentStatus: 'PAID', date: '2026-05-28' },
-    { transactionId: 'TXN-1002', customer: 'Nehan Fernando', amount: 210000, paymentStatus: 'PENDING', date: '2026-05-27' },
-    { transactionId: 'TXN-1003', customer: 'Aisha Silva', amount: 595000, paymentStatus: 'PAID', date: '2026-05-25' },
-    { transactionId: 'TXN-1004', customer: 'Kavindu Jay', amount: 320000, paymentStatus: 'REFUNDED', date: '2026-05-22' }
-  ]
-});
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
 
-module.exports = { getFinanceDashboard };
+const getOrderItems = (order = {}) => {
+  if (Array.isArray(order.items) && order.items.length) return order.items;
+  return [{
+    product: order.productId || order.product,
+    name: order.productName,
+    quantity: order.quantity,
+    price: order.price,
+  }];
+};
+
+const isPaidOrder = (order = {}) => order.paymentStatus === 'PAID' || order.payment?.status === 'PAID';
+
+const productKeyFromItem = (item = {}, productsById, productIdByName) => {
+  const rawId = item.productId || item.product || item.id;
+  if (rawId && productsById.has(String(rawId))) return String(rawId);
+
+  const name = String(item.name || item.productName || '').trim().toLowerCase();
+  return productIdByName.get(name) || '';
+};
+
+const buildBestRevenueProducts = (orders = [], products = []) => {
+  const paidOrders = orders.filter(isPaidOrder);
+  const productsById = new Map(products.map((product) => [String(product.id || product._id), product]));
+  const productIdByName = new Map(
+    products
+      .filter((product) => product.name)
+      .map((product) => [String(product.name).trim().toLowerCase(), String(product.id || product._id)])
+  );
+  const byProduct = new Map();
+
+  paidOrders.forEach((order) => {
+    getOrderItems(order).forEach((item) => {
+      const productId = productKeyFromItem(item, productsById, productIdByName);
+      if (!productId) return;
+
+      const product = productsById.get(productId);
+      if (!product) return;
+
+      const quantity = Math.max(1, Math.trunc(toNumber(item.quantity, 1)));
+      const unitPrice = toNumber(item.price, toNumber(product.price, 0));
+      const itemRevenue = unitPrice * quantity;
+      const unitCost = toNumber(item.cost ?? item.costPrice ?? item.unitCost, 0);
+      const itemProfit = itemRevenue - (unitCost * quantity);
+      const current = byProduct.get(productId) || {
+        id: productId,
+        product: product.name,
+        productName: product.name,
+        orders: new Set(),
+        revenue: 0,
+        profit: 0,
+      };
+
+      current.orders.add(order.id || order._id || order.orderId);
+      current.revenue += itemRevenue;
+      current.profit += itemProfit;
+      byProduct.set(productId, current);
+    });
+  });
+
+  return Array.from(byProduct.values())
+    .map((entry) => ({
+      id: entry.id,
+      product: entry.product,
+      productName: entry.productName,
+      orders: entry.orders.size,
+      revenue: entry.revenue,
+      profit: entry.profit,
+    }))
+    .filter((entry) => entry.revenue > 0)
+    .sort((left, right) => right.revenue - left.revenue);
+};
+
+const buildMonthlyRevenue = (orders = []) => {
+  const byMonth = new Map();
+  orders.filter(isPaidOrder).forEach((order) => {
+    const label = monthLabel(order.createdAt || order.orderDate);
+    const current = byMonth.get(label) || { label, revenue: 0, orders: 0 };
+    current.revenue += toNumber(order.totalAmount ?? order.totalPrice, 0);
+    current.orders += 1;
+    byMonth.set(label, current);
+  });
+  return Array.from(byMonth.values());
+};
+
+const buildRevenueByCollection = (bestProducts = [], products = []) => {
+  const productsById = new Map(products.map((product) => [String(product.id || product._id), product]));
+  const byCollection = new Map();
+
+  bestProducts.forEach((entry) => {
+    const product = productsById.get(String(entry.id));
+    if (!product) return;
+    const label = product.collection || product.category || 'Uncategorized';
+    byCollection.set(label, (byCollection.get(label) || 0) + toNumber(entry.revenue, 0));
+  });
+
+  return Array.from(byCollection.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((left, right) => right.value - left.value);
+};
+
+const buildFinanceDashboard = ({ orders = [], products = [], revenue = 0, expenses = 0, bestProducts } = {}) => {
+  const paidOrders = orders.filter(isPaidOrder);
+  const liveBestProducts = bestProducts || buildBestRevenueProducts(paidOrders, products);
+  const monthlyRevenue = buildMonthlyRevenue(paidOrders);
+  const monthlyProfit = monthlyRevenue.map((entry) => ({
+    label: entry.label,
+    profit: Math.max(0, entry.revenue - (expenses / Math.max(monthlyRevenue.length, 1))),
+  }));
+  const profit = revenue - expenses;
+  const margin = revenue ? Number(((profit / revenue) * 100).toFixed(1)) : 0;
+
+  return {
+    summary: [
+      { label: 'Total Revenue', value: revenue, growth: 0, trend: revenue ? 'up' : 'neutral' },
+      { label: 'Net Profit', value: profit, growth: 0, trend: profit >= 0 ? 'up' : 'down' },
+      { label: 'Expenses', value: expenses, growth: 0, trend: expenses ? 'down' : 'neutral' },
+      { label: 'Profit Margin', value: margin, suffix: '%', growth: 0, trend: margin >= 0 ? 'up' : 'down' },
+    ],
+    cashFlow: [
+      { label: 'Cash Inflow', value: revenue, trend: revenue ? 'up' : 'neutral', growth: 0 },
+      { label: 'Cash Outflow', value: expenses, trend: expenses ? 'down' : 'neutral', growth: 0 },
+      { label: 'Net Cash Flow', value: profit, trend: profit >= 0 ? 'up' : 'down', growth: 0 },
+    ],
+    monthlyTarget: {
+      revenueGoal: 0,
+      currentRevenue: revenue,
+      completion: 0,
+      remaining: 0,
+    },
+    financialInsights: [],
+    revenueSources: [
+      { label: 'Website Orders', value: revenue },
+    ],
+    monthlyRevenue,
+    monthlyProfit,
+    revenueByCollection: buildRevenueByCollection(liveBestProducts, products),
+    bestProducts: liveBestProducts,
+    recentTransactions: [],
+  };
+};
+
+module.exports = {
+  buildBestRevenueProducts,
+  buildFinanceDashboard,
+};

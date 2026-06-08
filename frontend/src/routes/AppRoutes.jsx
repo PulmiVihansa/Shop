@@ -5,6 +5,8 @@ import ProtectedRoute from '../components/ProtectedRoute.jsx';
 const Home = lazy(() => import('../pages/Home.jsx'));
 const Login = lazy(() => import('../pages/Login.jsx'));
 const Signup = lazy(() => import('../pages/Signup.jsx'));
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword.jsx'));
+const ResetPassword = lazy(() => import('../pages/ResetPassword.jsx'));
 const SearchResults = lazy(() => import('../pages/SearchResults.jsx'));
 const Account = lazy(() => import('../pages/Account.jsx'));
 const Wishlist = lazy(() => import('../pages/Wishlist.jsx'));
@@ -39,6 +41,8 @@ export default function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/auth/success" element={<AuthSuccess />} />
         <Route path="/men" element={<Navigate to="/collection" replace />} />
         <Route path="/search" element={<SearchResults />} />

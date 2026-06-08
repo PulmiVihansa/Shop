@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getErrorMessage } from '../services/api.js';
+import { getPasswordChecks, getPasswordStrength, isStrongPassword } from '../utils/passwordValidation.js';
 import '../styles/auth-streetwear.css';
 
 export default function Signup() {
@@ -13,12 +14,20 @@ export default function Signup() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const googleAuthUrl = `${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/auth/google`;
+  const passwordChecks = useMemo(() => getPasswordChecks(form.password), [form.password]);
+  const passwordStrength = useMemo(() => getPasswordStrength(form.password), [form.password]);
+  const passwordsMatch = Boolean(form.confirmPassword) && form.password === form.confirmPassword;
+  const canSubmit = isStrongPassword(form.password) && passwordsMatch && acceptedTerms && !submitting;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    if (!isStrongPassword(form.password)) {
+      setError('Password does not meet security requirements');
+      return;
+    }
     if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Passwords do not match.');
       return;
     }
     if (!acceptedTerms) {
@@ -97,6 +106,20 @@ export default function Signup() {
                 </button>
               </span>
             </label>
+            <div className="password-live-panel" aria-live="polite">
+              <div className={`password-strength strength-${passwordStrength.toLowerCase()}`}>
+                <span>Password strength</span>
+                <strong>{passwordStrength}</strong>
+              </div>
+              <ul className="password-requirements">
+                {passwordChecks.map((requirement) => (
+                  <li key={requirement.key} className={requirement.met ? 'met' : 'missing'}>
+                    <span aria-hidden="true">{requirement.met ? '✓' : '×'}</span>
+                    {requirement.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
             <label>
               Confirm Password
               <span className="auth-password-field">
@@ -112,6 +135,7 @@ export default function Signup() {
                 </button>
               </span>
             </label>
+            {form.confirmPassword && !passwordsMatch && <div className="auth-inline-error">Passwords do not match.</div>}
 
             <label className="auth-check auth-terms">
               <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} />
@@ -119,7 +143,7 @@ export default function Signup() {
               Terms & Conditions
             </label>
 
-            <button className="auth-primary-btn" type="submit" disabled={submitting}>
+            <button className="auth-primary-btn" type="submit" disabled={!canSubmit}>
               {submitting ? 'Creating...' : 'Sign Up'}
             </button>
           </form>

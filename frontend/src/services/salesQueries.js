@@ -32,7 +32,7 @@ export const normalizeSaleProduct = (entry = {}) => {
     campaignId: entry.id || entry._id,
     name: entry.productName || product.name || entry.name || 'Astravia Product',
     image,
-    price: Number(entry.originalPrice || product.price || 0),
+    price: Number(product.price || entry.originalPrice || 0),
     salePrice: Number(entry.salePrice || 0),
     discount: Number(entry.discountPercentage || 0),
     badge: entry.badge || 'Sale',

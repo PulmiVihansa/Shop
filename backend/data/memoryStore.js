@@ -97,99 +97,6 @@ const seedAdmin = async () => {
 
 const seedProducts = () => {
   if (store.products.length) return;
-
-  store.products.push(
-    {
-      _id: createId(),
-      name: 'Astravia Noir Graphic Tee',
-      price: 490,
-      description: 'A heavyweight men\'s graphic tee with a structured luxury streetwear fit.',
-      collection: 'men',
-      category: 'Graphic Tees',
-      colors: ['Black', 'Ivory', 'Gold'],
-      images: [],
-      sizes: ['XS', 'S', 'M', 'L'],
-      stock: 12,
-      sizeStock: { S: 15, M: 5, L: 0, XL: 2 },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      _id: createId(),
-      name: 'Linen Oxford Shirt',
-      price: 210,
-      description: 'A relaxed linen shirt with hand-finished details.',
-      collection: 'men',
-      category: 'Shirts',
-      colors: ['Ivory', 'Sand'],
-      images: [],
-      sizes: ['S', 'M', 'L', 'XL'],
-      stock: 18,
-      sizeStock: { S: 12, M: 18, L: 7, XL: 0 },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      _id: createId(),
-      name: 'Oversized Charcoal Tee',
-      price: 285,
-      description: 'An oversized men\'s tee in a contemporary charcoal streetwear silhouette.',
-      collection: 'men',
-      category: 'Oversized Tees',
-      colors: ['Charcoal', 'Black'],
-      images: [],
-      sizes: ['S', 'M', 'L', 'XL'],
-      stock: 28,
-      sizeStock: { S: 14, M: 9, L: 5, XL: 0 },
-      createdAt: new Date(Date.now() - 86400000 * 7),
-      updatedAt: new Date(Date.now() - 86400000 * 2),
-    },
-    {
-      _id: createId(),
-      name: 'Astravia Tailored Shirt',
-      price: 290,
-      description: 'A crisp men\'s shirt refined for modern evening and daily wear.',
-      collection: 'men',
-      category: 'Shirts',
-      colors: ['Charcoal', 'Black'],
-      images: [],
-      sizes: ['S', 'M', 'L', 'XL'],
-      stock: 8,
-      sizeStock: { S: 0, M: 3, L: 5, XL: 0 },
-      createdAt: new Date(Date.now() - 86400000 * 16),
-      updatedAt: new Date(Date.now() - 86400000),
-    },
-    {
-      _id: createId(),
-      name: 'Noir Technical Jacket',
-      price: 175,
-      description: 'A clean men\'s jacket with a masculine streetwear profile.',
-      collection: 'men',
-      category: 'Jackets',
-      colors: ['Natural', 'Black'],
-      images: [],
-      sizes: ['S', 'M', 'L', 'XL'],
-      stock: 0,
-      sizeStock: { S: 0, M: 0, L: 0, XL: 0 },
-      createdAt: new Date(Date.now() - 86400000 * 5),
-      updatedAt: new Date(Date.now() - 86400000 * 1),
-    },
-    {
-      _id: createId(),
-      name: 'Gold Mark Hoodie',
-      price: 380,
-      description: 'A premium men\'s hoodie with subtle Astravia gold detailing.',
-      collection: 'men',
-      category: 'Hoodies',
-      colors: ['Black', 'Ivory', 'Charcoal'],
-      images: [],
-      sizes: ['S', 'M', 'L', 'XL'],
-      stock: 22,
-      sizeStock: { S: 12, M: 11, L: 0, XL: 0 },
-      createdAt: new Date(Date.now() - 86400000 * 20),
-      updatedAt: new Date(Date.now() - 86400000 * 4),
-    }
-  );
 };
 
 const seedBusinessData = async () => {
@@ -241,7 +148,7 @@ const seedBusinessData = async () => {
 
   store.users.forEach(ensureCustomerId);
 
-  if (!store.orders.length) {
+  if (!store.orders.length && store.products.length >= 6) {
     const users = store.users.filter((user) => user.role === 'user');
     let orderSequence = 1001;
     const makeOrder = (user, productIndexes, status, daysAgo, phone) => {
@@ -324,106 +231,7 @@ const seedBusinessData = async () => {
     );
   }
 
-  if (!store.bulkOrderRequests.length) {
-    const approvedCustomerId = createId();
-    const productionCustomerId = createId();
-    const completedCustomerId = createId();
-
-    store.bulkCustomers.push(
-      {
-        _id: approvedCustomerId,
-        companyName: 'Maison Lune Resort',
-        contactPerson: 'Amara Jay',
-        email: 'amara@maisonlune.com',
-        phone: '+94 76 118 4400',
-        discount: 0,
-        notes: 'Generated automatically from approved wholesale orders.',
-        createdAt: new Date(Date.now() - 86400000 * 7),
-      },
-      {
-        _id: productionCustomerId,
-        companyName: 'Atelier North Wholesale',
-        contactPerson: 'Noah Laurent',
-        email: 'noah@ateliernorth.fr',
-        phone: '+33 6 18 44 90 10',
-        discount: 0,
-        notes: 'Generated automatically from approved wholesale orders.',
-        createdAt: new Date(Date.now() - 86400000 * 14),
-      },
-      {
-        _id: completedCustomerId,
-        companyName: 'Serene Retail Collective',
-        contactPerson: 'Leah Fernando',
-        email: 'leah@sereneretail.lk',
-        phone: '+94 71 990 1188',
-        discount: 0,
-        notes: 'Generated automatically from approved wholesale orders.',
-        createdAt: new Date(Date.now() - 86400000 * 30),
-      }
-    );
-
-    store.bulkOrderRequests.push(
-      {
-        _id: 'BULK-2041',
-        companyName: 'Ceylon Boutique Group',
-        contactPerson: 'Rivanya Silva',
-        email: 'rivanya@ceylonboutique.lk',
-        phone: '+94 77 440 2211',
-        products: ['Linen Oxford Shirt', 'Gold Mark Hoodie'],
-        quantity: 240,
-        orderValue: 2350000,
-        message: 'Needs custom woven label and staggered shipment.',
-        status: 'Pending',
-        createdAt: new Date(Date.now() - 86400000 * 3),
-        updatedAt: new Date(Date.now() - 86400000 * 3),
-      },
-      {
-        _id: 'BULK-2038',
-        companyName: 'Maison Lune Resort',
-        contactPerson: 'Amara Jay',
-        email: 'amara@maisonlune.com',
-        phone: '+94 76 118 4400',
-        products: ['Astravia Noir Graphic Tee', 'Oversized Charcoal Tee'],
-        quantity: 180,
-        orderValue: 1840000,
-        message: 'Resort capsule packaging requested.',
-        status: 'Approved',
-        bulkCustomerId: approvedCustomerId,
-        createdAt: new Date(Date.now() - 86400000 * 7),
-        updatedAt: new Date(Date.now() - 86400000 * 7),
-      },
-      {
-        _id: 'BULK-2034',
-        companyName: 'Atelier North Wholesale',
-        contactPerson: 'Noah Laurent',
-        email: 'noah@ateliernorth.fr',
-        phone: '+33 6 18 44 90 10',
-        products: ['Noir Technical Jacket', 'Gold Mark Hoodie'],
-        quantity: 320,
-        orderValue: 3120000,
-        message: 'Priority production slot confirmed.',
-        status: 'Production',
-        bulkCustomerId: productionCustomerId,
-        createdAt: new Date(Date.now() - 86400000 * 14),
-        updatedAt: new Date(Date.now() - 86400000 * 6),
-      },
-      {
-        _id: 'BULK-2029',
-        companyName: 'Serene Retail Collective',
-        contactPerson: 'Leah Fernando',
-        email: 'leah@sereneretail.lk',
-        phone: '+94 71 990 1188',
-        products: ['Premium T-Shirt Pack', 'Polo Shirt Pack'],
-        quantity: 90,
-        orderValue: 740000,
-        message: 'Delivered with branded invoice pack.',
-        status: 'Completed',
-        bulkCustomerId: completedCustomerId,
-        createdAt: new Date(Date.now() - 86400000 * 30),
-        updatedAt: new Date(Date.now() - 86400000 * 1),
-      }
-    );
-
+  if (!store.transactions.length && !store.invoices.length) {
     store.orders.forEach((order, index) => {
       const transactionId = order.transactionId || `TXN-${1001 + index}`;
       order.transactionId = transactionId;

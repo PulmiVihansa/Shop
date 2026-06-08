@@ -63,6 +63,30 @@ textarea {
   max-width: 100%;
 }
 
+.astravia-price-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.12rem;
+  line-height: 1.12;
+}
+
+.astravia-price-stack .sale-price,
+.astravia-price-stack .normal-price {
+  color: #ff2a4f;
+  font-weight: 700;
+}
+
+.astravia-price-stack .original-price {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.86em;
+  text-decoration: line-through;
+}
+
+.astravia-item-meta {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 button,
 a,
 input,

@@ -14,19 +14,33 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  customerId  String?  @unique
-  name        String
-  email       String   @unique
-  password    String?
-  provider    String   @default("local")
-  googleId    String?   @unique
-  avatar      String?
-  role        String   @default("user")
-  orders      Order[]
-  customer    Customer?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String               @id @default(cuid())
+  customerId          String?              @unique
+  name                String
+  email               String               @unique
+  password            String?
+  provider            String               @default("local")
+  googleId            String?              @unique
+  avatar              String?
+  role                String               @default("user")
+  orders              Order[]
+  customer            Customer?
+  passwordResetTokens PasswordResetToken[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Customer {
@@ -47,34 +61,34 @@ model Customer {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String?  @unique
-  price       Float
-  description String   @default("")
-  collection  String   @default("men")
-  category    String
-  colors      String[] @default([])
-  images      String[] @default([])
-  sizes       String[] @default([])
-  stock       Int      @default(0)
-  sizeStock   Json     @default("{\"XS\":0,\"S\":0,\"M\":0,\"L\":0,\"XL\":0,\"XXL\":0}")
-  badges      String[] @default([])
-  material    String   @default("")
-  fabric      String   @default("")
-  fit         String   @default("")
-  careInstructions String @default("")
-  countryOfOrigin String @default("")
-  metaTitle   String   @default("")
-  metaDescription String @default("")
-  metaKeywords String[] @default([])
-  rating      Float    @default(0)
-  reviewCount Int      @default(0)
-  reviews     Json     @default("[]")
+  id               String            @id @default(cuid())
+  name             String
+  slug             String?           @unique
+  price            Float
+  description      String            @default("")
+  collection       String            @default("men")
+  category         String
+  colors           String[]          @default([])
+  images           String[]          @default([])
+  sizes            String[]          @default([])
+  stock            Int               @default(0)
+  sizeStock        Json              @default("{\"XS\":0,\"S\":0,\"M\":0,\"L\":0,\"XL\":0,\"XXL\":0}")
+  badges           String[]          @default([])
+  material         String            @default("")
+  fabric           String            @default("")
+  fit              String            @default("")
+  careInstructions String            @default("")
+  countryOfOrigin  String            @default("")
+  metaTitle        String            @default("")
+  metaDescription  String            @default("")
+  metaKeywords     String[]          @default([])
+  rating           Float             @default(0)
+  reviewCount      Int               @default(0)
+  reviews          Json              @default("[]")
   featuredProducts FeaturedProduct[]
-  saleCampaigns SaleCampaign[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  saleCampaigns    SaleCampaign[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([collection, createdAt])
   @@index([collection, category, createdAt])
@@ -115,19 +129,19 @@ model Order {
 }
 
 model Transaction {
-  id             String    @id @default(cuid())
-  transactionId  String    @unique
-  orderId        String    @unique
-  order          Order     @relation("TransactionOrderFk", fields: [orderId], references: [id], onDelete: Cascade)
-  orderReference Order?    @relation("OrderTransactionFk")
+  id             String   @id @default(cuid())
+  transactionId  String   @unique
+  orderId        String   @unique
+  order          Order    @relation("TransactionOrderFk", fields: [orderId], references: [id], onDelete: Cascade)
+  orderReference Order?   @relation("OrderTransactionFk")
   customerId     String
-  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
   amount         Float
   paymentMethod  String
-  paymentStatus  String    @default("PENDING")
+  paymentStatus  String   @default("PENDING")
   invoice        Invoice?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([customerId])
   @@index([paymentStatus])
@@ -135,28 +149,28 @@ model Transaction {
 }
 
 model Invoice {
-  id            String      @id @default(cuid())
-  invoiceId     String      @unique
-  orderId       String      @unique
-  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  transactionId String      @unique
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  customerId    String
-  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  customerName  String      @default("")
-  customerEmail String      @default("")
-  customerPhone String      @default("")
-  customerAddress Json      @default("{}")
-  subtotal      Float
-  shipping      Float       @default(0)
-  discount      Float       @default(0)
-  tax           Float       @default(0)
-  grandTotal    Float
-  status        String      @default("Paid")
-  pdfUrl        String      @default("")
-  emailSent     Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String      @id @default(cuid())
+  invoiceId       String      @unique
+  orderId         String      @unique
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactionId   String      @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customerName    String      @default("")
+  customerEmail   String      @default("")
+  customerPhone   String      @default("")
+  customerAddress Json        @default("{}")
+  subtotal        Float
+  shipping        Float       @default(0)
+  discount        Float       @default(0)
+  tax             Float       @default(0)
+  grandTotal      Float
+  status          String      @default("Paid")
+  pdfUrl          String      @default("")
+  emailSent       Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   @@index([customerId])
   @@index([status])
@@ -295,20 +309,20 @@ model BulkCustomer {
 }
 
 model BulkOrderRequest {
-  id             String           @id @default(cuid())
+  id             String        @id @default(cuid())
   companyName    String
   contactPerson  String
   email          String
-  phone          String           @default("")
-  products       String[]         @default([])
-  quantity       Int              @default(0)
-  orderValue     Float            @default(0)
-  message        String           @default("")
-  status         String           @default("Pending")
+  phone          String        @default("")
+  products       String[]      @default([])
+  quantity       Int           @default(0)
+  orderValue     Float         @default(0)
+  message        String        @default("")
+  status         String        @default("Pending")
   bulkCustomerId String?
-  bulkCustomer   BulkCustomer?    @relation(fields: [bulkCustomerId], references: [id], onDelete: SetNull)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  bulkCustomer   BulkCustomer? @relation(fields: [bulkCustomerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([bulkCustomerId])
   @@index([status])
@@ -319,9 +333,9 @@ model FeaturedProduct {
   id           String   @id @default(cuid())
   productId    String
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  displayOrder Int @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
   @@unique([productId])
   @@index([isActive, displayOrder])
@@ -333,7 +347,7 @@ model SaleCampaign {
   product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   originalPrice      Float
   salePrice          Float
-  discountPercentage Float @default(0)
+  discountPercentage Float    @default(0)
   badge              String   @default("")
   startDate          DateTime
   endDate            DateTime
@@ -345,4 +359,3 @@ model SaleCampaign {
   @@index([isActive, startDate, endDate])
   @@index([createdAt])
 }
-

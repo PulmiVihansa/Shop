@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FiHeart, FiLock, FiRefreshCw, FiShield, FiTruck } from 'react-icons/fi';
 import { useCart } from '../context/CartContext.jsx';
 import { fetchProductById, fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
+import { salesProductsQuery } from '../services/salesQueries.js';
 import { getStockStatus } from '../utils/stockStatus.js';
 import { resolveImageList } from '../utils/imageUrl.js';
 import { getAvailableSizes } from '../utils/availableSizes.js';
@@ -87,6 +88,7 @@ export default function ProductDetails() {
     placeholderData: routeProduct ? [routeProduct] : [],
     ...productsQueryDefaults,
   });
+  const salesQuery = useQuery(salesProductsQuery);
 
   const loadedProduct = productQuery.data || routeProduct;
   const allProducts = allProductsQuery.data || (routeProduct ? [routeProduct] : []);
@@ -129,6 +131,13 @@ export default function ProductDetails() {
   const primaryImage = images[0] || '';
   const sizes = useMemo(() => availableSizes(product), [product]);
   const currentStock = getStockStatus(product);
+  const activeSale = useMemo(() => {
+    const productId = normalizeProductId(product);
+    return (salesQuery.data || []).find((sale) => String(sale.id) === String(productId)) || null;
+  }, [product, salesQuery.data]);
+  const displayPrice = activeSale ? activeSale.salePrice : product?.price;
+  const originalPrice = Number(product?.price || 0);
+  const saleDiscount = activeSale ? Math.max(0, originalPrice - Number(activeSale.salePrice || 0)) : 0;
   const reviews = Array.isArray(product?.reviews) ? product.reviews : [];
   const rating = Number(product?.rating || 0);
   const reviewCount = Number(product?.reviewCount || reviews.length || 0);
@@ -174,8 +183,14 @@ export default function ProductDetails() {
       productId: normalizeProductId(product),
       name: product.name,
       image: activeImage,
-      price: product.price,
+      price: displayPrice,
+      originalPrice,
+      salePrice: displayPrice,
+      saleDiscount,
+      isSale: Boolean(activeSale && saleDiscount > 0),
+      saleCampaignId: activeSale?.campaignId || '',
       color: selectedColor,
+      category: product.category,
       size: selectedSize,
       quantity,
     });
@@ -188,12 +203,18 @@ export default function ProductDetails() {
       productId: normalizeProductId(product),
       name: product.name,
       image: activeImage,
-      price: product.price,
+      price: displayPrice,
+      originalPrice,
+      salePrice: displayPrice,
+      saleDiscount,
+      isSale: Boolean(activeSale && saleDiscount > 0),
+      saleCampaignId: activeSale?.campaignId || '',
       color: selectedColor,
+      category: product.category,
       size: selectedSize,
       quantity,
     };
-    const subtotal = Number(product.price || 0) * quantity;
+    const subtotal = Number(displayPrice || 0) * quantity;
     const shipping = 250;
     const discount = 0;
     navigate('/checkout', {
@@ -294,7 +315,14 @@ export default function ProductDetails() {
                 <span className="product-detail-skeleton text short" />
               </div>
             )}
-            <div className="detail-price">{product ? formatAstraviaPrice(product.price) : <span className="product-detail-skeleton text price" aria-hidden="true" />}</div>
+            <div className="detail-price">
+              {product ? (
+                <>
+                  {formatAstraviaPrice(displayPrice)}
+                  {activeSale && saleDiscount > 0 && <del>{formatAstraviaPrice(originalPrice)}</del>}
+                </>
+              ) : <span className="product-detail-skeleton text price" aria-hidden="true" />}
+            </div>
             {product ? (
               <div className={`product-stock-status ${currentStock.className}`}>{currentStock.detailLabel}</div>
             ) : (

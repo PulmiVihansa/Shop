@@ -1,7 +1,7 @@
 const {
   emailInvoice,
+  ensureInvoicePdf,
   generateInvoiceForOrder,
-  getExistingInvoicePdf,
   getInvoiceById,
   getInvoiceDashboard,
 } = require('../services/invoiceService');
@@ -52,11 +52,8 @@ const generateInvoice = async (req, res) => {
 
 const downloadInvoice = async (req, res) => {
   try {
-    const pdf = await getExistingInvoicePdf(req.params.id);
+    const pdf = await ensureInvoicePdf(req.params.id, { force: true });
     if (!pdf) return res.status(404).json({ message: 'Invoice not found' });
-    if (pdf.missing) {
-      return res.status(404).json({ message: 'Invoice PDF has not been generated yet' });
-    }
 
     res.download(pdf.filePath, `${pdf.invoice.invoiceId}.pdf`);
   } catch (error) {

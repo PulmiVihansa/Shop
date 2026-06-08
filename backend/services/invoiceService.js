@@ -6,6 +6,7 @@ const { withId } = require('../utils/dbFormat');
 const { createTransactionAndInvoice } = require('./orderDocumentService');
 const { invoiceStorageDir, saveInvoicePdf } = require('./invoicePdfService');
 const { sendInvoiceEmail } = require('./invoiceEmailService');
+const { orderItemDiscountTotal } = require('./pricingService');
 
 const toNumber = (value, fallback = 0) => {
   const number = Number(value);
@@ -53,9 +54,14 @@ const normalizeProducts = (order = {}, invoice = {}) => {
     id: item.id || item.product || `${order.id || order._id || invoice.id || invoice._id || 'item'}-${index}`,
     product: item.product || item.productId || '',
     name: item.name || order.productName || 'Product',
-    sku: item.sku || item.SKU || item.product || item.productId || `AW-${String(index + 1).padStart(3, '0')}`,
     quantity: toNumber(item.quantity, 1),
     price: toNumber(item.price, 0),
+    originalPrice: toNumber(item.originalPrice, toNumber(item.price, 0)),
+    saleDiscount: toNumber(item.saleDiscount ?? item.discount, 0),
+    isSale: Boolean(item.isSale),
+    saleCampaignId: item.saleCampaignId || '',
+    color: item.color || '',
+    category: item.category || '',
     size: item.size || order.size || 'One Size',
     image: item.image || item.thumbnail || '',
   }));
@@ -245,12 +251,12 @@ const persistPdfUrl = async (invoice, pdfUrl) => {
   return formatInvoice(updated);
 };
 
-const ensureInvoicePdf = async (id) => {
+const ensureInvoicePdf = async (id, options = {}) => {
   const invoice = await getInvoiceById(id);
   if (!invoice) return null;
 
   const existing = getInvoicePdfPath(invoice);
-  if (existing) {
+  if (existing && !options.force) {
     const updated = invoice.pdfUrl === existing.pdfUrl ? invoice : await persistPdfUrl(invoice, existing.pdfUrl);
     return { invoice: updated, filePath: existing.filePath, pdfUrl: existing.pdfUrl };
   }
@@ -318,7 +324,7 @@ const generateInvoiceForOrder = async (orderId, options = {}) => {
       customerAddress: order.address || {},
       subtotal: order.price,
       shipping: order.shippingCost,
-      discount: 0,
+      discount: orderItemDiscountTotal(order.items),
       tax: 0,
       grandTotal: order.totalAmount,
       status: options.status || 'Paid',
@@ -358,7 +364,7 @@ const generateInvoiceForOrder = async (orderId, options = {}) => {
       amount: order.totalAmount,
       subtotal: order.price,
       shipping: order.shippingCost,
-      discount: options.discount || 0,
+      discount: options.discount ?? orderItemDiscountTotal(order.items),
       tax: options.tax || 0,
       grandTotal: order.totalAmount,
       customer: order.customer,

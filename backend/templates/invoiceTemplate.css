@@ -30,22 +30,21 @@ body {
   position: relative;
   width: 794px;
   height: 1123px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background:
     radial-gradient(ellipse at 50% 46%, rgba(0, 0, 0, .035) 0, rgba(255, 255, 255, 0) 41%),
     linear-gradient(115deg, #f6f6f6 0%, #f6f6f6 48%, #f6f6f6 100%);
   border: 1px solid #d9d9d9;
-  page-break-before: avoid;
-  page-break-after: avoid;
-  page-break-inside: avoid;
 }
 
 .hero {
   position: relative;
-  height: 222px;
+  height: 184px;
   display: grid;
   grid-template-columns: 1fr 256px;
-  padding: 48px 37px 0;
+  padding: 32px 37px 0;
   color: #f6f6f6;
   background:
     radial-gradient(circle at 22% 15%, rgba(255, 255, 255, .08) 0, rgba(255, 255, 255, 0) 32%),
@@ -67,9 +66,9 @@ body {
 
 .brand-logo {
   display: block;
-  width: 226px;
+  width: 214px;
   height: auto;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .brand p {
@@ -78,15 +77,15 @@ body {
   text-transform: uppercase;
   letter-spacing: 6px;
   font-family: "Poppins", Arial, sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
 .invoice-meta h1 {
-  margin: 0 0 17px;
+  margin: 0 0 12px;
   color: #d70000;
   font-family: "Playfair Display", Georgia, serif;
-  font-size: 47px;
+  font-size: 44px;
   line-height: .82;
   font-weight: 800;
 }
@@ -94,9 +93,9 @@ body {
 .meta-grid {
   display: grid;
   grid-template-columns: 93px 1fr;
-  row-gap: 11px;
+  row-gap: 8px;
   column-gap: 14px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.1;
 }
 
@@ -110,14 +109,14 @@ body {
   color: #ffffff;
   text-align: right;
   font-family: "Montserrat", Arial, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .paid-badge {
   width: 100px;
-  height: 30px;
-  margin-top: -2px;
+  height: 28px;
+  margin-top: 0;
   display: grid;
   grid-template-columns: 34px 1fr;
   align-items: center;
@@ -128,10 +127,10 @@ body {
   color: #ffffff;
   text-align: center;
   font-family: "Montserrat", Arial, sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   position: relative;
-  top: 9px;
+  top: 6px;
   z-index: 2;
 }
 
@@ -155,7 +154,12 @@ body {
 
 .body {
   position: relative;
-  padding: 50px 33px 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 33px 0;
+  overflow: hidden;
 }
 
 
@@ -163,11 +167,12 @@ body {
 .reference-row {
   position: relative;
   z-index: 1;
+  flex: 0 0 160px;
   display: grid;
   grid-template-columns: 256px 339px;
   gap: 79px;
   align-items: start;
-  margin-bottom: 21px;
+  margin-bottom: 8px;
 }
 .card-title {
   position: absolute;
@@ -178,7 +183,7 @@ body {
   background: #f6f6f6;
   color: #cf0000;
   font-family: "Poppins", Arial, sans-serif;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.18;
   text-transform: uppercase;
@@ -188,8 +193,8 @@ body {
 
 .info-card {
   position: relative;
-  min-height: 177px;
-  padding: 28px 22px 18px;
+  min-height: 136px;
+  padding: 22px 19px 13px;
   border: 1px solid rgba(202, 0, 0, .28);
   border-radius: 4px;
   background: #f6f6f6;
@@ -220,16 +225,16 @@ body {
 }
 
 .bill-card h2 {
-  margin: 0 0 7px;
+  margin: 0 0 5px;
   font-family: "Montserrat", Arial, sans-serif;
-  font-size: 21px;
+  font-size: 18px;
   line-height: 1;
   font-weight: 800;
 }
 
 .client-type {
-  margin: 0 0 14px;
-  font-size: 14px;
+  margin: 0 0 9px;
+  font-size: 12px;
   font-weight: 400;
 }
 
@@ -238,9 +243,9 @@ body {
   grid-template-columns: 19px 1fr;
   gap: 9px;
   align-items: start;
-  margin: 10px 0;
-  font-size: 13px;
-  line-height: 1.36;
+  margin: 6px 0;
+  font-size: 11px;
+  line-height: 1.25;
 }
 
 .ico {
@@ -275,17 +280,17 @@ body {
 }
 
 .order-card {
-  min-height: 150px;
-  margin-top: 42px;
-  padding-top: 28px;
+  min-height: 124px;
+  margin-top: 30px;
+  padding-top: 23px;
 }
 
 .order-grid {
   display: grid;
   grid-template-columns: 151px 1fr;
-  row-gap: 15px;
+  row-gap: 10px;
   column-gap: 18px;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.15;
 }
 
@@ -311,9 +316,11 @@ body {
 .items-card {
   position: relative;
   z-index: 1;
+  flex: 0 1 auto;
   width: 721px;
+  max-height: 318px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   border: 1px solid #d7d7d7;
   border-radius: 3px;
   background: rgba(255, 255, 255, .66);
@@ -359,6 +366,28 @@ td:nth-child(n+2) {
   text-align: center;
 }
 
+.invoice-price {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+}
+
+.invoice-price strong {
+  color: #c90000;
+  font-size: 13px;
+}
+
+.invoice-price del {
+  color: #666666;
+  font-size: 11px;
+}
+
+.invoice-price small {
+  color: #c90000;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .product-cell {
   display: grid;
   grid-template-columns: 50px 1fr;
@@ -397,20 +426,114 @@ td:nth-child(n+2) {
   font-weight: 400;
 }
 
+.items-card.density-medium th {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.items-card.density-medium td {
+  height: 42px;
+  padding: 5px 12px;
+  font-size: 11px;
+}
+
+.items-card.density-medium .product-cell {
+  grid-template-columns: 34px 1fr;
+  gap: 9px;
+}
+
+.items-card.density-medium .product-cell img,
+.items-card.density-medium .product-thumb {
+  width: 34px;
+  height: 34px;
+}
+
+.items-card.density-medium .product-cell strong {
+  margin-bottom: 2px;
+  font-size: 10px;
+}
+
+.items-card.density-medium .product-cell small {
+  font-size: 9px;
+  line-height: 1.18;
+}
+
+.items-card.density-medium .invoice-price strong,
+.items-card.density-medium .invoice-price del {
+  font-size: 9px;
+}
+
+.items-card.density-medium .invoice-price small {
+  font-size: 8px;
+  line-height: 1.1;
+}
+
+.items-card.density-compact th {
+  height: 27px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.items-card.density-compact td {
+  height: 27px;
+  padding: 2px 9px;
+  font-size: 9px;
+}
+
+.items-card.density-compact .product-cell {
+  grid-template-columns: 23px 1fr;
+  gap: 7px;
+}
+
+.items-card.density-compact .product-cell img,
+.items-card.density-compact .product-thumb {
+  width: 23px;
+  height: 23px;
+}
+
+.items-card.density-compact .product-cell strong {
+  margin-bottom: 1px;
+  font-size: 8px;
+  line-height: 1.05;
+}
+
+.items-card.density-compact .product-cell small {
+  font-size: 7px;
+  line-height: 1.08;
+}
+
+.items-card.density-compact .invoice-price {
+  gap: 0;
+}
+
+.items-card.density-compact .invoice-price strong,
+.items-card.density-compact .invoice-price del {
+  font-size: 7px;
+}
+
+.items-card.density-compact .invoice-price small {
+  font-size: 6px;
+  line-height: 1;
+}
+
 .totals-area {
   position: relative;
   z-index: 1;
+  flex: 0 0 154px;
   display: grid;
   grid-template-columns: 1fr 322px;
   align-items: end;
   gap: 28px;
-  height: 147px;
-  margin-bottom: 52px;
+  height: 154px;
+  margin-top: auto;
+  margin-bottom: 0;
+  overflow: hidden;
 }
 
 .wordmark-watermark {
   padding-left: 44px;
-  padding-bottom: 50px;
+  padding-bottom: 48px;
   color: rgba(0, 0, 0, .06);
   font-family: "Montserrat", sans-serif;;
   font-size: 64px;
@@ -456,11 +579,14 @@ td:nth-child(n+2) {
 .lower-area {
   position: relative;
   z-index: 1;
-  height: 200px;
+  margin-top: auto;
+  height: 178px;
+  flex: 0 0 178px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 42px;
-  padding-top: 30px;
+  padding-top: 18px;
+  overflow: hidden;
   border-top: 1px solid #d5d5d5;
 }
 
@@ -470,7 +596,7 @@ td:nth-child(n+2) {
 }
 
 .lower-area h3 {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   color: #c90000;
   text-transform: uppercase;
   font-family: "Montserrat", Arial, sans-serif;
@@ -481,23 +607,23 @@ td:nth-child(n+2) {
 .terms ul {
   margin: 0;
   padding-left: 14px;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 11px;
+  line-height: 1.38;
 }
 
 .terms li {
-  margin-bottom: 9px;
+  margin-bottom: 5px;
   padding-left: 6px;
 }
 
 .notes p {
-  margin: 0 0 9px;
-  font-size: 12px;
+  margin: 0 0 7px;
+  font-size: 11px;
 }
 
 .signature {
   width: 201px;
-  margin: 20px 0 0 auto;
+  margin: 10px 0 0 auto;
   text-align: center;
 }
 
@@ -530,20 +656,18 @@ td:nth-child(n+2) {
 }
 
 .footer-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 45px;
+  height: 40px;
+  flex: 0 0 40px;
+  margin-top: auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: center;
   gap: 19px;
-  padding: 0 70px;
+  padding: 0 60px;
   color: #ffffff;
   background: #050505;
   border-top: 3px solid #d00000;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .footer-bar span {

@@ -75,20 +75,26 @@ const productImage = (item, index) => {
 const productRows = (invoice) => (invoice.products || []).map((item, index) => {
   const quantity = Number(item.quantity || 1);
   const unitPrice = Number(item.price || 0);
-  const sku = item.sku || item.SKU || item.product || item.productId || `AW-${String(index + 1).padStart(3, '0')}`;
+  const originalPrice = Number(item.originalPrice || unitPrice);
+  const saleDiscount = Number(item.saleDiscount || item.discount || 0);
+  const isSale = Boolean(item.isSale && saleDiscount > 0 && originalPrice > unitPrice);
+  const meta = [item.color, item.category, item.size].filter(Boolean).join(' / ');
+  const unitPriceHtml = isSale
+    ? `<div class="invoice-price"><strong>${money(unitPrice)}</strong><del>${money(originalPrice)}</del><small>- ${money(saleDiscount)} sale discount</small></div>`
+    : money(unitPrice);
   return `
             <tr>
               <td>
                 <div class="product-cell">
-                  ${productImage(item, index)}
+                    ${productImage(item, index)}
                   <div>
                     <strong>${escapeHtml(item.name || 'Product')}</strong>
-                    <small>SKU: ${escapeHtml(sku)}</small>
+                    ${meta ? `<small>${escapeHtml(meta)}</small>` : ''}
                   </div>
                 </div>
               </td>
               <td>${quantity}</td>
-              <td>${money(unitPrice)}</td>
+              <td>${unitPriceHtml}</td>
               <td>${money(unitPrice * quantity)}</td>
             </tr>`;
 }).join('');
@@ -109,13 +115,16 @@ const buildInvoiceHtml = (invoice) => {
   const status = String(invoice.paymentStatus || invoice.status || 'PAID').toUpperCase();
   const subtotal = Number(invoice.subtotal || 0);
   const discount = Number(invoice.discount || 0);
+  const displaySubtotal = subtotal + discount;
   const shipping = Number(invoice.shipping || 0);
   const tax = Number(invoice.tax || 0);
   const grandTotal = Number(invoice.grandTotal || invoice.amount || subtotal + shipping + tax - discount);
   const products = Array.isArray(invoice.products) && invoice.products.length ? invoice.products : [];
+  const itemDensity = products.length >= 7 ? 'density-compact' : products.length >= 4 ? 'density-medium' : 'density-normal';
 
   return fillTemplate(template.html, {
     CSS: template.css,
+    ITEM_DENSITY: itemDensity,
     LOGO_SRC: logoDataUri,
     INVOICE_ID: escapeHtml(invoice.invoiceId || ''),
     ISSUE_DATE: dateText(invoice.issueDate || invoice.createdAt),
@@ -128,8 +137,8 @@ const buildInvoiceHtml = (invoice) => {
     ORDER_ID: escapeHtml(invoice.orderId || ''),
     TRANSACTION_ID: escapeHtml(invoice.transactionId || ''),
     PRODUCT_ROWS: productRows({ ...invoice, products }),
-    SUBTOTAL: money(subtotal),
-    DISCOUNT: money(discount),
+    SUBTOTAL: money(displaySubtotal),
+    DISCOUNT_ROW: discount > 0 ? `<div class="total-row"><span>DISCOUNT</span><strong>${money(discount)}</strong></div>` : '',
     SHIPPING: money(shipping),
     TAX: money(tax),
     GRAND_TOTAL: money(grandTotal),

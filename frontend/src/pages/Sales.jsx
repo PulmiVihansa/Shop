@@ -156,6 +156,13 @@ export default function Sales() {
       name: product.name,
       image: product.image,
       price: product.salePrice,
+      originalPrice: product.price,
+      salePrice: product.salePrice,
+      saleDiscount: Math.max(0, Number(product.price || 0) - Number(product.salePrice || 0)),
+      isSale: true,
+      saleCampaignId: product.campaignId,
+      color: product.colors[0] || '',
+      category: product.category,
       size,
       quantity: 1,
     });

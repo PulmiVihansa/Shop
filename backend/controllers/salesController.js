@@ -45,8 +45,8 @@ const serializeSale = (campaign) => {
     category: product.category || '',
     sizes: product.sizes || [],
     colors: product.colors || [],
-    price: Number(campaign.originalPrice || product.price || 0),
-    originalPrice: Number(campaign.originalPrice || product.price || 0),
+    price: Number(product.price || 0),
+    originalPrice: Number(product.price || 0),
     salePrice: Number(campaign.salePrice || 0),
     discountPercentage: Number(campaign.discountPercentage || 0),
     badge: campaign.badge || 'Sale',
@@ -141,6 +141,8 @@ const createSale = async (req, res) => {
       seedProducts();
       const product = store.products.find((entry) => (entry.id || entry._id) === payload.productId);
       if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+      payload.originalPrice = toNumber(product.price, 0);
+      payload.discountPercentage = calculateDiscount(payload.originalPrice, payload.salePrice);
       store.saleCampaigns = store.saleCampaigns || [];
       const sale = { id: createId(), ...payload, createdAt: new Date(), updatedAt: new Date(), product };
       store.saleCampaigns.unshift(sale);
@@ -149,6 +151,8 @@ const createSale = async (req, res) => {
 
     const product = await prisma.product.findUnique({ where: { id: payload.productId } });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    payload.originalPrice = toNumber(product.price, 0);
+    payload.discountPercentage = calculateDiscount(payload.originalPrice, payload.salePrice);
 
     const campaign = await prisma.saleCampaign.create({
       data: payload,
@@ -168,6 +172,10 @@ const updateSale = async (req, res) => {
       const index = sales.findIndex((sale) => sale.id === req.params.id || sale._id === req.params.id);
       if (index === -1) return res.status(404).json({ success: false, message: 'Sale campaign not found' });
       const payload = sanitizeSalePayload(req.body, sales[index]);
+      const product = store.products.find((entry) => (entry.id || entry._id) === payload.productId);
+      if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+      payload.originalPrice = toNumber(product.price, 0);
+      payload.discountPercentage = calculateDiscount(payload.originalPrice, payload.salePrice);
       sales[index] = { ...sales[index], ...payload, updatedAt: new Date() };
       return res.json(serializeSale({ ...sales[index], product: store.products.find((product) => (product.id || product._id) === sales[index].productId) }));
     }
@@ -178,6 +186,10 @@ const updateSale = async (req, res) => {
     if (payload.endDate < payload.startDate) {
       return res.status(400).json({ success: false, message: 'End date must be after start date' });
     }
+    const product = await prisma.product.findUnique({ where: { id: payload.productId } });
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    payload.originalPrice = toNumber(product.price, 0);
+    payload.discountPercentage = calculateDiscount(payload.originalPrice, payload.salePrice);
 
     const campaign = await prisma.saleCampaign.update({
       where: { id: req.params.id },

@@ -10,6 +10,7 @@ const {
 } = require('../services/orderDocumentService');
 const { generateInvoiceForOrder } = require('../services/invoiceService');
 const { fulfillGiftVoucherForOrder } = require('../services/giftVoucherService');
+const { priceOrderItems } = require('../services/pricingService');
 
 const ORDER_STATUS_ALLOWED = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_STATUS_ALLOWED = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
@@ -118,26 +119,8 @@ const reduceStock = async (items) => {
 const createOrder = async (req, res) => {
   try {
     const settings = await getPaymentSettingsDoc();
-    const incomingItems = Array.isArray(req.body.items) ? req.body.items : [];
-
-    const items = incomingItems.length
-      ? incomingItems.map((item) => ({
-          product: item.product || item.productId || item.id || undefined,
-          name: toText(item.name, toText(req.body.productName, 'Product')),
-          price: toNumber(item.price, 0),
-          quantity: Math.max(1, Math.trunc(toNumber(item.quantity, 1))),
-          size: toText(item.size, toText(req.body.size, 'One Size')),
-          image: toText(item.image, '')
-        }))
-      : [
-          {
-            product: req.body.product || undefined,
-            name: toText(req.body.productName, 'Product'),
-            price: toNumber(req.body.price, 0),
-            quantity: Math.max(1, Math.trunc(toNumber(req.body.quantity, 1))),
-            size: toText(req.body.size, 'One Size'),
-          }
-        ];
+    const pricedOrder = await priceOrderItems(req.body);
+    const items = pricedOrder.items;
 
     if (!items.length || !items[0].name) {
       return res.status(400).json({ message: 'Order must include at least one product' });
@@ -152,7 +135,8 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: 'Customer name and email are required' });
     }
 
-    const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
+    const subtotal = pricedOrder.subtotal;
+    const discount = pricedOrder.discount;
     const requestedMethod = String(req.body.payment?.method || req.body.paymentMethod || 'ONLINE').toUpperCase();
     const paymentMethod = requestedMethod === 'COD' ? 'COD' : 'ONLINE';
 
@@ -167,7 +151,7 @@ const createOrder = async (req, res) => {
     const defaultDelivery = subtotal > 25000 || subtotal === 0 ? 0 : 650;
     const codHandling = paymentMethod === 'COD' ? 250 : 0;
     const shippingCost = Math.max(0, toNumber(req.body.shippingCost, defaultDelivery + codHandling));
-    const totalAmount = Math.max(0, toNumber(req.body.totalAmount, subtotal + shippingCost));
+    const totalAmount = Math.max(0, subtotal + shippingCost);
 
     const incomingTransactionReference = req.body.payment?.transactionId || req.body.transactionId || '';
     const paymentSucceeded = paymentMethod === 'ONLINE' && Boolean(incomingTransactionReference || req.body.paymentStatus === 'PAID');
@@ -195,7 +179,7 @@ const createOrder = async (req, res) => {
       productName: toText(req.body.productName, buildSummaryProductName(items)),
       size: toText(req.body.size, buildSummarySize(items)),
       quantity: Math.max(1, Math.trunc(toNumber(req.body.quantity, items.reduce((sum, item) => sum + Number(item.quantity || 1), 0)))),
-      price: toNumber(req.body.price, subtotal),
+      price: subtotal,
       shippingCost,
       totalAmount,
       status: safeOrderStatus,
@@ -265,6 +249,7 @@ const createOrder = async (req, res) => {
         email: customerEmail,
         subtotal,
         shipping: shippingCost,
+        discount,
         tax: 0,
         grandTotal: totalAmount,
         status: paymentSucceeded ? 'Paid' : 'Pending',
@@ -301,6 +286,7 @@ const createOrder = async (req, res) => {
         amount: totalAmount,
         subtotal,
         shipping: shippingCost,
+        discount,
         tax: 0,
         grandTotal: totalAmount,
         customer,

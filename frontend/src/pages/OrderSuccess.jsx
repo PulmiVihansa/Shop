@@ -2,19 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FiArrowRight, FiCheck, FiClipboard, FiDownload, FiHome, FiMail, FiPackage, FiShield, FiTruck } from 'react-icons/fi';
 import api, { getErrorMessage } from '../services/api.js';
+import { isSaleItem, itemMetaText } from '../utils/pricing.js';
 import '../styles/order-success.css';
 
 const fallbackOrder = {
   orderId: '',
   transactionId: '',
-  totalAmount: 7317,
+  totalAmount: 0,
   payment: { method: 'Credit / Debit Card', status: 'Paid' },
   shipping: 'standard',
-  items: [
-    { productId: 'chaos-tee', name: 'Chaos Tee', image: '/models/Tshirt8.png', color: 'Black', size: 'M', quantity: 1, price: 2490 },
-    { productId: 'rebuild-tee', name: 'Rebuild Tee', image: '/models/Tshirt5.png', color: 'Stone', size: 'M', quantity: 1, price: 2145 },
-    { productId: 'phantom-tee', name: 'Phantom Tee', image: '/models/Tshirt11.png', color: 'Black', size: 'L', quantity: 1, price: 3056 },
-  ],
+  items: [],
 };
 
 const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -34,7 +31,7 @@ export default function OrderSuccess() {
   const order = remoteOrder || state?.order || fallbackOrder;
   const orderNumber = order.orderId || order.orderNumber || '';
   const transactionId = order.transactionId || order.payment?.reference || '';
-  const items = order.items?.length ? order.items : fallbackOrder.items;
+  const items = order.items?.length ? order.items : [];
   const total = order.totalAmount ?? order.totalPrice ?? items.reduce((sum, item) => sum + Number(item.price || 0) * (item.quantity || 1), 0);
   const giftVoucher = remoteVoucher || order.giftVoucher || order.voucher || null;
 
@@ -207,13 +204,16 @@ export default function OrderSuccess() {
 
           <div className="receipt-items">
             {items.map((item) => (
-              <div className="receipt-item" key={`${item.productId || item.name}-${item.size || 'M'}`}>
+              <div className="receipt-item" key={`${item.productId || item.name}-${item.size || 'One Size'}`}>
                 <img src={item.image} alt={item.name} />
                 <div>
                   <strong>{item.name}</strong>
-                  <span>{item.color || 'Black'} / {item.size || 'M'} / Qty {item.quantity || 1}</span>
+                  <span>{itemMetaText(item)} {itemMetaText(item) ? '/ ' : ''}Qty {item.quantity || 1}</span>
                 </div>
-                <p>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</p>
+                <p className="astravia-price-stack">
+                  <span className={isSaleItem(item) ? 'sale-price' : 'normal-price'}>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</span>
+                  {isSaleItem(item) && <span className="original-price">{formatPrice(Number(item.originalPrice || 0) * (item.quantity || 1))}</span>}
+                </p>
               </div>
             ))}
           </div>

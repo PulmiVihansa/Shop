@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX } from 'react-icons/fi';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import '../styles/header.css';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { prefetchCollectionProducts } from '../hooks/useCollectionProducts.js';
 import { prefetchSalesProducts } from '../services/salesQueries.js';
+import { fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
+import { salesProductsQuery } from '../services/salesQueries.js';
+import { isSaleItem, itemMetaText, pricingTotals, resolvePricedItems } from '../utils/pricing.js';
 
 export default function Header() {
   const { items, summary, isOpen, openCart, closeCart, removeItem } = useCart();
@@ -15,9 +18,23 @@ export default function Header() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const formatCurrency = (value) => `LKR${value.toLocaleString()}`;
+  const formatCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const warmSales = useCallback(() => prefetchSalesProducts(queryClient), [queryClient]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
+  const productsQuery = useQuery({
+    queryKey: ['products', 'cart-pricing'],
+    queryFn: () => fetchProducts({ source: 'cart-pricing', limit: 500 }),
+    enabled: items.length > 0,
+    ...productsQueryDefaults,
+  });
+  const salesQuery = useQuery({
+    ...salesProductsQuery,
+    enabled: items.length > 0,
+  });
+  const cartItems = items.length
+    ? resolvePricedItems(items, productsQuery.data || [], salesQuery.data || [])
+    : [];
+  const cartSummary = pricingTotals(cartItems, 0);
 
   const navLinks = [
     { to: '/collection', label: 'Collection', warm: prefetchCollectionProducts },
@@ -187,18 +204,19 @@ export default function Header() {
               <span>Add pieces to see them here.</span>
             </div>
           ) : (
-            items.map((item) => (
+            cartItems.map((item) => (
               <div key={`${item.productId}-${item.size || 'One Size'}`} className="cart-item">
                 <div className="cart-item-image">
                   {item.image ? <img src={item.image} alt={item.name} /> : <span>{item.name}</span>}
                 </div>
                 <div className="cart-item-info">
                   <p>{item.name}</p>
-                  <span>
-                    Size {item.size || 'One Size'} {'\u00B7'} Qty {item.quantity || 1}
-                  </span>
+                  <span>{itemMetaText(item)} {itemMetaText(item) ? '\u00B7' : ''} Qty {item.quantity || 1}</span>
                 </div>
-                <strong>{formatCurrency(item.price * (item.quantity || 1))}</strong>
+                <div className="astravia-price-stack">
+                  <span className={isSaleItem(item) ? 'sale-price' : 'normal-price'}>{formatCurrency(item.price * (item.quantity || 1))}</span>
+                  {isSaleItem(item) && <span className="original-price">{formatCurrency(item.originalPrice * (item.quantity || 1))}</span>}
+                </div>
                 <button
                   type="button"
                   className="cart-remove"
@@ -215,7 +233,7 @@ export default function Header() {
         <div className="cart-drawer-footer">
           <div className="cart-summary">
             <span>Subtotal</span>
-            <strong>{formatCurrency(summary.subtotal)}</strong>
+            <strong>{formatCurrency(cartSummary.subtotal)}</strong>
           </div>
           <button
             type="button"

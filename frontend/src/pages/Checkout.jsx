@@ -1,44 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiArrowLeft, FiArrowRight, FiCreditCard, FiLock, FiMail, FiMapPin, FiTag, FiTruck } from 'react-icons/fi';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import { fetchProducts, productsQueryDefaults } from '../services/productsQueries.js';
+import { salesProductsQuery } from '../services/salesQueries.js';
+import { isSaleItem, itemMetaText, pricingTotals, resolvePricedItems } from '../utils/pricing.js';
 import '../styles/checkout.css';
 
 const checkoutDetailsKey = 'astravia_checkout_details';
-
-const fallbackItems = [
-  {
-    productId: 'chaos-tee',
-    name: 'Chaos Tee',
-    image: '/models/Tshirt8.png',
-    color: 'Black',
-    size: 'M',
-    quantity: 1,
-    price: 2490,
-    oldPrice: 4990,
-  },
-  {
-    productId: 'rebuild-tee',
-    name: 'Rebuild Tee',
-    image: '/models/Tshirt5.png',
-    color: 'Stone',
-    size: 'M',
-    quantity: 1,
-    price: 2145,
-    oldPrice: 4290,
-  },
-  {
-    productId: 'phantom-tee',
-    name: 'Phantom Tee',
-    image: '/models/Tshirt11.png',
-    color: 'Black',
-    size: 'L',
-    quantity: 1,
-    price: 3056,
-    oldPrice: 4690,
-  },
-];
 
 const formatPrice = (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -89,23 +60,27 @@ export default function Checkout() {
   const [toast, setToast] = useState('');
   const [touchedFields, setTouchedFields] = useState({});
   const [customerDetails, setCustomerDetails] = useState(() => buildCheckoutDetails(user));
+  const productsQuery = useQuery({
+    queryKey: ['products', 'checkout-pricing'],
+    queryFn: () => fetchProducts({ source: 'checkout-pricing', limit: 500 }),
+    ...productsQueryDefaults,
+  });
+  const salesQuery = useQuery(salesProductsQuery);
 
   const checkoutItems = useMemo(() => {
-    if (checkoutState.items?.length) return checkoutState.items;
-    if (!items.length) return fallbackItems;
-    return items.map((item) => ({
-      ...item,
-      color: item.color || 'Black',
-      oldPrice: item.oldPrice || Math.round(Number(item.price || 0) * 1.35),
-    }));
-  }, [checkoutState.items, items]);
+    const sourceItems = checkoutState.items?.length ? checkoutState.items : items;
+    return resolvePricedItems(sourceItems, productsQuery.data || [], salesQuery.data || [])
+      .filter((item) => item.productId && item.name);
+  }, [checkoutState.items, items, productsQuery.data, salesQuery.data]);
 
-  const subtotal = checkoutItems.reduce((total, item) => total + Number(item.price || 0) * (item.quantity || 1), 0);
   const shipping = shippingMethod === 'standard' ? 250 : 550;
-  const discount = Math.round(subtotal * 0.2);
-  const total = subtotal + shipping - discount;
+  const totals = pricingTotals(checkoutItems, shipping);
+  const subtotal = totals.subtotal;
+  const discount = totals.discount;
+  const total = totals.total;
+  const pricingReady = !productsQuery.isLoading && !salesQuery.isLoading;
   const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerDetails.email.trim());
-  const checkoutValid = requiredCheckoutFields.every((field) => customerDetails[field].trim()) && emailReady;
+  const checkoutValid = checkoutItems.length > 0 && pricingReady && requiredCheckoutFields.every((field) => customerDetails[field].trim()) && emailReady;
 
   useEffect(() => {
     if (!user) return;
@@ -147,7 +122,7 @@ export default function Checkout() {
   const proceedToPayment = () => {
     if (!checkoutValid) {
       setTouchedFields(Object.fromEntries(requiredCheckoutFields.map((field) => [field, true])));
-      showToast('Complete required contact and shipping fields first.');
+      showToast(checkoutItems.length ? 'Complete required contact and shipping fields first.' : 'Add a product before checkout.');
       return;
     }
 
@@ -388,18 +363,20 @@ export default function Checkout() {
 
           <div className="checkout-products">
             {checkoutItems.map((item) => (
-              <div className="checkout-product-row" key={`${item.productId}-${item.size || 'M'}`}>
+              <div className="checkout-product-row" key={`${item.productId}-${item.size || 'One Size'}`}>
                 <div className="checkout-product-thumb">
                   {item.image ? <img src={item.image} alt={item.name} /> : <span>{item.name}</span>}
                 </div>
                 <div className="checkout-product-meta">
                   <h3>{item.name}</h3>
-                  <p>{item.color || 'Black'} / Oversized / {item.size || 'M'}</p>
+                  <p className="astravia-item-meta">{itemMetaText(item)}</p>
                   <span>Qty: {item.quantity || 1}</span>
                 </div>
                 <div className="checkout-product-price">
-                  <strong>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</strong>
-                  <del>{formatPrice(Number(item.oldPrice || 0) * (item.quantity || 1))}</del>
+                  <span className="astravia-price-stack">
+                    <span className={isSaleItem(item) ? 'sale-price' : 'normal-price'}>{formatPrice(Number(item.price || 0) * (item.quantity || 1))}</span>
+                    {isSaleItem(item) && <span className="original-price">{formatPrice(Number(item.originalPrice || 0) * (item.quantity || 1))}</span>}
+                  </span>
                 </div>
               </div>
             ))}
@@ -408,7 +385,6 @@ export default function Checkout() {
           <div className="checkout-summary-lines">
             <p><span>Subtotal</span><strong>{formatPrice(subtotal)}</strong></p>
             <p><span>Shipping</span><strong>{formatPrice(shipping)}</strong></p>
-            <p><span>Discount</span><strong className="discount">- {formatPrice(discount)}</strong></p>
           </div>
 
           <div className="checkout-total-line">

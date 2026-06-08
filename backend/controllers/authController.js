@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -7,6 +8,7 @@ const { store, createId, seedAdmin, getNextCustomerId } = require('../data/memor
 const { getNextCustomerId: getNextDbCustomerId } = require('../utils/customerId');
 const { withId } = require('../utils/dbFormat');
 const { avatarUploadsDir, toAvatarImagePath } = require('../middleware/avatarUpload');
+const { sendPasswordResetEmail } = require('../services/passwordResetEmailService');
 const devLog = require('../utils/devLog');
 
 const createToken = (id) => {
@@ -22,6 +24,35 @@ const logAuthStep = (step, details = {}) => {
 };
 
 const getFrontendUrl = () => (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const validatePassword = (password = '') => ({
+  minLength: String(password).length >= 8,
+  uppercase: /[A-Z]/.test(password),
+  lowercase: /[a-z]/.test(password),
+  number: /\d/.test(password),
+  special: /[!@#$%^&*]/.test(password),
+});
+const isStrongPassword = (password) => Object.values(validatePassword(password)).every(Boolean);
+const resetTokenExpiry = () => new Date(Date.now() + 60 * 60 * 1000);
+const passwordResetServiceUnavailable = (res) =>
+  res.status(500).json({
+    success: false,
+    message: 'Password reset service is not configured correctly.',
+  });
+const getPasswordResetTokenModel = () => {
+  const model = prisma.passwordResetToken;
+  if (
+    !model ||
+    typeof model.deleteMany !== 'function' ||
+    typeof model.create !== 'function' ||
+    typeof model.findUnique !== 'function' ||
+    typeof model.delete !== 'function'
+  ) {
+    return null;
+  }
+  return model;
+};
 
 const redirectWithOAuthError = (res, code = 'oauth_failed') => {
   res.redirect(`${getFrontendUrl()}/auth/success?error=${encodeURIComponent(code)}`);
@@ -114,6 +145,9 @@ const registerUser = async (req, res) => {
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ message: 'Password does not meet security requirements' });
     }
 
     if (global.useMemoryStore) {
@@ -231,6 +265,146 @@ const loginUser = async (req, res) => {
   }
 };
 
+const requestPasswordReset = async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+  if (!emailPattern.test(email)) {
+    return res.status(400).json({ message: 'Enter a valid email address' });
+  }
+
+  try {
+    if (global.useMemoryStore) {
+      await seedAdmin();
+      const user = store.users.find((entry) => String(entry.email || '').toLowerCase() === email);
+      if (!user) return res.status(404).json({ message: 'No account found with this email.' });
+
+      const token = crypto.randomBytes(32).toString('hex');
+      store.passwordResetTokens = (store.passwordResetTokens || []).filter((entry) => String(entry.userId) !== String(user._id || user.id));
+      store.passwordResetTokens.push({
+        _id: createId(),
+        userId: user._id || user.id,
+        token,
+        expiresAt: resetTokenExpiry(),
+        createdAt: new Date(),
+      });
+
+      await sendPasswordResetEmail({ user, resetUrl: `${getFrontendUrl()}/reset-password/${token}` });
+      return res.json({ success: true, message: 'Reset link sent to your email.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ message: 'No account found with this email.' });
+    if (!user.password && user.provider !== 'local') {
+      return res.status(400).json({ message: 'Please continue with Google for this account' });
+    }
+    const passwordResetToken = getPasswordResetTokenModel();
+    if (!passwordResetToken) return passwordResetServiceUnavailable(res);
+
+    const token = crypto.randomBytes(32).toString('hex');
+    await passwordResetToken.deleteMany({ where: { userId: user.id } });
+    await passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: resetTokenExpiry(),
+      },
+    });
+
+    await sendPasswordResetEmail({ user, resetUrl: `${getFrontendUrl()}/reset-password/${token}` });
+    return res.json({ success: true, message: 'Reset link sent to your email.' });
+  } catch (error) {
+    console.error('[auth] password reset request failed', error);
+    return res.status(500).json({ message: 'Something went wrong.' });
+  }
+};
+
+const validateResetToken = async (req, res) => {
+  const token = String(req.params.token || req.body.token || '').trim();
+  if (!token) return res.status(400).json({ message: 'This reset link has expired.' });
+
+  try {
+    if (global.useMemoryStore) {
+      const entry = (store.passwordResetTokens || []).find((item) => item.token === token);
+      if (!entry || new Date(entry.expiresAt) <= new Date()) {
+        return res.status(400).json({ message: 'This reset link has expired.' });
+      }
+      return res.json({ success: true });
+    }
+
+    const passwordResetToken = getPasswordResetTokenModel();
+    if (!passwordResetToken) return passwordResetServiceUnavailable(res);
+
+    const entry = await passwordResetToken.findUnique({ where: { token } });
+    if (!entry || entry.expiresAt <= new Date()) {
+      if (entry) await passwordResetToken.delete({ where: { token } }).catch(() => {});
+      return res.status(400).json({ message: 'This reset link has expired.' });
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[auth] reset token validation failed', error);
+    return res.status(500).json({ message: 'Something went wrong.' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const token = String(req.params.token || req.body.token || '').trim();
+  const password = String(req.body.password || '');
+
+  if (!token) return res.status(400).json({ message: 'This reset link has expired.' });
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ message: 'Password does not meet security requirements' });
+  }
+
+  try {
+    if (global.useMemoryStore) {
+      const tokens = store.passwordResetTokens || [];
+      const entry = tokens.find((item) => item.token === token);
+      if (!entry || new Date(entry.expiresAt) <= new Date()) {
+        store.passwordResetTokens = tokens.filter((item) => item.token !== token);
+        return res.status(400).json({ message: 'This reset link has expired.' });
+      }
+
+      const user = store.users.find((item) => String(item._id || item.id) === String(entry.userId));
+      if (!user) return res.status(400).json({ message: 'This reset link has expired.' });
+
+      user.password = await bcrypt.hash(password, 10);
+      user.provider = user.provider || 'local';
+      user.updatedAt = new Date();
+      store.passwordResetTokens = tokens.filter((item) => String(item.userId) !== String(entry.userId));
+      return res.json({ success: true, message: 'Password updated successfully.' });
+    }
+
+    const passwordResetToken = getPasswordResetTokenModel();
+    if (!passwordResetToken) return passwordResetServiceUnavailable(res);
+
+    const entry = await passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+    if (!entry || entry.expiresAt <= new Date()) {
+      if (entry) await passwordResetToken.delete({ where: { token } }).catch(() => {});
+      return res.status(400).json({ message: 'This reset link has expired.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: entry.userId },
+        data: { password: hashedPassword, provider: entry.user.provider || 'local' },
+      }),
+      passwordResetToken.deleteMany({ where: { userId: entry.userId } }),
+    ]);
+
+    return res.json({ success: true, message: 'Password updated successfully.' });
+  } catch (error) {
+    console.error('[auth] password reset failed', error);
+    return res.status(500).json({ message: 'Something went wrong.' });
+  }
+};
+
 const getMe = async (req, res) => {
   res.json({ user: serializeUser(req.user) });
 };
@@ -279,6 +453,9 @@ const updateAvatar = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  requestPasswordReset,
+  validateResetToken,
+  resetPassword,
   getMe,
   updateAvatar,
   redirectGoogleAuthSuccess,

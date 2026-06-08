@@ -24,26 +24,6 @@ const records = [
     createdAt: new Date('2026-05-28T08:45:00.000Z')
   },
   {
-    customerId: 'CUS-1049',
-    name: 'Nethmi Silva',
-    email: 'nethmi.silva@example.com',
-    phone: '+94 76 441 2290',
-    orderId: 'ORD-1049',
-    transactionId: 'TXN-782452',
-    invoiceId: 'INV-2026-1049',
-    productName: 'Linen Oxford Shirt',
-    collection: 'Men',
-    size: 'L',
-    quantity: 2,
-    unitPrice: 210000,
-    shipping: 650,
-    paymentMethod: 'CARD',
-    city: 'Kandy',
-    line1: '18 Riverdale Road',
-    postalCode: '20000',
-    createdAt: new Date('2026-05-30T11:20:00.000Z')
-  },
-  {
     customerId: 'CUS-1050',
     name: 'Kavindu Jay',
     email: 'kavindu.jay@example.com',
@@ -78,7 +58,6 @@ const buildAddress = (record) => ({
 const productImageData = (record) => {
   const palette = {
     'Silk Wrap Maxi': ['#111111', '#f1ece8'],
-    'Linen Oxford Shirt': ['#e8ded5', '#ffffff'],
     'Raffia Structured Tote': ['#b67434', '#f2d4a4'],
   }[record.productName] || ['#111111', '#eeeeee'];
   const svg = `

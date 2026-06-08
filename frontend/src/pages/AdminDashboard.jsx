@@ -30,6 +30,7 @@ import InventoryManagementPanel from '../components/admin/InventoryManagementPan
 import { COLLECTION_OPTIONS, getCategoryOptions } from '../utils/productStructure.js';
 import { getStockStatus, getTotalStock } from '../utils/stockStatus.js';
 import { resolveImageUrl } from '../utils/imageUrl.js';
+import { isSaleItem, itemMetaText } from '../utils/pricing.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
 import adminLogo from '../assets/Name 2.png';
@@ -482,6 +483,10 @@ const getCustomerEmail = (order) => order?.customerEmail || order?.user?.email |
 
 const getCustomerKey = (order) => String(order?.customerEmail || order?.user?.email || order?.email || order?.customerId || order?.userId || getCustomerName(order)).toLowerCase();
 
+const isPaidOrder = (order) => order?.paymentStatus === 'PAID' || order?.payment?.status === 'PAID';
+
+const getPaidOrderAmount = (order) => (isPaidOrder(order) ? Number(order?.totalAmount ?? order?.totalPrice ?? order?.amount ?? 0) : 0);
+
 const buildTopCustomers = (orders = []) => {
   const grouped = new Map();
 
@@ -489,7 +494,7 @@ const buildTopCustomers = (orders = []) => {
     const key = getCustomerKey(order);
     if (!key) return;
 
-    const revenue = Number(order?.totalAmount ?? order?.totalPrice ?? 0);
+    const revenue = getPaidOrderAmount(order);
     const orderDate = order?.orderDate || order?.createdAt || null;
     const name = getCustomerName(order);
     const email = getCustomerEmail(order);
@@ -803,7 +808,7 @@ export default function AdminDashboard() {
   const totals = analytics?.totals || {
     users: customers.length,
     orders: orders.length,
-    revenue: orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0),
+    revenue: orders.reduce((sum, order) => sum + getPaidOrderAmount(order), 0),
     lowStock: products.filter((product) => getStockStatus(product).className === 'low').length,
   };
 
@@ -1385,7 +1390,7 @@ export default function AdminDashboard() {
       shipped: countBy('shipped'),
       delivered: countBy('delivered'),
       cancelled: countBy('cancelled'),
-      revenue: source.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0),
+      revenue: source.reduce((sum, order) => sum + getPaidOrderAmount(order), 0),
     };
   }, [filteredOrders]);
 
@@ -1411,7 +1416,8 @@ export default function AdminDashboard() {
       const deliveredOrders = customerOrders.filter((order) =>
         String(order.orderStatus || order.status || '').toLowerCase() === 'delivered'
       );
-      const totalSpent = deliveredOrders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
+      const paidOrders = customerOrders.filter(isPaidOrder);
+      const totalSpent = paidOrders.reduce((sum, order) => sum + getPaidOrderAmount(order), 0);
 
       const lastOrderDate = customerOrders.reduce((latest, order) => {
         const date = order.orderDate ? new Date(order.orderDate) : order.createdAt ? new Date(order.createdAt) : null;
@@ -1480,8 +1486,9 @@ export default function AdminDashboard() {
     const orderAmount = (order) => Number(order.totalAmount ?? order.totalPrice ?? order.amount ?? 0);
     const orderStatus = (order) => String(order.orderStatus || order.status || '').toLowerCase();
     const isCompleted = (order) => ['delivered', 'completed'].includes(orderStatus(order));
+    const paidOrders = orders.filter(isPaidOrder);
 
-    const revenueFor = (predicate) => orders.reduce((sum, order) => {
+    const revenueFor = (predicate) => paidOrders.reduce((sum, order) => {
       const date = orderDate(order);
       return date && predicate(date, order) ? sum + orderAmount(order) : sum;
     }, 0);
@@ -1499,13 +1506,16 @@ export default function AdminDashboard() {
       return date && date >= lastMonthStart && date < thisMonthStart;
     });
 
-    const totalRevenue = orders.reduce((sum, order) => sum + orderAmount(order), 0);
+    const totalRevenue = paidOrders.reduce((sum, order) => sum + orderAmount(order), 0);
     const todayRevenue = revenueFor((date) => date >= startOfToday);
     const monthRevenue = revenueFor((date) => date >= startOfMonth);
     const yearRevenue = revenueFor((date) => date >= startOfYear);
-    const lastMonthRevenue = lastMonthOrders.reduce((sum, order) => sum + orderAmount(order), 0);
+    const lastMonthRevenue = paidOrders.reduce((sum, order) => {
+      const date = orderDate(order);
+      return date && date >= lastMonthStart && date < thisMonthStart ? sum + orderAmount(order) : sum;
+    }, 0);
     const monthlyGrowth = lastMonthRevenue ? ((monthRevenue - lastMonthRevenue) / Math.abs(lastMonthRevenue)) * 100 : (monthRevenue ? 100 : 0);
-    const averageOrderValue = orders.length ? totalRevenue / orders.length : 0;
+    const averageOrderValue = paidOrders.length ? totalRevenue / paidOrders.length : 0;
 
     const lowStockProducts = products
       .map((product) => ({
@@ -1519,7 +1529,7 @@ export default function AdminDashboard() {
 
     const productLookup = new Map(products.map((product) => [String(product.id || product._id), product]));
     const productSales = new Map();
-    orders.forEach((order) => {
+    paidOrders.forEach((order) => {
       const items = Array.isArray(order.items) && order.items.length ? order.items : [];
       items.forEach((item) => {
         const product = productLookup.get(String(item.product || item.productId || ''));
@@ -2285,7 +2295,11 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <p>{item.name}</p>
-                    <small>Size: {item.size} | Qty: {item.quantity} | {money(Number(item.price || 0))}</small>
+                    <small>{itemMetaText(item)}{itemMetaText(item) ? ' | ' : ''}Qty: {item.quantity}</small>
+                    <small className="astravia-price-stack">
+                      <span className={isSaleItem(item) ? 'sale-price' : 'normal-price'}>{money(Number(item.price || 0))}</span>
+                      {isSaleItem(item) && <span className="original-price">{money(Number(item.originalPrice || 0))}</span>}
+                    </small>
                   </div>
                 </article>
               ))}
@@ -2468,7 +2482,7 @@ export default function AdminDashboard() {
           }))}
         />
       </section>
-      <section className="erp-card"><div className="admin-section-head"><span>Performance</span><h2>Best Revenue Products</h2></div><DataTable columns={[{ key: 'product', label: 'Product' }, { key: 'orders', label: 'Orders' }, { key: 'revenue', label: 'Revenue' }, { key: 'profit', label: 'Profit' }]} rows={(finance?.bestProducts || []).map((item) => ({ id: item.product, ...item, revenue: money(item.revenue), profit: money(item.profit) }))} /></section>
+      <section className="erp-card"><div className="admin-section-head"><span>Performance</span><h2>Best Revenue Products</h2></div><DataTable empty="No revenue data available" columns={[{ key: 'product', label: 'Product' }, { key: 'orders', label: 'Orders' }, { key: 'revenue', label: 'Revenue' }, { key: 'profit', label: 'Profit' }]} rows={(finance?.bestProducts || []).map((item) => ({ id: item.id || item.product, ...item, revenue: money(item.revenue), profit: money(item.profit) }))} /></section>
       <section className="erp-card">
         <div className="admin-section-head"><span>Gift Voucher Sales</span><h2>Gift Voucher Sales</h2></div>
         <div className="erp-metrics">
@@ -2800,18 +2814,26 @@ export default function AdminDashboard() {
                 {(selectedInvoice.products || []).map((item) => (
                   <article key={item.id || item.name}>
                     <span className="invoice-item-thumb">{item.image ? <img src={resolveImageUrl(item.image)} alt={item.name} /> : item.name?.slice(0, 1)}</span>
-                    <div><strong>{item.name}</strong><small>SKU: {item.sku || item.product || 'ASTRAVIA'}</small></div>
+                    <div>
+                      <strong>{item.name}</strong>
+                      {itemMetaText(item) && <small>{itemMetaText(item)}</small>}
+                    </div>
                     <em>Qty {item.quantity}</em>
-                    <em>{formatLkr(item.price)}</em>
+                    <em>
+                      <span className="astravia-price-stack">
+                        <span className={isSaleItem(item) ? 'sale-price' : 'normal-price'}>{formatLkr(item.price)}</span>
+                        {isSaleItem(item) && <span className="original-price">{formatLkr(item.originalPrice)}</span>}
+                      </span>
+                    </em>
                     <b>{formatLkr(Number(item.price || 0) * Number(item.quantity || 1))}</b>
                   </article>
                 ))}
               </section>
 
               <section className="invoice-detail-totals">
-                <p><span>Subtotal</span><strong>{formatLkr(selectedInvoice.subtotal)}</strong></p>
+                <p><span>Subtotal</span><strong>{formatLkr(Number(selectedInvoice.subtotal || 0) + Number(selectedInvoice.discount || 0))}</strong></p>
                 <p><span>Shipping</span><strong>{formatLkr(selectedInvoice.shipping)}</strong></p>
-                <p><span>Discount</span><strong>{formatLkr(selectedInvoice.discount)}</strong></p>
+                {Number(selectedInvoice.discount || 0) > 0 && <p><span>Discount</span><strong>{formatLkr(selectedInvoice.discount)}</strong></p>}
                 <p><span>Tax</span><strong>{formatLkr(selectedInvoice.tax)}</strong></p>
                 <p className="grand-total"><span>Grand Total</span><strong>{formatLkr(selectedInvoice.grandTotal || selectedInvoice.amount)}</strong></p>
               </section>

@@ -47,7 +47,7 @@
         </section>
       </div>
 
-      <section class="items-card">
+      <section class="items-card {{ITEM_DENSITY}}">
         <table>
           <thead>
             <tr>
@@ -67,7 +67,7 @@
         <div class="wordmark-watermark">Astravia</div>
         <div class="totals">
           <div class="total-row"><span>SUBTOTAL</span><strong>{{SUBTOTAL}}</strong></div>
-          <div class="total-row"><span>DISCOUNT</span><strong>{{DISCOUNT}}</strong></div>
+{{DISCOUNT_ROW}}
           <div class="total-row"><span>SHIPPING</span><strong>{{SHIPPING}}</strong></div>
           <div class="total-row"><span>TAX</span><strong>{{TAX}}</strong></div>
           <div class="grand-row"><span>GRAND TOTAL</span><strong>{{GRAND_TOTAL}}</strong></div>
@@ -92,7 +92,6 @@
             <div class="script">Astravia</div>
             <div class="signature-line"></div>
             <strong>Astravia Management</strong>
-            <span>Authorized Signature</span>
           </div>
         </div>
       </section>

@@ -81,7 +81,7 @@ export default function Login() {
                 <span aria-hidden="true" />
                 Remember me
               </label>
-              <a href="/forgot-password">Forgot password?</a>
+              <Link to="/forgot-password">Forgot password?</Link>
             </div>
 
             <button className="auth-primary-btn" type="submit" disabled={submitting}>

@@ -7,6 +7,7 @@ const { sendAdminEmpty, sendAdminObject } = require('../utils/adminApiResponse')
 
 const monthKey = (date) => new Date(date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
 const getOrderTotal = (order) => Number(order.totalAmount ?? order.totalPrice ?? 0);
+const isPaidOrder = (order = {}) => order.paymentStatus === 'PAID' || order.payment?.status === 'PAID';
 const getTotalStock = (product) => {
   if (product?.sizeStock && typeof product.sizeStock === 'object') {
     return Object.values(product.sizeStock).reduce((sum, value) => sum + Math.max(0, Math.trunc(Number(value) || 0)), 0);
@@ -26,7 +27,8 @@ const getOrderItems = (order) => {
 };
 
 const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) => {
-  const revenue = orders.reduce((sum, order) => sum + getOrderTotal(order), 0);
+  const paidOrders = orders.filter(isPaidOrder);
+  const revenue = paidOrders.reduce((sum, order) => sum + getOrderTotal(order), 0);
   const voucherRevenue = Number(metrics.voucherRevenue || 0);
   const lowStock = products.filter((product) => {
     const stock = getTotalStock(product);
@@ -34,7 +36,7 @@ const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) =>
   });
   const productSales = {};
 
-  orders.forEach((order) => {
+  paidOrders.forEach((order) => {
     getOrderItems(order).forEach((item) => {
       const key = item.product || item.name;
       if (!productSales[key]) {
@@ -46,7 +48,7 @@ const buildAnalytics = (products, orders, users, expenses = [], metrics = {}) =>
   });
 
   const monthlyRevenue = Object.values(
-    orders.reduce((acc, order) => {
+    paidOrders.reduce((acc, order) => {
       const key = monthKey(getOrderDate(order));
       if (!acc[key]) acc[key] = { label: key, revenue: 0, orders: 0 };
       acc[key].revenue += getOrderTotal(order);
@@ -129,6 +131,7 @@ const getAnalytics = async (req, res) => {
       console.error({ endpoint, table: label, error: error.message });
       return fallback;
     });
+    const paidOrderWhere = { paymentStatus: 'PAID' };
 
     const products = await safe('Product', prisma.product.findMany({
       select: {
@@ -148,11 +151,12 @@ const getAnalytics = async (req, res) => {
       safe('Order', prisma.order.count(), 0),
       safe('User', prisma.user.count(), 0),
       safe('Customer', prisma.customer.count(), 0),
-      safe('Order', prisma.order.aggregate({ _sum: { totalAmount: true } }), { _sum: { totalAmount: 0 } }),
+      safe('Order', prisma.order.aggregate({ where: paidOrderWhere, _sum: { totalAmount: true } }), { _sum: { totalAmount: 0 } }),
       safe('Expense', prisma.expense.aggregate({ _sum: { amount: true } }), { _sum: { amount: 0 } })
     ]);
     const [orders, users] = await Promise.all([
       safe('Order', prisma.order.findMany({
+        where: paidOrderWhere,
         select: {
           id: true,
           orderId: true,

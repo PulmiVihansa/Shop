@@ -2,19 +2,34 @@ const prisma = require('../config/prisma');
 const { store, createId, seedBusinessData } = require('../data/memoryStore');
 const { withId } = require('../utils/dbFormat');
 const { sendAdminEmpty, sendAdminObject } = require('../utils/adminApiResponse');
-const { getFinanceDashboard } = require('../services/financeService');
+const { buildFinanceDashboard } = require('../services/financeService');
 const { formatTransaction } = require('./transactionController');
 const { getGiftVoucherSalesSummary } = require('../services/giftVoucherService');
 
+const isPaidOrder = (order = {}) => order.paymentStatus === 'PAID' || order.payment?.status === 'PAID';
+
 const summarizeFinance = (orders, expenses, totals = {}) => {
-  const revenue = totals.revenue ?? orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
+  const paidOrders = orders.filter(isPaidOrder);
+  const revenue = totals.revenue ?? paidOrders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.totalPrice ?? 0), 0);
   const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const breakdown = totals.breakdown ?? expenses.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + Number(expense.amount || 0);
     return acc;
   }, {});
   const totalExpenses = totals.expenses ?? expenseTotal;
-  return { ...getFinanceDashboard(), revenue, expenses: totalExpenses, profit: revenue - totalExpenses, breakdown };
+  return {
+    ...buildFinanceDashboard({
+      orders: paidOrders,
+      products: totals.products || [],
+      revenue,
+      expenses: totalExpenses,
+      bestProducts: totals.bestProducts,
+    }),
+    revenue,
+    expenses: totalExpenses,
+    profit: revenue - totalExpenses,
+    breakdown,
+  };
 };
 
 const getFinanceSummary = async (req, res) => {
@@ -28,7 +43,7 @@ const getFinanceSummary = async (req, res) => {
       await seedBusinessData();
       const financeTransactions = store.financeTransactions || [];
       const payload = {
-        ...summarizeFinance(store.orders, store.expenses),
+        ...summarizeFinance(store.orders, store.expenses, { products: [], bestProducts: [] }),
         giftVoucherSales,
         financeTransactions,
         recentTransactions: [
@@ -46,13 +61,41 @@ const getFinanceSummary = async (req, res) => {
     }
 
     const where = req.query.category ? { category: req.query.category } : {};
+    const paidOrderWhere = { paymentStatus: 'PAID' };
     const limit = Math.min(Math.max(Number(req.query.limit || 200), 1), 500);
     const safe = async (label, promise, fallback) => promise.catch((error) => {
       console.error({ endpoint, table: label, error: error.message });
       return fallback;
     });
-    const [orderTotals, expenseTotals, expenseBreakdown, expenses, transactions, financeTransactions] = await Promise.all([
-      safe('Order', prisma.order.aggregate({ _sum: { totalAmount: true } }), { _sum: { totalAmount: 0 } }),
+    const [orders, products, orderTotals, expenseTotals, expenseBreakdown, expenses, transactions, financeTransactions] = await Promise.all([
+      safe('Order', prisma.order.findMany({
+        where: paidOrderWhere,
+        select: {
+          id: true,
+          orderId: true,
+          productName: true,
+          quantity: true,
+          price: true,
+          totalAmount: true,
+          items: true,
+          paymentStatus: true,
+          orderStatus: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1000
+      }), []),
+      safe('Product', prisma.product.findMany({
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          collection: true,
+          category: true,
+        }
+      }), []),
+      safe('Order', prisma.order.aggregate({ where: paidOrderWhere, _sum: { totalAmount: true } }), { _sum: { totalAmount: 0 } }),
       safe('Expense', prisma.expense.aggregate({ where, _sum: { amount: true } }), { _sum: { amount: 0 } }),
       safe('Expense', prisma.expense.groupBy({
         by: ['category'],
@@ -72,10 +115,11 @@ const getFinanceSummary = async (req, res) => {
       return acc;
     }, {});
     const payload = {
-      ...summarizeFinance([], expenses, {
+      ...summarizeFinance(orders, expenses, {
         revenue: Number(orderTotals._sum.totalAmount || 0),
         expenses: Number(expenseTotals._sum.amount || 0),
-        breakdown
+        breakdown,
+        products,
       }),
       giftVoucherSales,
       financeTransactions: financeTransactions.map(withId),

@@ -3,6 +3,9 @@ const passport = require('passport');
 const {
   registerUser,
   loginUser,
+  requestPasswordReset,
+  validateResetToken,
+  resetPassword,
   getMe,
   updateAvatar,
   redirectGoogleAuthSuccess,
@@ -18,6 +21,9 @@ const googleFailureRedirect = `${(process.env.FRONTEND_URL || 'http://localhost:
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.post('/forgot-password', requestPasswordReset);
+router.get('/reset-password/:token', validateResetToken);
+router.post('/reset-password/:token', resetPassword);
 router.get('/google', (req, res, next) => {
   devLog('[auth][google] initiate route hit', {
     hasClientId: Boolean(process.env.GOOGLE_CLIENT_ID),

@@ -15,6 +15,7 @@ const {
   findVoucherByOrderId,
   normalizeVoucherIntent,
 } = require('../services/giftVoucherService');
+const { normalizeIncomingItems, orderItemDiscountTotal, priceOrderItems } = require('../services/pricingService');
 
 const PAYHERE_SANDBOX_URL = 'https://sandbox.payhere.lk/pay/checkout';
 const PAYHERE_PRODUCTION_URL = 'https://www.payhere.lk/pay/checkout';
@@ -39,27 +40,6 @@ const checkoutHash = ({ merchantId, orderId, amount, currency, merchantSecret })
   md5Upper(`${merchantId}${orderId}${money(amount)}${currency}${md5Upper(merchantSecret)}`);
 const notifyHash = ({ merchantId, orderId, amount, currency, statusCode, merchantSecret }) =>
   md5Upper(`${merchantId}${orderId}${amount}${currency}${statusCode}${md5Upper(merchantSecret)}`);
-
-const normalizeItems = (body = {}) => {
-  const incoming = Array.isArray(body.items) ? body.items : [];
-  const items = incoming.length ? incoming : [{
-    product: body.product || body.productId,
-    name: body.productName || 'Product',
-    price: body.price || body.totalAmount || 0,
-    quantity: body.quantity || 1,
-    size: body.size || 'One Size',
-    image: body.image || '',
-  }];
-
-  return items.map((item) => ({
-    product: item.product || item.productId || item.id || undefined,
-    name: toText(item.name, toText(body.productName, 'Product')),
-    price: toNumber(item.price, 0),
-    quantity: Math.max(1, Math.trunc(toNumber(item.quantity, 1))),
-    size: toText(item.size, toText(body.size, 'One Size')),
-    image: toText(item.image, ''),
-  }));
-};
 
 const summaryName = (items) => {
   if (items.length <= 1) return items[0]?.name || 'Product';
@@ -104,8 +84,7 @@ const reduceStock = async (items) => {
   }));
 };
 
-const buildOrderData = (req, settings) => {
-  const items = normalizeItems(req.body);
+const buildOrderData = async (req, settings) => {
   const isVoucherOrder = req.body.orderType === 'voucher' || Boolean(req.body.voucher);
   const voucherIntent = isVoucherOrder
     ? normalizeVoucherIntent({
@@ -113,9 +92,24 @@ const buildOrderData = (req, settings) => {
         senderEmail: req.body.voucher?.senderEmail || req.body.customerEmail || req.user?.email,
       })
     : null;
-  const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
+  const pricedOrder = isVoucherOrder
+    ? {
+        items: normalizeIncomingItems(req.body).map((item) => ({
+          ...item,
+          price: toNumber(req.body.totalAmount, toNumber(req.body.total, voucherIntent?.amount || 0)),
+          originalPrice: toNumber(req.body.totalAmount, toNumber(req.body.total, voucherIntent?.amount || 0)),
+          saleDiscount: 0,
+          isSale: false,
+        })),
+        subtotal: toNumber(req.body.subtotal, voucherIntent?.amount || 0),
+        discount: 0,
+      }
+    : await priceOrderItems(req.body);
+  const items = pricedOrder.items;
+  const subtotal = pricedOrder.subtotal;
+  const discount = pricedOrder.discount;
   const shippingCost = Math.max(0, toNumber(req.body.shippingCost, toNumber(req.body.shipping, subtotal > 25000 || subtotal === 0 ? 0 : 650)));
-  const totalAmount = Math.max(0, toNumber(req.body.totalAmount, toNumber(req.body.total, subtotal + shippingCost)));
+  const totalAmount = Math.max(0, isVoucherOrder ? toNumber(req.body.totalAmount, toNumber(req.body.total, subtotal + shippingCost)) : subtotal + shippingCost);
   const address = {
     ...(req.body.address || {}),
     ...(voucherIntent ? { giftVoucher: voucherIntent, orderType: 'voucher' } : {}),
@@ -134,6 +128,7 @@ const buildOrderData = (req, settings) => {
     items,
     voucherIntent,
     subtotal,
+    discount,
     shippingCost,
     totalAmount,
     address,
@@ -155,7 +150,7 @@ const memoryTransactionId = () => {
 const createPayHerePayment = async (req, res) => {
   try {
     const settings = await getPaymentSettingsDoc();
-    const data = buildOrderData(req, settings);
+    const data = await buildOrderData(req, settings);
     const currency = String(settings.currency || 'LKR').toUpperCase();
     await reduceStock(data.items);
 
@@ -222,6 +217,7 @@ const createPayHerePayment = async (req, res) => {
           paymentStatus: 'PENDING',
           amount: data.totalAmount,
           subtotal: data.subtotal,
+          discount: data.discount,
           shipping: data.shippingCost,
           grandTotal: data.totalAmount,
           customer,
@@ -374,6 +370,7 @@ const handlePayHereNotify = async (req, res) => {
           paymentStatus: 'PAID',
           amount: Number(payhereAmount || order.totalAmount || 0),
           subtotal: order.price,
+          discount: orderItemDiscountTotal(order.items),
           shipping: order.shippingCost,
           grandTotal: order.totalAmount,
           customer: order.customer,

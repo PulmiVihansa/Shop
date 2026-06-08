@@ -3068,6 +3068,14 @@
   text-align: right;
 }
 
+.admin-shell .astravia-price-stack {
+  align-items: flex-start;
+}
+
+.admin-shell .original-price {
+  color: rgba(42, 34, 26, 0.48);
+}
+
 .invoice-detail-products b {
   text-align: right;
 }
