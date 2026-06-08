@@ -130,7 +130,7 @@ export default function OrderTracking() {
             <form className="care-form" onSubmit={trackManual}>
               <label>
                 Track By Order ID
-                <input value={manualId} onChange={(event) => setManualId(event.target.value)} placeholder="AST-123456" />
+                <input value={manualId} onChange={(event) => setManualId(event.target.value)} placeholder="ORD-1234" />
               </label>
               <button className="care-button" type="submit">Track Order</button>
             </form>

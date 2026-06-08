@@ -1036,9 +1036,19 @@ export default function AdminDashboard() {
     });
   };
 
-  const deleteProduct = async (id) => {
-    await api.delete(`/products/${id}`);
-    await loadAdminData();
+  const deleteProduct = async (id, productName = 'this product') => {
+    const confirmed = window.confirm(`Delete ${productName}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setError('');
+    setMessage('');
+    try {
+      await api.delete(`/products/${id}`);
+      setMessage(`${productName} deleted`);
+      await loadAdminData();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const duplicateProduct = async (product) => {
@@ -1138,6 +1148,10 @@ export default function AdminDashboard() {
   };
 
   const updateStatus = async (id, status) => {
+    if (!id) {
+      setError('Order ID is missing. Reopen the order and try again.');
+      return;
+    }
     try {
       const response = await api.put(`/orders/${id}/status`, { status });
       setSelectedOrder(response.data);
@@ -1614,6 +1628,10 @@ export default function AdminDashboard() {
   };
 
   const updatePaymentStatus = async (id, paymentStatus) => {
+    if (!id) {
+      setError('Order ID is missing. Reopen the order and try again.');
+      return;
+    }
     try {
       const response = await api.put(`/orders/${id}/payment-status`, { paymentStatus });
       setSelectedOrder(response.data);
@@ -2025,7 +2043,7 @@ export default function AdminDashboard() {
                           </button>
                           <button className="admin-action admin-action-message" type="button" onClick={() => editProduct(product)}>Edit</button>
                           <button className="admin-action admin-action-processing" type="button" onClick={() => duplicateProduct(product)}>Duplicate</button>
-                          <button className="admin-action admin-action-cancelled" type="button" onClick={() => deleteProduct(id)}>Delete</button>
+                          <button className="admin-action admin-action-cancelled" type="button" onClick={() => deleteProduct(id, product.name || product.title || 'this product')}>Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -2180,7 +2198,7 @@ export default function AdminDashboard() {
       <section className="admin-panel">
         <div className="admin-section-head"><span>Order Management</span><h2>Orders</h2></div>
         <div className="admin-order-filters">
-          <input placeholder="Order ID" value={orderFilters.orderId} onChange={(e) => setOrderFilters((prev) => ({ ...prev, orderId: e.target.value }))} />
+          <input placeholder="ORD-1234" value={orderFilters.orderId} onChange={(e) => setOrderFilters((prev) => ({ ...prev, orderId: e.target.value }))} />
           <input placeholder="Customer Name" value={orderFilters.customerName} onChange={(e) => setOrderFilters((prev) => ({ ...prev, customerName: e.target.value }))} />
           <input placeholder="Email" value={orderFilters.email} onChange={(e) => setOrderFilters((prev) => ({ ...prev, email: e.target.value }))} />
           <input type="date" value={orderFilters.startDate} onChange={(e) => setOrderFilters((prev) => ({ ...prev, startDate: e.target.value }))} />
@@ -2238,6 +2256,10 @@ export default function AdminDashboard() {
         <aside className="admin-order-drawer">
           <button className="admin-close" onClick={() => setSelectedOrder(null)}>Close</button>
           <h3>Order #{selectedOrder.orderId || String(selectedOrder._id || selectedOrder.id).slice(-8).toUpperCase()}</h3>
+          {(() => {
+            const selectedOrderActionId = selectedOrder._id || selectedOrder.id || selectedOrder.orderId;
+            return (
+              <>
           <div className="admin-order-detail-grid">
             <section>
               <h4>Customer Information</h4>
@@ -2285,11 +2307,11 @@ export default function AdminDashboard() {
           <section className="admin-order-actions">
             <h4>Admin Actions</h4>
             <div className="admin-actions">
-              <button className="admin-action admin-action-processing" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'processing')}>Mark Processing</button>
-              <button className="admin-action admin-action-shipped" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'shipped')}>Mark Shipped</button>
-              <button className="admin-action admin-action-delivered" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'delivered')}>Mark Delivered</button>
-              <button className="admin-action admin-action-cancelled" onClick={() => updateStatus(selectedOrder._id || selectedOrder.id, 'cancelled')}>Cancel Order</button>
-              <button className="admin-action admin-action-refund" onClick={() => updatePaymentStatus(selectedOrder._id || selectedOrder.id, 'REFUNDED')}>Refund</button>
+              <button className="admin-action admin-action-processing" onClick={() => updateStatus(selectedOrderActionId, 'processing')}>Mark Processing</button>
+              <button className="admin-action admin-action-shipped" onClick={() => updateStatus(selectedOrderActionId, 'shipped')}>Mark Shipped</button>
+              <button className="admin-action admin-action-delivered" onClick={() => updateStatus(selectedOrderActionId, 'delivered')}>Mark Delivered</button>
+              <button className="admin-action admin-action-cancelled" onClick={() => updateStatus(selectedOrderActionId, 'cancelled')}>Cancel Order</button>
+              <button className="admin-action admin-action-refund" onClick={() => updatePaymentStatus(selectedOrderActionId, 'REFUNDED')}>Refund</button>
             </div>
           </section>
           <section className="admin-order-timeline">
@@ -2301,6 +2323,9 @@ export default function AdminDashboard() {
               </p>
             ))}
           </section>
+              </>
+            );
+          })()}
         </aside>
       )}
     </>

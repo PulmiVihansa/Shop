@@ -1,6 +1,6 @@
 import { Component, Suspense, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Environment, useAnimations, useGLTF } from '@react-three/drei';
+import { useAnimations, useGLTF } from '@react-three/drei';
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import gsap from 'gsap';
 import * as THREE from 'three';
@@ -19,6 +19,7 @@ class HeroCanvasErrorBoundary extends Component {
 
   componentDidCatch(error) {
     console.error('Astravia hero canvas failed:', error);
+    this.props.onError?.(error);
   }
 
   render() {
@@ -374,7 +375,7 @@ function TShirtModel({ introRef, pointerRef }) {
   );
 }
 
-export default function TShirtExperience({ className, style }) {
+export default function TShirtExperience({ className, style, onWebGLError }) {
   const introRef = useRef({ move: 0, reveal: 0 });
   const pointerRef = useRef({ x: 0, y: 0, dragRotation: 0 });
   const dragRef = useRef({ active: false, lastX: 0 });
@@ -400,7 +401,7 @@ export default function TShirtExperience({ className, style }) {
   }, []);
 
   return (
-    <HeroCanvasErrorBoundary>
+    <HeroCanvasErrorBoundary onError={onWebGLError}>
     <Canvas
       fallback={null}
       camera={{ position: [0, 0.22, 6.2], fov: 31, near: 0.1, far: 50 }}
@@ -460,8 +461,6 @@ export default function TShirtExperience({ className, style }) {
       />
       <Suspense fallback={null}>
         <TShirtModel introRef={introRef} pointerRef={pointerRef} />
-        {/* Environment is reflection-only (no visible background). */}
-        <Environment preset="studio" background={false} environmentIntensity={0.42} />
       </Suspense>
 
       <EffectComposer multisampling={0}>

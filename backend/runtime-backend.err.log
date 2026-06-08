@@ -1,0 +1,14 @@
+PrismaClientKnownRequestError: 
+Invalid `prisma.product.delete()` invocation:
+
+
+An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.
+    at ei.handleRequestError (C:\Github\Shop\backend\node_modules\@prisma\client\runtime\library.js:121:7283)
+    at ei.handleAndLogRequestError (C:\Github\Shop\backend\node_modules\@prisma\client\runtime\library.js:121:6608)
+    at ei.request (C:\Github\Shop\backend\node_modules\@prisma\client\runtime\library.js:121:6315)
+    at async a (C:\Github\Shop\backend\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async deleteProduct (C:\Github\Shop\backend\controllers\productController.js:641:5) {
+  code: 'P2025',
+  meta: { modelName: 'Product', cause: 'No record was found for a delete.' },
+  clientVersion: '6.15.0'
+}

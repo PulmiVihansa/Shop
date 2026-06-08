@@ -31,20 +31,33 @@ const memoryOrderMatches = (order, id) => (
   String(order.orderId || '') === String(id)
 );
 
-const findOrderByAnyId = (id, include = {}) => prisma.order.findFirst({
-  where: {
-    OR: [
-      { id },
-      { orderId: id }
-    ]
-  },
-  include
-});
+const findOrderByAnyId = (id, options = {}) => {
+  const include = options.include || options;
+  const hasInclude = include && Object.keys(include).length > 0;
+  return prisma.order.findFirst({
+    where: {
+      OR: [
+        { id },
+        { orderId: id }
+      ]
+    },
+    ...(hasInclude ? { include } : {})
+  });
+};
 
 const orderStatusData = (status) => ({
   status,
   orderStatus: status.toUpperCase()
 });
+
+const isCodPaymentMethod = (value) => String(value || '').trim().toUpperCase() === 'COD';
+
+const isCodOrder = (order = {}) => isCodPaymentMethod(
+  order.paymentMethod ||
+  order.payment?.method ||
+  order.transaction?.paymentMethod ||
+  order.transactionRecord?.paymentMethod
+);
 
 const buildSummaryProductName = (items) => {
   if (!items.length) return 'Product';
@@ -388,23 +401,95 @@ const updateOrderStatus = async (req, res) => {
       if (!order) return res.status(404).json({ message: 'Order not found' });
       order.orderStatus = orderStatus.toUpperCase();
       order.status = orderStatus;
+      if (orderStatus === 'delivered' && isCodOrder(order)) {
+        order.paymentStatus = 'PAID';
+        order.payment = {
+          ...(order.payment || {}),
+          method: order.payment?.method || 'cod',
+          status: 'paid',
+          paidAt: order.payment?.paidAt || new Date()
+        };
+        const transaction = (store.transactions || []).find((entry) => (
+          String(entry.orderId || '') === String(order._id || order.id) ||
+          String(entry.orderReference || '') === String(order.orderId)
+        ));
+        if (transaction) {
+          transaction.paymentStatus = 'PAID';
+          transaction.updatedAt = new Date();
+        }
+        const invoice = (store.invoices || []).find((entry) => (
+          String(entry.orderId || '') === String(order._id || order.id) ||
+          String(entry.orderReference || '') === String(order.orderId)
+        ));
+        if (invoice) {
+          invoice.status = 'Paid';
+          invoice.updatedAt = new Date();
+        }
+      }
       order.updatedAt = new Date();
       return res.json(normalizeOrder(order));
     }
 
-    const existing = await findOrderByAnyId(req.params.id);
-    if (!existing) return res.status(404).json({ message: 'Order not found' });
-    const order = await prisma.order.update({
-      where: { id: existing.id },
-      data: orderStatusData(orderStatus),
+    const existing = await findOrderByAnyId(req.params.id, {
       include: {
-        user: { select: { id: true, name: true, email: true, customerId: true } },
         customer: true,
         transaction: true,
         transactionRecord: true,
         invoice: true
       }
     });
+    if (!existing) return res.status(404).json({ message: 'Order not found' });
+    const shouldMarkCodPaid = orderStatus === 'delivered' && isCodOrder(existing);
+    const order = await prisma.$transaction(async (tx) => {
+      const nextOrderData = {
+        ...orderStatusData(orderStatus),
+        ...(shouldMarkCodPaid ? { paymentStatus: 'PAID' } : {})
+      };
+
+      await tx.order.update({
+        where: { id: existing.id },
+        data: nextOrderData
+      });
+
+      if (shouldMarkCodPaid) {
+        const transaction = existing.transaction || existing.transactionRecord;
+        if (transaction) {
+          await tx.transaction.update({
+            where: { id: transaction.id },
+            data: { paymentStatus: 'PAID' }
+          });
+          if (existing.invoice) {
+            await tx.invoice.update({
+              where: { id: existing.invoice.id },
+              data: { status: 'Paid' }
+            });
+          }
+        } else {
+          await createTransactionAndInvoice(tx, existing, {
+            paymentMethod: 'COD',
+            paymentStatus: 'PAID',
+            customer: existing.customer,
+            customerAddress: existing.address
+          }).catch(() => null);
+        }
+      }
+
+      return tx.order.findUnique({
+        where: { id: existing.id },
+        include: {
+          user: { select: { id: true, name: true, email: true, customerId: true } },
+          customer: true,
+          transaction: true,
+          transactionRecord: true,
+          invoice: true
+        }
+      });
+    });
+    if (shouldMarkCodPaid) {
+      await generateInvoiceForOrder(order.id, { paymentStatus: 'PAID', sendEmail: false }).catch((invoiceError) => {
+        console.warn('[invoice] COD delivery payment update failed', invoiceError.message);
+      });
+    }
     return res.json(normalizeOrder(order));
   } catch (error) {
     return res.status(400).json({ message: 'Failed to update order', error: error.message });

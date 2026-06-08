@@ -33,6 +33,7 @@ export default function LightPillar({
   mixBlendMode = 'screen',
   pillarRotation = 0,
   quality = 'high',
+  onWebGLError,
 }) {
   const containerRef = useRef(null);
   const rafRef = useRef(null);
@@ -48,9 +49,16 @@ export default function LightPillar({
 
   useEffect(() => {
     const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) setWebGLSupported(false);
-  }, []);
+    const gl =
+      canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: false }) ||
+      canvas.getContext('webgl', { failIfMajorPerformanceCaveat: false }) ||
+      canvas.getContext('experimental-webgl', { failIfMajorPerformanceCaveat: false });
+
+    if (!gl) {
+      setWebGLSupported(false);
+      onWebGLError?.();
+    }
+  }, [onWebGLError]);
 
   useEffect(() => {
     if (!containerRef.current || !webGLSupported) return undefined;
@@ -81,8 +89,9 @@ export default function LightPillar({
         stencil: false,
         depth: false,
       });
-    } catch {
+    } catch (error) {
       setWebGLSupported(false);
+      onWebGLError?.(error);
       return undefined;
     }
 
@@ -266,7 +275,6 @@ export default function LightPillar({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (rendererRef.current) {
         rendererRef.current.dispose();
-        rendererRef.current.forceContextLoss();
         if (container.contains(rendererRef.current.domElement)) container.removeChild(rendererRef.current.domElement);
       }
       materialRef.current?.dispose();
@@ -323,13 +331,7 @@ export default function LightPillar({
     materialRef.current.uniforms.uPillarRotSin.value = Math.sin(pillarRotRad);
   }, [pillarRotation]);
 
-  if (!webGLSupported) {
-    return (
-      <div className={`light-pillar-fallback ${className}`} style={{ mixBlendMode }}>
-        WebGL not supported
-      </div>
-    );
-  }
+  if (!webGLSupported) return <div className={`light-pillar-fallback ${className}`} style={{ mixBlendMode }} />;
 
   return <div ref={containerRef} className={`light-pillar-container ${className}`} style={{ mixBlendMode }} />;
 }

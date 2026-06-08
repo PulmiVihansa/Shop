@@ -57,7 +57,7 @@ export default function Returns() {
               <div className="care-row">
                 <label>
                   Order Number
-                  <input value={form.order} onChange={update('order')} placeholder="AST-123456" />
+                  <input value={form.order} onChange={update('order')} placeholder="ORD-1234" />
                 </label>
                 <label>
                   Email

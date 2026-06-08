@@ -203,7 +203,7 @@ export default function Contact() {
             <div className="contact-field-row">
               <label>
                 Order ID
-                <input value={form.order} onChange={updateField('order')} placeholder="Optional" />
+                <input value={form.order} onChange={updateField('order')} placeholder="ORD-1234" />
               </label>
               <label>
                 Subject

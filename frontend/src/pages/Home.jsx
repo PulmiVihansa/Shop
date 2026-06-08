@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiCheck, FiLock, FiRefreshCw, FiShield, FiTruck, FiUpload } from 'react-icons/fi';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -18,6 +18,23 @@ gsap.registerPlugin(ScrollTrigger);
 const LightPillar = lazy(() => import('../components/home/LightPillar.jsx'));
 const TShirtExperience = lazy(() => import('../components/home/TShirtExperience.jsx'));
 const IntroVideoGate = lazy(() => import('../components/home/IntroVideoGate.jsx'));
+const HERO_STATIC_SHIRT = '/models/hero-webgl-fallback.png';
+
+function canCreateWebGLContext() {
+  if (typeof document === 'undefined') return false;
+
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: false }) ||
+      canvas.getContext('webgl', { failIfMajorPerformanceCaveat: false }) ||
+      canvas.getContext('experimental-webgl', { failIfMajorPerformanceCaveat: false });
+
+    return Boolean(gl);
+  } catch {
+    return false;
+  }
+}
 
 const products = [
   {
@@ -94,6 +111,37 @@ const filters = [
   ['On Sale', 'sale'],
 ];
 
+const orderHelpCards = [
+  {
+    title: 'Find your size',
+    text: 'Check measurements before ordering so the oversized fit lands right.',
+    to: '/sizeguide',
+    action: 'Size Guide',
+    Icon: FiCheck,
+  },
+  {
+    title: 'Shipping info',
+    text: 'See delivery timing, COD notes, and what happens after checkout.',
+    to: '/shipping',
+    action: 'Shipping',
+    Icon: FiTruck,
+  },
+  {
+    title: 'Returns',
+    text: 'Start here if the size is off or the item arrives with an issue.',
+    to: '/returns',
+    action: 'Returns',
+    Icon: FiRefreshCw,
+  },
+  {
+    title: 'Need help?',
+    text: 'Send your order ID and message straight to Astravia support.',
+    to: '/support',
+    action: 'Support',
+    Icon: FiShield,
+  },
+];
+
 const tryOnProducts = [
   { id: 'void-tee', name: 'Void Tee', price: '4,490', image: '/models/Tshirt6.png', vibe: 'minimal' },
   { id: 'shadow-tee', name: 'Shadow Tee', price: '4,690', image: '/models/Tshirt7.png', vibe: 'night' },
@@ -101,51 +149,6 @@ const tryOnProducts = [
   { id: 'break-rules-tee', name: 'Break Rules Tee', price: '5,290', image: '/models/Tshirt5.png', vibe: 'statement' },
   { id: 'ghost-type-tee', name: 'Astravia Tee', price: '3,600', image: '/models/Tshirt22.png', vibe: 'daily' },
   { id: 'chaos-tee', name: 'Rebel Tee', price: '4,990', image: '/models/Tshirt8.png', vibe: 'statement' },
-];
-
-const dropLabModes = [
-  {
-    id: 'night-run',
-    label: 'Night Run',
-    productIndex: 1,
-    headline: 'Low light, high impact.',
-    brief: 'Built for night plans, black denim, silver chain, and one loud graphic doing the talking.',
-    palette: ['#050505', '#ff1f3d', '#d8d4cc'],
-    stats: [
-      ['Fit Match', 94],
-      ['Statement', 91],
-      ['Versatility', 78],
-    ],
-    kit: ['Black denim', 'Chrome accessories', 'Chunky sneakers'],
-  },
-  {
-    id: 'daily-uniform',
-    label: 'Daily Uniform',
-    productIndex: 0,
-    headline: 'Clean enough for every day.',
-    brief: 'A quiet oversized base for coffee runs, campus days, or errands that still need intent.',
-    palette: ['#f5f0e8', '#4d4d4d', '#a8a095'],
-    stats: [
-      ['Fit Match', 89],
-      ['Comfort', 96],
-      ['Repeat Wear', 93],
-    ],
-    kit: ['Wide-leg cargos', 'Minimal watch', 'White sneakers'],
-  },
-  {
-    id: 'main-character',
-    label: 'Main Character',
-    productIndex: 5,
-    headline: 'For when subtle is cancelled.',
-    brief: 'A bolder pick for drops, photos, parties, and any outfit that needs a center of gravity.',
-    palette: ['#111111', '#ff4d5f', '#f4d35e'],
-    stats: [
-      ['Fit Match', 92],
-      ['Photo Energy', 97],
-      ['Limited Feel', 88],
-    ],
-    kit: ['Stacked rings', 'Relaxed trousers', 'High-top sneakers'],
-  },
 ];
 
 const aiResponses = {
@@ -229,7 +232,7 @@ export default function Home() {
   const [tryOnGlow, setTryOnGlow] = useState(false);
   const [tryOnProductIndex, setTryOnProductIndex] = useState(5);
   const [tryOnCompare, setTryOnCompare] = useState(50);
-  const [activeDropLabIndex, setActiveDropLabIndex] = useState(0);
+  const [heroWebGLFailed, setHeroWebGLFailed] = useState(false);
   const tryOnInputRef = useRef(null);
 
   const visibleProducts = useMemo(() => {
@@ -255,8 +258,6 @@ export default function Home() {
   const stackRef = useRef(null);
   const panelRef = useRef(null);
   const selectedTryOnProduct = tryOnProducts[tryOnProductIndex] || tryOnProducts[0];
-  const activeDropLabMode = dropLabModes[activeDropLabIndex] || dropLabModes[0];
-  const activeDropLabProduct = tryOnProducts[activeDropLabMode.productIndex] || tryOnProducts[0];
 
   const featuredProductsQuery = useQuery({
     queryKey: ['products', 'featured', 5],
@@ -267,7 +268,6 @@ export default function Home() {
   });
   const featuredProductsFromQuery = featuredProductsQuery.data || [];
   const featuredLoadingFromQuery = featuredProductsQuery.isLoading && !featuredProductsFromQuery.length;
-
   useEffect(() => {
     prefetchSalesProducts(queryClient);
   }, [queryClient]);
@@ -283,6 +283,16 @@ export default function Home() {
       setIntroComplete(true);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (!canCreateWebGLContext()) {
+      setHeroWebGLFailed(true);
+    }
+  }, []);
+
+  const handleHeroWebGLError = useCallback(() => {
+    setHeroWebGLFailed(true);
+  }, []);
 
   useEffect(() => {
     featuredProductsCache = featuredProductsFromQuery;
@@ -479,18 +489,6 @@ export default function Home() {
     openCart();
   };
 
-  const handleDropLabAddToCart = () => {
-    addItem({
-      productId: `drop-lab-${activeDropLabProduct.name.toLowerCase().replace(/\s+/g, '-')}`,
-      name: activeDropLabProduct.name,
-      price: Number(String(activeDropLabProduct.price).replace(/,/g, '')),
-      image: activeDropLabProduct.image,
-      size: selectedSize || 'M',
-      quantity: 1,
-    });
-    openCart();
-  };
-
   const handleDownloadTryOn = async () => {
     if (!tryOnResult) return;
     const link = document.createElement('a');
@@ -523,31 +521,41 @@ export default function Home() {
       )}
 
       <section className="hero">
-        <div className="hero-light-pillar-background" aria-hidden="true">
-          <Suspense fallback={<div className="hero-visual-fallback" aria-hidden="true" />}>
-            <LightPillar
-              topColor="#727176"
-              bottomColor="#f17474"
-              intensity={1}
-              rotationSpeed={0.3}
-              glowAmount={0.002}
-              pillarWidth={3}
-              pillarHeight={0.4}
-              noiseIntensity={0.5}
-              pillarRotation={25}
-              interactive={false}
-              mixBlendMode="screen"
-              quality="high"
-            />
-          </Suspense>
-        </div>
-        <div className="hero-3d-layer" aria-hidden="true">
-          {introComplete && (
-            <Suspense fallback={<div className="hero-canvas hero-visual-fallback" aria-hidden="true" />}>
-              <TShirtExperience className="hero-canvas" />
-            </Suspense>
-          )}
-        </div>
+        {heroWebGLFailed ? (
+          <div className="hero-static-fallback" aria-hidden="true">
+            <div className="hero-static-pillars" />
+            <img src={HERO_STATIC_SHIRT} alt="" className="hero-static-shirt" loading="eager" decoding="async" />
+          </div>
+        ) : (
+          <>
+            <div className="hero-light-pillar-background" aria-hidden="true">
+              <Suspense fallback={<div className="hero-visual-fallback" aria-hidden="true" />}>
+                <LightPillar
+                  topColor="#727176"
+                  bottomColor="#f17474"
+                  intensity={1}
+                  rotationSpeed={0.3}
+                  glowAmount={0.002}
+                  pillarWidth={3}
+                  pillarHeight={0.4}
+                  noiseIntensity={0.5}
+                  pillarRotation={25}
+                  interactive={false}
+                  mixBlendMode="screen"
+                  quality="high"
+                  onWebGLError={handleHeroWebGLError}
+                />
+              </Suspense>
+            </div>
+            <div className="hero-3d-layer" aria-hidden="true">
+              {introComplete && (
+                <Suspense fallback={<div className="hero-canvas hero-visual-fallback" aria-hidden="true" />}>
+                  <TShirtExperience className="hero-canvas" onWebGLError={handleHeroWebGLError} />
+                </Suspense>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="hero-left">
           <p className="hero-eyebrow">New Drop - SS 2026</p>
@@ -775,82 +783,27 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="virtual-tryon-section drop-lab-section" id="drop-lab">
-        <div className="tryon-copy tryon-animate">
-          <p className="tryon-kicker">Live Styling Engine</p>
-          <h2 className="tryon-title">DROP<br />LAB<br /><span>LIVE.</span></h2>
-          <p className="tryon-description">
-            Pick a mood and let Astravia build a wearable tee setup with a match score, color palette, styling kit, and instant cart action.
+      <section className="order-help-section" id="before-you-order">
+        <div className="order-help-head tryon-animate">
+          <div>
+            <p className="tryon-kicker">Before You Order</p>
+            <h2>Shop With Less Guessing</h2>
+          </div>
+          <p>
+            Fast links for the things customers usually need before checkout or right after placing an order.
           </p>
-          <ul className="tryon-features">
-            {['Choose your vibe', 'See the fit formula', 'Add the pick instantly', 'Switch moods anytime'].map((item) => (
-              <li key={item}><FiCheck aria-hidden="true" />{item}</li>
-            ))}
-          </ul>
         </div>
 
-        <div className="drop-lab-console tryon-animate">
-          <div className="drop-lab-tabs" role="tablist" aria-label="Drop Lab modes">
-            {dropLabModes.map((mode, index) => (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeDropLabIndex === index}
-                className={activeDropLabIndex === index ? 'active' : ''}
-                key={mode.id}
-                onClick={() => setActiveDropLabIndex(index)}
-              >
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                {mode.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="drop-lab-stage">
-            <div className="drop-lab-orbit" aria-hidden="true">
-              {activeDropLabMode.palette.map((color, index) => (
-                <span key={color} style={{ '--swatch': color, '--spin-step': index }} />
-              ))}
-            </div>
-            <div className="drop-lab-product">
-              <img src={activeDropLabProduct.image} alt={activeDropLabProduct.name} loading="lazy" decoding="async" />
-            </div>
-            <div className="drop-lab-scan" aria-hidden="true" />
-          </div>
-
-          <div className="drop-lab-kit">
-            {activeDropLabMode.kit.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
+        <div className="order-help-grid">
+          {orderHelpCards.map(({ title, text, to, action, Icon }) => (
+            <article className="order-help-card tryon-animate" key={title}>
+              <Icon aria-hidden="true" />
+              <h3>{title}</h3>
+              <p>{text}</p>
+              <Link to={to}>{action}</Link>
+            </article>
+          ))}
         </div>
-
-        <aside className="drop-lab-result tryon-animate">
-          <p className="drop-finder-label">Current Formula</p>
-          <h3>{activeDropLabProduct.name}</h3>
-          <p>{activeDropLabMode.headline}</p>
-          <div className="tryon-product-price">Rs. {activeDropLabProduct.price}.00</div>
-          <p className="drop-lab-brief">{activeDropLabMode.brief}</p>
-          <div className="drop-lab-palette" aria-label="Recommended palette">
-            {activeDropLabMode.palette.map((color) => (
-              <span key={color} style={{ background: color }} />
-            ))}
-          </div>
-          <div className="locker-progress-list drop-lab-score-list">
-            {activeDropLabMode.stats.map(([label, value]) => (
-              <div className="locker-progress" key={label}>
-                <div><span>{label}</span><strong>{value}%</strong></div>
-                <i style={{ '--value': `${value}%` }} />
-              </div>
-            ))}
-          </div>
-          <button type="button" className="tryon-cart-btn drop-lab-cart" onClick={handleDropLabAddToCart}>
-            Add Lab Pick To Bag
-          </button>
-          <Link className="drop-lab-secondary-link" to={`/products/${activeDropLabProduct.id}`}>
-            Inspect product
-          </Link>
-        </aside>
       </section>
 
       <section className="newsletter reveal">

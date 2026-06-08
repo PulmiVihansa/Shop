@@ -62,7 +62,7 @@ export default function Support() {
                 </label>
                 <label>
                   Order ID
-                  <input value={form.order} onChange={update('order')} placeholder="Optional" />
+                  <input value={form.order} onChange={update('order')} placeholder="ORD-1234" />
                 </label>
               </div>
               <div className="care-row">
